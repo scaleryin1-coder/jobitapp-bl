@@ -37,7 +37,7 @@ function MainLayout() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentCity, setCurrentCity] = useState(() => {
-    return localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra';
+    return localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   });
 
   // Check URL hash for direct partner/staff login route (e.g. #partner, #worker, #admin)

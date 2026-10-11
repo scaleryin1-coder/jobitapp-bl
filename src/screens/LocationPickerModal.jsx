@@ -9,13 +9,15 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
   if (!isOpen) return null;
 
   const popularCities = [
-    { name: 'Mumbai, Maharashtra', area: 'Bandra, Andheri, Colaba' },
+    { name: 'Melattur, Kerala', area: 'Town Center, Railway Station Road, Malappuram' },
+    { name: 'Perinthalmanna, Kerala', area: 'Bypass Road, Angadippuram, Malappuram' },
+    { name: 'Manjeri, Kerala', area: 'Court Road, Pandikkad Road, Malappuram' },
+    { name: 'Malappuram, Kerala', area: 'Kottakkunnu, Up Hill, Down Hill' },
+    { name: 'Kozhikode, Kerala', area: 'Mavoor Road, Beach, Palayam' },
+    { name: 'Kochi, Kerala', area: 'Edappally, Kakkanad, Fort Kochi' },
     { name: 'Bengaluru, Karnataka', area: 'Koramangala, Indiranagar, HSR' },
-    { name: 'Delhi NCR', area: 'Connaught Place, Noida, Gurugram' },
-    { name: 'Hyderabad, Telangana', area: 'HITEC City, Jubilee Hills, Gachibowli' },
-    { name: 'Pune, Maharashtra', area: 'Kothrud, Viman Nagar, Hinjewadi' },
-    { name: 'Chennai, Tamil Nadu', area: 'T. Nagar, Adyar, Anna Nagar' },
-    { name: 'Kolkata, West Bengal', area: 'Salt Lake, Park Street, New Town' }
+    { name: 'Mumbai, Maharashtra', area: 'Bandra, Andheri, Colaba' },
+    { name: 'Delhi NCR', area: 'Connaught Place, Noida, Gurugram' }
   ];
 
   const handleTriggerLiveGPS = () => {

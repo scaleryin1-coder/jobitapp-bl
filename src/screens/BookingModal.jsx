@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 
 export function BookingModal({ service, isOpen, onClose, onSuccess }) {
   const { currentUser } = useAuth() || {};
-  const userLoc = localStorage.getItem('jobit_user_location') || currentUser?.city || 'Mumbai, Maharashtra';
-  const [address, setAddress] = useState(`Flat 402, Sunshine Heights, ${userLoc}`);
+  const userLoc = localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
+  const [address, setAddress] = useState(`Main Road, Town Center, ${userLoc}`);
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);

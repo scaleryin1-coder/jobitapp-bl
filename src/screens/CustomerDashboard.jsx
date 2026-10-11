@@ -109,7 +109,7 @@ export function CustomerDashboard({
   // Real-time GPS Location state
   const [isLocating, setIsLocating] = useState(false);
   const [locationName, setLocationName] = useState(() => {
-    return localStorage.getItem('jobit_user_location') || currentCity || 'Detect Live Location';
+    return localStorage.getItem('jobit_user_location') || currentCity || 'Melattur, Kerala';
   });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locationNotice, setLocationNotice] = useState('');
@@ -295,61 +295,47 @@ export function CustomerDashboard({
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
-      {/* 1. Header with 'JOBIT' Brand Logo & Live GPS Location Selector */}
-      <header className="bg-white px-5 pt-3.5 pb-3 border-b border-slate-100 sticky top-0 z-40 shadow-xs">
+      {/* 1. Header Cleanup: Clean 'JOBit' Brand Logo only & Compact Location Selector */}
+      <header className="bg-white px-4 pt-3 pb-2.5 border-b border-slate-100 sticky top-0 z-40 shadow-xs">
         <div className="flex items-center justify-between">
           
-          {/* JOBIT Brand Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0EA5E0] to-[#38BDF8] flex items-center justify-center text-white shadow-sm">
-              <Sparkles className="w-4 h-4 fill-white" />
-            </div>
-            <div>
-              <div className="flex items-center tracking-tight leading-none">
-                <span className="text-base font-black text-slate-900">JOB</span>
-                <span className="text-base font-black text-[#0EA5E0]">IT</span>
-              </div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">
-                Hyperlocal Pro
-              </p>
-            </div>
+          {/* Clean 'JOBit' Brand Logo (removed tagline and clutter) */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xl font-black tracking-tight text-slate-900">
+              JOB<span className="text-[#0EA5E0]">it</span>
+            </span>
           </div>
 
-          {/* Interactive Real-Time GPS Location Button */}
-          <div className="flex items-center gap-1.5">
+          {/* Compact, Neat Location Selector Banner & Notification */}
+          <div className="flex items-center gap-2">
             <button
               onClick={handleLocationClick}
               disabled={isLocating}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer shadow-xs ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-200 cursor-pointer shadow-xs ${
                 isLocating 
                   ? 'bg-sky-50 border-sky-300 text-[#0EA5E0]' 
                   : 'bg-slate-50 hover:bg-sky-50 border-slate-200 text-slate-800'
               }`}
-              title="Click to detect live device GPS location"
+              title="Click to change or detect live location (Melattur, Kerala)"
             >
-              <div className="w-5 h-5 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center shrink-0">
-                <MapPin className={`w-3 h-3 fill-[#0EA5E0] ${isLocating ? 'animate-bounce' : ''}`} />
-              </div>
-              <div className="text-left max-w-[125px] sm:max-w-[155px]">
-                <p className="text-[9px] font-bold text-slate-400 uppercase leading-none">
-                  {isLocating ? 'Detecting GPS...' : 'My Location'}
-                </p>
-                <p className="text-[11px] font-extrabold text-slate-900 truncate leading-tight mt-0.5">
-                  {locationName}
+              <MapPin className={`w-3.5 h-3.5 text-[#0EA5E0] shrink-0 ${isLocating ? 'animate-bounce' : 'fill-[#0EA5E0]/20'}`} />
+              <div className="text-left max-w-[120px] sm:max-w-[160px]">
+                <p className="text-[11px] font-extrabold text-slate-900 truncate leading-tight">
+                  {isLocating ? 'Locating...' : locationName}
                 </p>
               </div>
-              <Compass className={`w-3.5 h-3.5 text-slate-400 shrink-0 ${isLocating ? 'animate-spin text-[#0EA5E0]' : ''}`} />
+              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
             </button>
 
             {/* Notification Bell */}
             <button
               onClick={() => setIsNotificationOpen(true)}
-              className="w-8 h-8 rounded-full bg-[#F1F3F5] text-slate-800 flex items-center justify-center hover:bg-slate-200 transition relative cursor-pointer shrink-0"
+              className="w-7 h-7 rounded-full bg-[#F1F3F5] text-slate-700 flex items-center justify-center hover:bg-slate-200 transition relative cursor-pointer shrink-0"
               title="Notifications"
             >
-              <Bell className="w-4 h-4 stroke-[2]" />
+              <Bell className="w-3.5 h-3.5 stroke-[2]" />
               {unreadNotifCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-[#0EA5E0] absolute top-1.5 right-1.5 ring-2 ring-white animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-[#0EA5E0] absolute top-1 right-1 ring-2 ring-white animate-pulse" />
               )}
             </button>
           </div>
@@ -357,133 +343,37 @@ export function CustomerDashboard({
 
         {/* GPS Status Toast Notice */}
         {locationNotice && (
-          <div className="mt-2 py-1 px-3 bg-sky-50 border border-sky-200 rounded-xl text-[11px] font-bold text-[#0EA5E0] flex items-center gap-1.5 animate-fade-in">
-            <Compass className="w-3.5 h-3.5 animate-spin" />
-            <span>{locationNotice}</span>
+          <div className="mt-1.5 py-1 px-2.5 bg-sky-50 border border-sky-200 rounded-lg text-[10px] font-bold text-[#0EA5E0] flex items-center gap-1.5 animate-fade-in">
+            <Compass className="w-3 h-3 animate-spin shrink-0" />
+            <span className="truncate">{locationNotice}</span>
           </div>
         )}
-
-        {/* 2. Interactive Search Bar with Real-time Dropdown Suggestions */}
-        <div ref={searchContainerRef} className="relative mt-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              placeholder="Search services (e.g. Plumbing, AC, Cleaning, Electrician)..."
-              className="w-full pl-10 pr-9 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition shadow-xs"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer hover:bg-slate-300"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
-          {/* Real-time Autocomplete Dropdown List */}
-          {isSearchFocused && searchQuery.trim().length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto no-scrollbar animate-fade-in">
-              <div className="p-2 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Matching Home Services ({searchResults.length})
-                </span>
-                <span className="text-[10px] font-bold text-[#0EA5E0]">Instant Select</span>
-              </div>
-
-              {searchResults.length > 0 ? (
-                <div className="divide-y divide-slate-100">
-                  {searchResults.map((service) => (
-                    <div
-                      key={service.id}
-                      onClick={() => {
-                        onSelectService?.(service);
-                        setIsSearchFocused(false);
-                        setSearchQuery('');
-                      }}
-                      className="p-3 hover:bg-sky-50/70 transition cursor-pointer flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <img 
-                          src={service.heroImage || "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=150&q=80"} 
-                          alt={service.title}
-                          className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200"
-                        />
-                        <div>
-                          <p className="text-xs font-black text-slate-900 group-hover:text-[#0EA5E0] transition">
-                            {service.title}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-semibold">
-                            {service.categoryName} • ★ {service.rating || 4.9} ({service.ordersCompleted || 500}+ done)
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-xs font-black text-slate-900">₹{service.price}/hr</span>
-                        <div className="text-[10px] font-extrabold text-[#0EA5E0] flex items-center justify-end gap-0.5 mt-0.5">
-                          <span>Book</span>
-                          <ArrowRight className="w-2.5 h-2.5" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 text-center text-slate-400 text-xs">
-                  <p className="font-bold text-slate-600">No service found for "{searchQuery}"</p>
-                  <p className="text-[11px] mt-1">Try keywords like Plumbing, AC Repair, Cleaning, or Electrician</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Quick Search Chips */}
-          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar pb-0.5">
-            {['Plumbing', 'AC Repair', 'Cleaning', 'Electrician', 'Painting', 'Carpenter'].map((chip) => (
-              <button
-                key={chip}
-                onClick={() => {
-                  setSearchQuery(chip);
-                  setIsSearchFocused(true);
-                }}
-                className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-sky-50 hover:text-[#0EA5E0] text-[10px] font-bold text-slate-600 transition whitespace-nowrap cursor-pointer shrink-0"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        </div>
       </header>
 
-      {/* 3. Auto-sliding Promotional Banner Carousel */}
-      <div className="px-5 pt-3 pb-2">
-        <div className="relative w-full rounded-[24px] bg-gradient-to-r from-[#2B8FD8] to-[#6FD0EE] p-4 overflow-hidden shadow-lg shadow-sky-400/20 text-white min-h-[155px] flex flex-col justify-between">
-          <div className="absolute right-0 bottom-0 w-[48%] h-full pointer-events-none flex items-end justify-end">
+      {/* 2. 'Book Trusted Services' Promotional Banner (Moved right up to top directly below header) */}
+      <div className="px-4 pt-3 pb-1">
+        <div className="relative w-full rounded-[22px] bg-gradient-to-r from-[#2B8FD8] to-[#6FD0EE] p-4 overflow-hidden shadow-md shadow-sky-400/15 text-white min-h-[145px] flex flex-col justify-between">
+          <div className="absolute right-0 bottom-0 w-[45%] h-full pointer-events-none flex items-end justify-end">
             <img
               src={activeBanner.image || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=500&q=80"}
               alt="Worker"
-              className="h-full object-cover object-top scale-110"
+              className="h-full object-cover object-top scale-105"
             />
           </div>
 
-          <div className="relative z-10 max-w-[58%]">
+          <div className="relative z-10 max-w-[60%]">
             <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
-              Promotional Offer
+              Trial Region: Melattur
             </span>
-            <h3 className="text-lg font-extrabold tracking-tight leading-tight mt-1.5">
+            <h3 className="text-base sm:text-lg font-black tracking-tight leading-tight mt-1.5">
               {activeBanner.title || "Book Trusted Services"}
             </h3>
-            <p className="text-[10px] text-white/85 font-medium mt-1 leading-snug">
+            <p className="text-[10px] text-white/90 font-medium mt-0.5 leading-snug">
               {activeBanner.subtitle || "Get quick access to home services in your location."}
             </p>
           </div>
 
-          <div className="relative z-10 mt-2 max-w-[62%] bg-white/20 backdrop-blur-md border border-white/30 rounded-xl p-2 flex items-center justify-between">
+          <div className="relative z-10 mt-2 max-w-[65%] bg-white/20 backdrop-blur-md border border-white/30 rounded-xl p-2 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-bold text-white leading-tight">
                 {activeBanner.serviceName || "Home Repair"}
@@ -497,7 +387,7 @@ export function CustomerDashboard({
                 const target = (services || []).find(s => s?.title && s.title.toLowerCase().includes((activeBanner.serviceName || '').toLowerCase())) || (services && services[0]);
                 if (target) onSelectService(target);
               }}
-              className="px-2.5 py-1 rounded-full bg-white text-[#2B8FD8] font-extrabold text-[10px] shadow-sm ml-1.5 whitespace-nowrap active:scale-95 transition cursor-pointer"
+              className="px-2.5 py-1 rounded-full bg-white text-[#2B8FD8] font-black text-[10px] shadow-sm ml-1.5 whitespace-nowrap active:scale-95 transition cursor-pointer"
             >
               Book Now
             </button>
@@ -522,47 +412,136 @@ export function CustomerDashboard({
         )}
       </div>
 
-      {/* 4. "Select Category" with PREMIUM VECTOR ICONS (Replaced realistic stock photos) */}
-      <div className="pt-2 pb-3">
-        <div className="px-5 mb-2.5 flex items-center justify-between">
-          <h4 className="text-sm font-extrabold text-slate-900">Select Category</h4>
-          {selectedCategoryFilter !== 'all' && (
-            <button 
-              onClick={() => setSelectedCategoryFilter('all')}
-              className="text-[11px] font-bold text-[#0EA5E0] hover:underline cursor-pointer"
-            >
-              All Categories
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar px-5">
-          {(categories || []).map((cat) => {
-            if (!cat) return null;
-            const isSelected = selectedCategoryFilter === cat.id;
-            return (
-              <div
-                key={cat.id || Math.random()}
-                onClick={() => {
-                  setSelectedCategoryFilter(prev => prev === cat.id ? 'all' : cat.id);
-                  onSelectCategory?.(cat);
-                }}
-                className="flex flex-col items-center shrink-0 cursor-pointer group"
+      {/* 3. Search Bar Directly Below Banner with Dynamic Real-time Filtering */}
+      <div className="px-4 py-2">
+        <div ref={searchContainerRef} className="relative">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              placeholder="Search services or categories (e.g. d, clean, plumb)..."
+              className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0EA5E0] focus:ring-2 focus:ring-sky-100 transition shadow-xs"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 w-5 h-5 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer hover:bg-slate-200 transition"
               >
-                {/* Clean, Vector Icon Graphic Badge */}
-                <CategoryVectorIcon 
-                  id={cat.id} 
-                  name={cat.name} 
-                  isSelected={isSelected} 
-                />
-                <span className={`text-[11px] font-bold mt-1.5 text-center leading-tight transition ${
-                  isSelected ? 'text-[#0EA5E0] font-black' : 'text-slate-800'
-                }`}>
-                  {cat.name}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Real-time Dynamic Suggestions & Category Results (Appears cleanly as user types) */}
+          {searchQuery.trim().length > 0 && (
+            <div className="mt-2 bg-white rounded-2xl border border-slate-200/90 shadow-xl overflow-hidden animate-fade-in divide-y divide-slate-100">
+              
+              {/* Category Matches */}
+              {categories.filter(c => c?.name?.toLowerCase().includes(searchQuery.toLowerCase().trim())).length > 0 && (
+                <div className="p-2.5 bg-sky-50/50">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2 px-1">
+                    Matching Categories
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {categories
+                      .filter(c => c?.name?.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+                      .map(cat => (
+                        <div
+                          key={cat.id}
+                          onClick={() => {
+                            setSelectedCategoryFilter(cat.id);
+                            onSelectCategory?.(cat);
+                            setSearchQuery('');
+                            setIsSearchFocused(false);
+                          }}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-sky-100 shadow-xs hover:border-[#0EA5E0] cursor-pointer transition group"
+                        >
+                          <CategoryVectorIcon id={cat.id} name={cat.name} isSelected={selectedCategoryFilter === cat.id} />
+                          <div>
+                            <p className="text-xs font-black text-slate-900 group-hover:text-[#0EA5E0] transition leading-tight">
+                              {cat.name}
+                            </p>
+                            <span className="text-[10px] font-bold text-[#0EA5E0]">Filter</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Service Matches Header */}
+              <div className="p-2.5 bg-slate-50 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Matching Services ({searchResults.length})
                 </span>
+                <span className="text-[10px] font-bold text-[#0EA5E0]">Instant Book</span>
               </div>
-            );
-          })}
+
+              {/* Service Results List */}
+              {searchResults.length > 0 ? (
+                <div className="max-h-64 overflow-y-auto no-scrollbar divide-y divide-slate-100">
+                  {searchResults.map((service) => (
+                    <div
+                      key={service.id}
+                      onClick={() => {
+                        onSelectService?.(service);
+                        setIsSearchFocused(false);
+                        setSearchQuery('');
+                      }}
+                      className="p-3 hover:bg-sky-50/70 transition cursor-pointer flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <img 
+                          src={service.heroImage || "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=150&q=80"} 
+                          alt={service.title}
+                          className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200"
+                        />
+                        <div>
+                          <p className="text-xs font-black text-slate-900 group-hover:text-[#0EA5E0] transition leading-tight">
+                            {service.title}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                            {service.categoryName} • ★ {service.rating || 4.9} ({service.ordersCompleted || 500}+ done)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 ml-2">
+                        <span className="text-xs font-black text-slate-900">₹{service.price}/hr</span>
+                        <div className="text-[10px] font-extrabold text-[#0EA5E0] flex items-center justify-end gap-0.5 mt-0.5">
+                          <span>Book</span>
+                          <ArrowRight className="w-2.5 h-2.5" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-slate-400 text-xs">
+                  <p className="font-bold text-slate-600">No service matching "{searchQuery}"</p>
+                  <p className="text-[11px] mt-0.5">Try keywords like Plumbing, AC, Deep Cleaning, or Electrician</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Active Category Filter Reset Badge (Shown if user filtered by category) */}
+          {selectedCategoryFilter !== 'all' && !searchQuery && (
+            <div className="flex items-center justify-between mt-2 px-1">
+              <span className="text-[11px] font-bold text-slate-600">
+                Filtered by: <strong className="text-[#0EA5E0]">{categories.find(c => c.id === selectedCategoryFilter)?.name || selectedCategoryFilter}</strong>
+              </span>
+              <button
+                onClick={() => setSelectedCategoryFilter('all')}
+                className="text-[11px] font-extrabold text-[#0EA5E0] hover:underline cursor-pointer"
+              >
+                Clear Filter ✕
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -268,9 +268,20 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 </div>
 
                 <div className="bg-white/10 rounded-xl p-2.5 text-xs text-white/95 space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                    <span className="truncate font-semibold">{job.address}</span>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                      <span className="truncate font-semibold">{job.address}</span>
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address || 'Melattur, Kerala')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold shrink-0 transition"
+                      title="Route in Google Maps"
+                    >
+                      Maps ➔
+                    </a>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-sky-200 shrink-0" />
@@ -419,9 +430,21 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       </div>
                     </div>
 
-                    <div className="pt-1 border-t border-slate-200/60 text-slate-600 flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                      <span className="leading-tight font-medium">{job.address}</span>
+                    <div className="pt-1 border-t border-slate-200/60 text-slate-600 flex items-start justify-between gap-1.5">
+                      <div className="flex items-start gap-1.5 flex-1">
+                        <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        <span className="leading-tight font-medium text-slate-800">{job.address}</span>
+                      </div>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address || 'Melattur, Kerala')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 shrink-0 transition"
+                        title="Open in Google Maps Navigation"
+                      >
+                        <Compass className="w-3 h-3 text-[#0EA5E0]" />
+                        <span>Route</span>
+                      </a>
                     </div>
 
                     {job.note && (
