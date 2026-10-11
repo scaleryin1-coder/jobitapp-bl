@@ -12,7 +12,7 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SplashScreen } from './screens/SplashScreen';
-import { HomeScreen } from './screens/HomeScreen';
+import { CustomerDashboard } from './screens/CustomerDashboard';
 import { ServiceDetailScreen } from './screens/ServiceDetailScreen';
 import { BookingModal } from './screens/BookingModal';
 import { BookingsScreen } from './screens/BookingsScreen';
@@ -137,9 +137,10 @@ function MainLayout() {
           {currentScreen === 'main' && (
             <>
               {activeTab === 'home' && (
-                <HomeScreen
+                <CustomerDashboard
                   currentCity={currentCity}
                   onChangeCity={() => setCityPickerOpen(true)}
+                  onUpdateCity={(city) => setCurrentCity(city)}
                   onOpenSearch={() => setSearchModalOpen(true)}
                   onOpenNotifications={() => alert("All bookings and offers are up-to-date!")}
                   onSelectCategory={(cat) => {}}
