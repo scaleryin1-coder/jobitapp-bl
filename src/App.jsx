@@ -12,6 +12,7 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SplashScreen } from './screens/SplashScreen';
+import { WelcomeScreen } from './screens/WelcomeScreen';
 import { CustomerDashboard } from './screens/CustomerDashboard';
 import { ServiceDetailScreen } from './screens/ServiceDetailScreen';
 import { BookingModal } from './screens/BookingModal';
@@ -157,7 +158,7 @@ function MainLayout() {
         <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
           
           {currentScreen === 'splash' && (
-            <SplashScreen
+            <WelcomeScreen
               onGetStarted={() => {
                 setCurrentScreen('main');
               }}
