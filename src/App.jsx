@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SplashScreen } from './screens/SplashScreen';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { CustomerDashboard } from './screens/CustomerDashboard';
+import { ServiceListScreen } from './screens/ServiceList';
 import { ServiceDetailScreen } from './screens/ServiceDetailScreen';
 import { BookingModal } from './screens/BookingModal';
 import { BookingsScreen } from './screens/BookingsScreen';
@@ -26,8 +27,9 @@ import { PartnerLoginModal } from './screens/PartnerLoginModal';
 
 function MainLayout() {
   const { currentUser, logout } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState('splash'); // 'splash' | 'main' | 'detail' | 'chat'
+  const [currentScreen, setCurrentScreen] = useState('splash'); // 'splash' | 'main' | 'service-list' | 'detail' | 'chat'
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'chat' | 'bookings' | 'profile'
+  const [selectedCategoryName, setSelectedCategoryName] = useState('All');
   const [selectedService, setSelectedService] = useState(null);
   const [activeChatBooking, setActiveChatBooking] = useState(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -172,9 +174,15 @@ function MainLayout() {
                   currentCity={currentCity}
                   onChangeCity={() => setCityPickerOpen(true)}
                   onUpdateCity={(city) => setCurrentCity(city)}
-                  onOpenSearch={() => setSearchModalOpen(true)}
+                  onOpenSearch={() => {
+                    setSelectedCategoryName('All');
+                    setCurrentScreen('service-list');
+                  }}
                   onOpenNotifications={() => alert("All bookings and offers are up-to-date!")}
-                  onSelectCategory={(cat) => {}}
+                  onSelectCategory={(cat) => {
+                    setSelectedCategoryName(cat?.name || 'All');
+                    setCurrentScreen('service-list');
+                  }}
                   onSelectService={(serv) => {
                     setSelectedService(serv);
                     setCurrentScreen('detail');
@@ -214,6 +222,21 @@ function MainLayout() {
                 />
               )}
             </>
+          )}
+
+          {currentScreen === 'service-list' && (
+            <ServiceListScreen
+              initialCategory={selectedCategoryName}
+              onBack={() => setCurrentScreen('main')}
+              onSelectService={(serv) => {
+                setSelectedService(serv);
+                setCurrentScreen('detail');
+              }}
+              onBookService={(serv) => {
+                setSelectedService(serv);
+                setIsBookingModalOpen(true);
+              }}
+            />
           )}
 
           {currentScreen === 'detail' && selectedService && (
