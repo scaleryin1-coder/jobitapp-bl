@@ -3,7 +3,18 @@ import { auth, db, isFirebaseConfigured } from '../firebase';
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-const AuthContext = createContext(null);
+const defaultAuthContext = {
+  currentUser: null,
+  loading: false,
+  loginWithPhone: async () => null,
+  loginAsWorker: async () => null,
+  loginAsAdmin: async () => null,
+  updateUserProfile: async () => {},
+  logout: async () => {},
+  isFirebaseConfigured: false
+};
+
+const AuthContext = createContext(defaultAuthContext);
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -171,5 +182,6 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  return context || defaultAuthContext;
 }

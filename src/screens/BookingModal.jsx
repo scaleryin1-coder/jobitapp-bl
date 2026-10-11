@@ -4,6 +4,7 @@ import { createBooking } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 
 export function BookingModal({ service, isOpen, onClose, onSuccess }) {
+  const { currentUser } = useAuth() || {};
   const userLoc = localStorage.getItem('jobit_user_location') || currentUser?.city || 'Mumbai, Maharashtra';
   const [address, setAddress] = useState(`Flat 402, Sunshine Heights, ${userLoc}`);
   const [date, setDate] = useState(() => {
