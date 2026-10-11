@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, ShieldCheck, Star } from 'lucide-react';
-import file0Asset from '../assets/file-0.png';
+
+const WELCOME_HERO_IMAGE_URL = 'https://i.imgur.com/1OViWYh.png';
 
 export function WelcomeScreen({ onGetStarted, imageSrc }) {
   const [progress, setProgress] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   
-  // Reference the uploaded file (file-0...png) with seamless fallbacks
+  // Strictly use the specified Image URL as primary source
   const [imgSrc, setImgSrc] = useState(
-    imageSrc || file0Asset || '/file-0.png'
+    imageSrc || WELCOME_HERO_IMAGE_URL
   );
 
   // Auto-launch progress bar (3.5s) while allowing user to tap 'Get Started' or 'Skip' anytime
@@ -34,7 +35,7 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
     <div className="relative w-full h-full min-h-screen flex flex-col justify-between bg-white overflow-hidden select-none">
       
       {/* ========================================================
-          1. HERO IMAGE (ROUGHLY 80% VIEWPORT HEIGHT)
+          1. HERO IMAGE (75% - 80% UPPER SCREEN SPACE)
           ======================================================== */}
       <div className="relative w-full h-[76vh] sm:h-[78vh] overflow-hidden bg-slate-50 flex-shrink-0">
         
@@ -60,18 +61,17 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
           </button>
         </div>
 
-        {/* Hero Image covering ~80% with object-cover for sharp high-quality display */}
+        {/* Hero Image covering 75-80% with object-cover for crisp, high-quality presentation */}
         <img
           src={imgSrc}
           alt="Professional Home Services"
           onLoad={() => setImageLoaded(true)}
           onError={() => {
-            if (imgSrc !== '/file-0.png') {
+            // Local fallback if remote image has network issues
+            if (imgSrc === WELCOME_HERO_IMAGE_URL) {
+              setImgSrc('/welcome-hero.png');
+            } else if (imgSrc !== '/file-0.png') {
               setImgSrc('/file-0.png');
-            } else if (imgSrc !== '/welcome-image.jpg') {
-              setImgSrc('/welcome-image.jpg');
-            } else {
-              setImgSrc('https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=85');
             }
           }}
           className={`w-full h-full object-cover object-top sm:object-center transition-all duration-700 ease-out ${
@@ -82,8 +82,8 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
         {/* Top subtle vignette for header contrast */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/25 to-transparent pointer-events-none" />
 
-        {/* Smooth white gradient / fade blend where bottom of photo meets white text area */}
-        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+        {/* Smooth white gradient / fade blend where bottom of photo meets clean white text area */}
+        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-white via-white/85 to-transparent pointer-events-none" />
 
         {/* Floating Verified Trust Pill Badge over Image */}
         <div className="absolute bottom-8 left-5 z-20 flex items-center gap-2.5 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-100 shadow-card">
@@ -104,12 +104,12 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
       </div>
 
       {/* ========================================================
-          2. CONTENT & CTA PLACEMENT (CLEAN WHITE BACKGROUND, ELEVATED)
+          2. CONTENT & CTA PLACEMENT (CLEAN WHITE BACKGROUND, LIFTED HIGHER: pb-16)
           ======================================================== */}
-      <div className="relative flex-1 flex flex-col justify-end px-6 pb-10 sm:pb-12 pt-1 z-20 bg-white text-slate-900">
+      <div className="relative flex-1 flex flex-col justify-end px-6 pb-16 pt-2 z-20 bg-white text-slate-900">
         
-        {/* Headlines & Subtext sitting comfortably above bottom */}
-        <div className="mb-5">
+        {/* Headlines & Subtext sitting comfortably above bottom edge */}
+        <div className="mb-4">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mb-2 rounded-full bg-sky-50 text-[#0EA5E0] border border-sky-100 text-[10px] font-bold tracking-wide uppercase">
             <span>Hyperlocal Marketplace</span>
           </div>
@@ -131,17 +131,17 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
           />
         </div>
 
-        {/* Primary Action Button (Blue 'Get Started' button moved higher up) */}
+        {/* Primary Action Button (Blue 'Get Started' button lifted higher with pb-16) */}
         <button
           onClick={onGetStarted}
-          className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_10px_24px_-4px_rgba(14,165,224,0.45)] hover:shadow-[0_14px_28px_-4px_rgba(14,165,224,0.6)] active:scale-[0.98] transition-all cursor-pointer mb-2"
+          className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_10px_24px_-4px_rgba(14,165,224,0.45)] hover:shadow-[0_14px_28px_-4px_rgba(14,165,224,0.6)] active:scale-[0.98] transition-all cursor-pointer mb-3"
         >
           <span>Get Started</span>
           <ArrowRight className="w-4 h-4 stroke-[2.5]" />
         </button>
 
-        {/* Modern Bottom Home Indicator Pill */}
-        <div className="w-24 h-1 bg-slate-200 rounded-full mx-auto mt-2" />
+        {/* Modern Bottom Home Indicator Pill with comfortable spacing */}
+        <div className="w-24 h-1 bg-slate-200 rounded-full mx-auto" />
       </div>
 
     </div>
