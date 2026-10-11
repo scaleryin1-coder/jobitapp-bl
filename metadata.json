@@ -1,0 +1,8 @@
+{
+  "name": "JOBit",
+  "description": "Hyperlocal home service and job marketplace connecting customers, verified workers, and admin management with fixed task-based pricing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

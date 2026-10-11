@@ -1,0 +1,245 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["CUSTOMER", "WORKER", "ADMIN"] },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "role"]
+    },
+    "Worker": {
+      "title": "Worker",
+      "description": "Service professional profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "skills": { "type": "array" },
+        "categories": { "type": "array" },
+        "experienceYears": { "type": "number" },
+        "serviceArea": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "totalJobsCompleted": { "type": "number" },
+        "isAvailable": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "phone", "isVerified", "isAvailable"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Service categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "iconName": { "type": "string" },
+        "description": { "type": "string" },
+        "sortOrder": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Specific sub-services with fixed task rates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "taskPrice": { "type": "number" },
+        "durationMinutes": { "type": "number" },
+        "inclusions": { "type": "array" },
+        "image": { "type": "string" }
+      },
+      "required": ["id", "categoryId", "name", "taskPrice"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Customer service booking order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "workerId": { "type": "string" },
+        "workerName": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "subServiceId": { "type": "string" },
+        "subServiceName": { "type": "string" },
+        "taskPrice": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["REQUESTED", "WORKER_ASSIGNED", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] },
+        "serviceAddress": { "type": "string" },
+        "addressLandmark": { "type": "string" },
+        "scheduledDate": { "type": "string" },
+        "scheduledSlot": { "type": "string" },
+        "customerNotes": { "type": "string" },
+        "workerNotes": { "type": "string" },
+        "finalBillAmount": { "type": "number" },
+        "commissionPercent": { "type": "number" },
+        "commissionAmount": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["PENDING", "PAID"] },
+        "paymentMethod": { "type": "string", "enum": ["CASH"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "customerId", "categoryId", "subServiceId", "taskPrice", "totalAmount", "status", "serviceAddress", "scheduledDate", "scheduledSlot"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer feedback and rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "workerId": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "bookingId", "customerId", "rating"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment transaction records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "workerId": { "type": "string" },
+        "amount": { "type": "number" },
+        "commissionPercent": { "type": "number" },
+        "commissionAmount": { "type": "number" },
+        "workerAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "bookingId", "customerId", "amount", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User in-app notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "message", "isRead"]
+    },
+    "Address": {
+      "title": "Address",
+      "description": "Saved customer address",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "label": { "type": "string" },
+        "fullAddress": { "type": "string" },
+        "landmark": { "type": "string" },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "fullAddress"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Promo offers and coupons",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "discountPercent": { "type": "number" },
+        "maxDiscount": { "type": "number" },
+        "minOrder": { "type": "number" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "code", "discountPercent", "isActive"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Home promotional banners",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "tag": { "type": "string" },
+        "image": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "title", "isActive"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile documents"
+    },
+    "/workers/{workerId}": {
+      "schema": { "$ref": "#/entities/Worker" },
+      "description": "Worker professional profiles"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Service categories"
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/Service" },
+      "description": "Sub-services catalog"
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Service bookings and orders"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Service reviews"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Payments and commissions"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User notifications"
+    },
+    "/users/{userId}/addresses/{addressId}": {
+      "schema": { "$ref": "#/entities/Address" },
+      "description": "User saved addresses"
+    },
+    "/offers/{offerId}": {
+      "schema": { "$ref": "#/entities/Offer" },
+      "description": "Coupons and promo offers"
+    },
+    "/banners/{bannerId}": {
+      "schema": { "$ref": "#/entities/Banner" },
+      "description": "Promotional banners"
+    }
+  }
+}
