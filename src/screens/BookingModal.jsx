@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, MapPin, FileText, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
-import { db, isFirebaseConfigured } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { createBooking } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 
 export function BookingModal({ service, isOpen, onClose, onSuccess }) {
@@ -27,8 +26,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
       customerId: currentUser?.uid || 'guest_user',
       customerName: currentUser?.name || 'Valued Customer',
       customerPhone: currentUser?.phone || '9876543210',
-      workerId: service.workerId || 'worker_default',
-      workerName: service.workerName || 'Assigned Technician',
+      workerId: null, // Unallocated -> Instant broadcast to available workers
+      workerName: null,
+      preferredWorkerId: service.workerId || null,
+      preferredWorkerName: service.workerName || null,
       serviceId: service.id,
       serviceTitle: service.title,
       categoryName: service.categoryName,
@@ -36,28 +37,13 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
       address,
       dateTime: `${date} at ${timeSlot}`,
       note: note.trim(),
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      status: 'pending' // Pending Assignment
     };
 
-    if (isFirebaseConfigured && db) {
-      try {
-        await addDoc(collection(db, 'bookings'), {
-          ...bookingPayload,
-          serverTimestamp: serverTimestamp()
-        });
-      } catch {
-        // Fallback
-      }
-    }
-
-    // Also persist to local storage for instant offline resilience
     try {
-      const existing = JSON.parse(localStorage.getItem('jobit_bookings') || '[]');
-      existing.unshift({ id: 'bk_' + Date.now(), ...bookingPayload });
-      localStorage.setItem('jobit_bookings', JSON.stringify(existing));
-    } catch {
-      // Fallback
+      await createBooking(bookingPayload);
+    } catch (err) {
+      console.warn('Booking create fallback', err);
     }
 
     setLoading(false);
