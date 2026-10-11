@@ -23,8 +23,7 @@ export function ProfileScreen({
 }) {
   const { currentUser, updateUserProfile, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(currentUser?.name || 'Customer');
-  const [city, setCity] = useState(currentUser?.city || 'Celina, Delaware');
+  const [city, setCity] = useState(() => currentUser?.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra');
   const [becomeWorkerOpen, setBecomeWorkerOpen] = useState(false);
   const [serviceSkill, setServiceSkill] = useState('Plumbing');
   const [workerApplied, setWorkerApplied] = useState(false);
@@ -100,7 +99,7 @@ export function ProfileScreen({
             </div>
             <div>
               <p className="text-xs font-extrabold text-slate-800">Edit Profile</p>
-              <p className="text-[11px] text-slate-400">{currentUser?.city || "Celina, Delaware"}</p>
+              <p className="text-[11px] text-slate-400">{currentUser?.city || localStorage.getItem('jobit_user_location') || "Mumbai, Maharashtra"}</p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400" />

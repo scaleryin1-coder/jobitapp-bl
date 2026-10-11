@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
                 phone: fbUser.phoneNumber || '',
                 role: 'customer',
                 photo: fbUser.photoURL || '',
-                city: 'Celina, Delaware'
+                city: localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra'
               };
               await setDoc(userRef, defaultData, { merge: true });
               setCurrentUser(defaultData);
@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
       phone,
       name: name || 'Valued Customer',
       role: 'customer',
-      city: 'Celina, Delaware',
+      city: localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra',
       photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
     };
 
@@ -94,7 +94,7 @@ export function AuthProvider({ children }) {
       avatar: worker.avatar,
       vehicle: worker.vehicle,
       rating: worker.rating,
-      city: worker.city || 'Celina, Delaware'
+      city: worker.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra'
     };
 
     if (isFirebaseConfigured && db) {

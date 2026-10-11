@@ -17,19 +17,87 @@ import {
   Zap,
   ThumbsUp,
   Headphones,
-  Check
+  Check,
+  Wrench,
+  Flame,
+  Layers
 } from 'lucide-react';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { initialCategories, initialBanners, initialServices } from '../data/seedData';
+import { NotificationModal } from './NotificationModal';
+import { LocationPickerModal } from './LocationPickerModal';
+
+// Clean, premium vector icon component for Categories matching the primary theme
+function CategoryVectorIcon({ id = '', name = '', isSelected = false }) {
+  const lower = (id + ' ' + name).toLowerCase();
+
+  let iconSvg = <Sparkles className="w-6 h-6 text-white stroke-[2.2]" />;
+  let gradientBg = "from-[#0EA5E0] to-[#38BDF8]";
+
+  if (lower.includes('ac') || lower.includes('air') || lower.includes('cool')) {
+    iconSvg = (
+      <svg className="w-6 h-6 text-white stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M2 8h20M2 12h20M2 16h20M7 8v8M17 8v8"/>
+        <path d="M8 4l2 4M16 4l-2 4M9 20l1-4M15 20l-1-4"/>
+      </svg>
+    );
+    gradientBg = "from-[#0EA5E0] to-[#2563EB]";
+  } else if (lower.includes('plumb') || lower.includes('pipe') || lower.includes('tap') || lower.includes('leak')) {
+    iconSvg = (
+      <svg className="w-6 h-6 text-white stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+      </svg>
+    );
+    gradientBg = "from-[#0284C7] to-[#0EA5E0]";
+  } else if (lower.includes('clean') || lower.includes('wash') || lower.includes('sanit')) {
+    iconSvg = (
+      <svg className="w-6 h-6 text-white stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+    );
+    gradientBg = "from-[#06B6D4] to-[#0EA5E0]";
+  } else if (lower.includes('elect') || lower.includes('wire') || lower.includes('power')) {
+    iconSvg = (
+      <svg className="w-6 h-6 text-white stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    );
+    gradientBg = "from-[#F59E0B] to-[#0EA5E0]";
+  } else if (lower.includes('paint') || lower.includes('polish') || lower.includes('brush')) {
+    iconSvg = (
+      <svg className="w-6 h-6 text-white stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M19 11V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h8"/>
+        <path d="M14 8V4M8 8V4M12 18v4M8 22h8"/>
+      </svg>
+    );
+    gradientBg = "from-[#6366F1] to-[#0EA5E0]";
+  } else if (lower.includes('carp') || lower.includes('wood') || lower.includes('furniture')) {
+    iconSvg = (
+      <svg className="w-6 h-6 text-white stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M15 12l-8.5 8.5a2.12 2.12 0 1 1-3-3L12 9"/>
+        <path d="M17.64 4.36a9 9 0 0 1 2 2L15 11l-4-4 4.64-4.64a9 9 0 0 1 2 2z"/>
+      </svg>
+    );
+    gradientBg = "from-[#0EA5E0] to-[#0D9488]";
+  }
+
+  return (
+    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 bg-gradient-to-tr ${gradientBg} ${
+      isSelected 
+        ? 'ring-3 ring-[#0EA5E0] shadow-glow scale-105' 
+        : 'shadow-xs hover:scale-102 hover:shadow-md'
+    }`}>
+      {iconSvg}
+    </div>
+  );
+}
 
 export function CustomerDashboard({ 
   onSelectCategory, 
   onSelectService, 
   onNavigateTab,
   currentCity,
-  onChangeCity,
-  onOpenNotifications,
   onUpdateCity
 }) {
   const [categories, setCategories] = useState(initialCategories || []);
@@ -40,15 +108,22 @@ export function CustomerDashboard({
 
   // Real-time GPS Location state
   const [isLocating, setIsLocating] = useState(false);
-  const [locationName, setLocationName] = useState(currentCity || 'Fetching your location...');
+  const [locationName, setLocationName] = useState(() => {
+    return localStorage.getItem('jobit_user_location') || currentCity || 'Detect Live Location';
+  });
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locationNotice, setLocationNotice] = useState('');
+
+  // Notification Modal state & Unread count badge
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
 
   // Interactive Search Autocomplete state
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchContainerRef = useRef(null);
 
-  // Sync prop changes for currentCity
+  // Sync prop changes for currentCity if provided
   useEffect(() => {
     if (currentCity && !isLocating) {
       setLocationName(currentCity);
@@ -87,7 +162,7 @@ export function CustomerDashboard({
         }
       }, () => {});
     } catch {
-      // Quiet offline fallback
+      // Quiet fallback
     }
 
     return () => {
@@ -117,23 +192,21 @@ export function CustomerDashboard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Real-time Device Geolocation via navigator.geolocation
-  const fetchLiveGPSLocation = () => {
+  // Direct Real-Time Geolocation via navigator.geolocation
+  const handleLocationClick = () => {
     if (!navigator.geolocation) {
-      setLocationNotice('Geolocation not supported by this browser.');
-      setTimeout(() => setLocationNotice(''), 3000);
+      setIsLocationModalOpen(true);
       return;
     }
 
     setIsLocating(true);
-    setLocationNotice('Detecting GPS location...');
+    setLocationNotice('Requesting GPS coordinates...');
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
         try {
-          // Reverse geocode via OpenStreetMap reverse API
-          const response = await fetch(
+          const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`,
             {
               headers: {
@@ -142,49 +215,50 @@ export function CustomerDashboard({
               }
             }
           );
-          
-          if (response.ok) {
-            const data = await response.json();
-            const address = data.address || {};
-            const neighborhood = address.suburb || address.neighbourhood || address.residential || address.road || address.hamlet;
-            const city = address.city || address.town || address.county || address.state_district || address.state;
-            
-            const resolvedName = neighborhood && city 
-              ? `${neighborhood}, ${city}` 
-              : city || `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`;
 
-            setLocationName(resolvedName);
-            onUpdateCity?.(resolvedName);
-            setLocationNotice(`GPS Locked: ${resolvedName}`);
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const neighborhood = addr.suburb || addr.neighbourhood || addr.residential || addr.road || addr.hamlet;
+            const city = addr.city || addr.town || addr.county || addr.state_district || addr.state;
+            
+            const resolved = neighborhood && city 
+              ? `${neighborhood}, ${city}` 
+              : city || `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`;
+
+            setLocationName(resolved);
+            localStorage.setItem('jobit_user_location', resolved);
+            onUpdateCity?.(resolved);
+            setLocationNotice(`Live GPS: ${resolved}`);
           } else {
-            const coordStr = `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`;
-            setLocationName(coordStr);
-            onUpdateCity?.(coordStr);
-            setLocationNotice('GPS coordinates captured');
+            const fallback = `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`;
+            setLocationName(fallback);
+            localStorage.setItem('jobit_user_location', fallback);
+            onUpdateCity?.(fallback);
           }
-        } catch (err) {
-          const coordStr = `Location (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`;
-          setLocationName(coordStr);
-          onUpdateCity?.(coordStr);
-          setLocationNotice('GPS acquired');
+        } catch {
+          const fallback = `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`;
+          setLocationName(fallback);
+          localStorage.setItem('jobit_user_location', fallback);
+          onUpdateCity?.(fallback);
         } finally {
           setIsLocating(false);
-          setTimeout(() => setLocationNotice(''), 3500);
+          setTimeout(() => setLocationNotice(''), 3000);
         }
       },
-      (error) => {
+      (err) => {
         setIsLocating(false);
-        let msg = 'Could not access device location';
-        if (error.code === 1) msg = 'Location access permission was denied';
-        if (error.code === 2) msg = 'Position unavailable';
-        if (error.code === 3) msg = 'Location request timed out';
-        setLocationNotice(msg);
+        const errMsg = err.code === 1 
+          ? 'GPS permission denied. Choose your location below.' 
+          : 'GPS timed out. Choose your location below.';
+        setLocationNotice(errMsg);
         setTimeout(() => setLocationNotice(''), 3500);
+        setIsLocationModalOpen(true);
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 60000
+        maximumAge: 30000
       }
     );
   };
@@ -204,7 +278,7 @@ export function CustomerDashboard({
 
   const activeBanner = (banners && banners[activeBannerIdx]) || (initialBanners && initialBanners[0]) || {
     title: "Book Trusted Services",
-    subtitle: "Get quick access to home services your location.",
+    subtitle: "Get quick access to home services in your location.",
     serviceName: "Home Repair",
     price: 300,
     image: "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=500&q=80"
@@ -244,21 +318,21 @@ export function CustomerDashboard({
           {/* Interactive Real-Time GPS Location Button */}
           <div className="flex items-center gap-1.5">
             <button
-              onClick={fetchLiveGPSLocation}
+              onClick={handleLocationClick}
               disabled={isLocating}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer shadow-xs ${
                 isLocating 
                   ? 'bg-sky-50 border-sky-300 text-[#0EA5E0]' 
                   : 'bg-slate-50 hover:bg-sky-50 border-slate-200 text-slate-800'
               }`}
-              title="Click to detect real device GPS location"
+              title="Click to detect live device GPS location"
             >
               <div className="w-5 h-5 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center shrink-0">
                 <MapPin className={`w-3 h-3 fill-[#0EA5E0] ${isLocating ? 'animate-bounce' : ''}`} />
               </div>
-              <div className="text-left max-w-[130px] sm:max-w-[160px]">
+              <div className="text-left max-w-[125px] sm:max-w-[155px]">
                 <p className="text-[9px] font-bold text-slate-400 uppercase leading-none">
-                  {isLocating ? 'Detecting GPS...' : 'Current Location'}
+                  {isLocating ? 'Detecting GPS...' : 'My Location'}
                 </p>
                 <p className="text-[11px] font-extrabold text-slate-900 truncate leading-tight mt-0.5">
                   {locationName}
@@ -269,12 +343,14 @@ export function CustomerDashboard({
 
             {/* Notification Bell */}
             <button
-              onClick={onOpenNotifications || (() => alert('You have no new alerts. All services are up-to-date!'))}
+              onClick={() => setIsNotificationOpen(true)}
               className="w-8 h-8 rounded-full bg-[#F1F3F5] text-slate-800 flex items-center justify-center hover:bg-slate-200 transition relative cursor-pointer shrink-0"
               title="Notifications"
             >
               <Bell className="w-4 h-4 stroke-[2]" />
-              <span className="w-2 h-2 rounded-full bg-[#0EA5E0] absolute top-1.5 right-1.5 ring-2 ring-white" />
+              {unreadNotifCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-[#0EA5E0] absolute top-1.5 right-1.5 ring-2 ring-white animate-pulse" />
+              )}
             </button>
           </div>
         </div>
@@ -446,7 +522,7 @@ export function CustomerDashboard({
         )}
       </div>
 
-      {/* 4. "Select Category" Horizontal Scroll */}
+      {/* 4. "Select Category" with PREMIUM VECTOR ICONS (Replaced realistic stock photos) */}
       <div className="pt-2 pb-3">
         <div className="px-5 mb-2.5 flex items-center justify-between">
           <h4 className="text-sm font-extrabold text-slate-900">Select Category</h4>
@@ -460,7 +536,7 @@ export function CustomerDashboard({
           )}
         </div>
 
-        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-5">
+        <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar px-5">
           {(categories || []).map((cat) => {
             if (!cat) return null;
             const isSelected = selectedCategoryFilter === cat.id;
@@ -473,19 +549,14 @@ export function CustomerDashboard({
                 }}
                 className="flex flex-col items-center shrink-0 cursor-pointer group"
               >
-                <div className={`w-14 h-14 rounded-2xl overflow-hidden bg-slate-50 transition-all duration-200 ${
-                  isSelected 
-                    ? 'ring-2 ring-[#0EA5E0]/30 border-2 border-[#0EA5E0] shadow-sm' 
-                    : 'border border-slate-100 group-hover:border-slate-200'
-                }`}>
-                  <img
-                    src={cat.image || "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=200&q=80"}
-                    alt={cat.name || "Category"}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span className={`text-[11px] font-bold mt-1 text-center leading-tight transition ${
-                  isSelected ? 'text-[#0EA5E0]' : 'text-slate-800'
+                {/* Clean, Vector Icon Graphic Badge */}
+                <CategoryVectorIcon 
+                  id={cat.id} 
+                  name={cat.name} 
+                  isSelected={isSelected} 
+                />
+                <span className={`text-[11px] font-bold mt-1.5 text-center leading-tight transition ${
+                  isSelected ? 'text-[#0EA5E0] font-black' : 'text-slate-800'
                 }`}>
                   {cat.name}
                 </span>
@@ -495,12 +566,17 @@ export function CustomerDashboard({
         </div>
       </div>
 
-      {/* 5. "Near For You" Featured Services Grid */}
+      {/* 5. "Near For You" HORIZONTAL SCROLL CAROUSEL / LIST (Swipe Sideways) */}
       <div className="px-5 pt-1">
         <div className="mb-2.5 flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-extrabold text-slate-900">Near For You</h4>
-            <p className="text-[10px] text-slate-400 font-semibold">Available pros within 5 km</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-900">Near For You</h4>
+              <p className="text-[10px] text-slate-400 font-semibold">Available pros within your area</p>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-[9px] font-black uppercase text-[#0EA5E0] tracking-wider">
+              Swipe ➔
+            </span>
           </div>
           <button 
             onClick={() => onNavigateTab?.('bookings')}
@@ -510,28 +586,32 @@ export function CustomerDashboard({
           </button>
         </div>
 
-        <div className="flex flex-col gap-3.5">
+        {/* Smooth Horizontal Carousel List */}
+        <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1 -mx-5 px-5 snap-x snap-mandatory scroll-smooth">
           {displayedServices.map((service) => {
             if (!service) return null;
             return (
               <div
                 key={service.id || Math.random()}
                 onClick={() => onSelectService(service)}
-                className="relative h-44 rounded-[24px] overflow-hidden shadow-sm border border-slate-100 cursor-pointer group active:scale-[0.99] transition-all duration-200"
+                className="relative w-[260px] sm:w-[280px] h-48 rounded-[24px] overflow-hidden shadow-card border border-slate-100 cursor-pointer group active:scale-[0.98] transition-all duration-200 shrink-0 snap-start"
               >
+                {/* Cover Image */}
                 <img
                   src={service.heroImage || "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80"}
                   alt={service.title || "Service"}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
 
+                {/* Rating Badge */}
                 <div className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-extrabold text-slate-900 shadow-sm flex items-center gap-1">
                   <span className="text-amber-400">★</span>
                   <span>{service.rating || '4.9'}</span>
                   <span className="text-slate-400 font-semibold">({service.reviewCount || 'Review'})</span>
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent pt-8 pb-3 px-3.5 flex items-end justify-between">
+                {/* Bottom Overlay Card */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pt-8 pb-3 px-3.5 flex items-end justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-sky-300 uppercase tracking-wider">
                       {service.categoryName || 'Verified Pro'}
@@ -543,7 +623,7 @@ export function CustomerDashboard({
                       ₹{service.price || 300}/hour
                     </p>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center group-hover:bg-[#0EA5E0] transition-colors shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center group-hover:bg-[#0EA5E0] transition-colors shadow-sm shrink-0">
                     <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                   </div>
                 </div>
@@ -553,15 +633,8 @@ export function CustomerDashboard({
         </div>
       </div>
 
-      {/* =========================================================================
-          6. EXTENDED SCROLLABLE PROFESSIONAL LAYOUT:
-             - Why Choose JOBIT & Trust Indicators
-             - 7-Day Guarantee Box
-             - Informative About Jobit
-             - Customer Testimonials
-             - Comprehensive Footer
-         ========================================================================= */}
-
+      {/* 6. EXTENDED SCROLLABLE PROFESSIONAL LAYOUT: Trust, Guarantees & About Section */}
+      
       {/* Why Choose JOBIT? Trust Grid */}
       <div className="px-5 pt-8">
         <div className="text-center mb-4">
@@ -675,7 +748,6 @@ export function CustomerDashboard({
             Our mission is to replace uncertain roadside service quotes with standardized, fixed task pricing, real-time GPS dispatching, and verified service quality.
           </p>
 
-          {/* Key Metrics Banner */}
           <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
             <div className="p-2 rounded-xl bg-slate-50">
               <p className="text-sm font-black text-slate-900">50K+</p>
@@ -747,7 +819,7 @@ export function CustomerDashboard({
       <footer className="px-5 pt-8 pb-4 text-center space-y-2">
         <div className="flex items-center justify-center gap-1.5">
           <div className="w-5 h-5 rounded-lg bg-[#0EA5E0] flex items-center justify-center text-white">
-            <Sparkles className="w-3 h-3 fill-white" />
+            <Sparkles className="w-3 3 fill-white" />
           </div>
           <span className="text-xs font-black tracking-tight text-slate-800">JOB<span className="text-[#0EA5E0]">IT</span> Services Inc.</span>
         </div>
@@ -764,9 +836,26 @@ export function CustomerDashboard({
         <p className="text-[9px] text-slate-300 pt-1">© 2026 JOBIT. All rights reserved.</p>
       </footer>
 
+      {/* Clean Notification Center Modal */}
+      <NotificationModal
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onUnreadChange={setUnreadNotifCount}
+      />
+
+      {/* Dedicated Location & GPS Geolocation Picker Modal */}
+      <LocationPickerModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        currentCity={locationName}
+        onSelectLocation={(loc) => {
+          setLocationName(loc);
+          onUpdateCity?.(loc);
+        }}
+      />
+
     </div>
   );
 }
 
-// Re-export as HomeScreen for backwards compatibility
 export { CustomerDashboard as HomeScreen };

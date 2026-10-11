@@ -35,7 +35,9 @@ function MainLayout() {
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentCity, setCurrentCity] = useState('Celina, Delaware');
+  const [currentCity, setCurrentCity] = useState(() => {
+    return localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra';
+  });
 
   // Check URL hash for direct partner/staff login route (e.g. #partner, #worker, #admin)
   useEffect(() => {
@@ -51,18 +53,46 @@ function MainLayout() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  // Handle Geolocation
+  // Handle Live Geolocation with Reverse Geocoding
   const requestBrowserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        () => {
-          setCurrentCity("Current Location (GPS)");
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`,
+              {
+                headers: {
+                  'Accept': 'application/json',
+                  'User-Agent': 'JobitHomeServicesWeb/1.0'
+                }
+              }
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || {};
+              const neighborhood = addr.suburb || addr.neighbourhood || addr.residential || addr.road || addr.hamlet;
+              const city = addr.city || addr.town || addr.county || addr.state_district || addr.state;
+              const resolved = neighborhood && city ? `${neighborhood}, ${city}` : (city || `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`);
+              setCurrentCity(resolved);
+              localStorage.setItem('jobit_user_location', resolved);
+            } else {
+              const fallback = `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`;
+              setCurrentCity(fallback);
+              localStorage.setItem('jobit_user_location', fallback);
+            }
+          } catch {
+            const fallback = `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`;
+            setCurrentCity(fallback);
+            localStorage.setItem('jobit_user_location', fallback);
+          }
           setCityPickerOpen(false);
         },
         () => {
-          setCurrentCity("Celina, Delaware");
           setCityPickerOpen(false);
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
       );
     }
   };
@@ -327,11 +357,12 @@ function MainLayout() {
               </button>
 
               <div className="space-y-1">
-                {['Celina, Delaware', 'Mumbai, MH', 'Bengaluru, KA', 'Delhi NCR', 'Hyderabad, TS'].map((city) => (
+                {['Mumbai, Maharashtra', 'Bengaluru, Karnataka', 'Delhi NCR', 'Hyderabad, Telangana', 'Pune, Maharashtra', 'Chennai, Tamil Nadu'].map((city) => (
                   <button
                     key={city}
                     onClick={() => {
                       setCurrentCity(city);
+                      localStorage.setItem('jobit_user_location', city);
                       setCityPickerOpen(false);
                     }}
                     className={`w-full py-2.5 px-3 rounded-xl text-left text-xs font-semibold transition ${

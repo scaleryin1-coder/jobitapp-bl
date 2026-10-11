@@ -185,7 +185,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 {isOnline ? "You're Online & Receiving Jobs" : "You're Offline (Duty Off)"}
               </p>
               <p className="text-[10px] text-slate-500 font-medium">
-                {isOnline ? "Broadcast radar active in Celina area" : "Toggle on to receive new job dispatches"}
+                {isOnline ? "Broadcast radar active in your local service area" : "Toggle on to receive new job dispatches"}
               </p>
             </div>
           </div>

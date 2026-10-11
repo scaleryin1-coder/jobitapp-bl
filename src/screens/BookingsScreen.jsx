@@ -239,7 +239,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                     <Radio className="w-4 h-4 text-[#0EA5E0] animate-pulse" />
                     <span className="font-semibold text-slate-700">Awaiting technician pickup...</span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400">Celina Radius</span>
+                  <span className="text-[10px] font-bold text-slate-400">Hyperlocal Radius</span>
                 </div>
               )}
 
