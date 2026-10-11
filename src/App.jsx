@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Home as HomeIcon, 
   MessageCircle, 
@@ -7,11 +7,7 @@ import {
   Search, 
   MapPin, 
   X, 
-  Bell,
-  Briefcase,
-  Settings,
-  ShieldCheck,
-  ChevronRight
+  Bell
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -25,33 +21,35 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { AdminScreen } from './screens/AdminScreen';
 import { WorkerScreen } from './screens/WorkerScreen';
 import { AuthModal } from './screens/AuthModal';
+import { PartnerLoginModal } from './screens/PartnerLoginModal';
 
 function MainLayout() {
-  const { currentUser } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState('splash'); // 'splash' | 'main' | 'worker' | 'admin' | 'detail' | 'chat'
+  const { currentUser, logout } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState('splash'); // 'splash' | 'main' | 'detail' | 'chat'
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'chat' | 'bookings' | 'profile'
-  const [currentRole, setCurrentRole] = useState('customer'); // 'customer' | 'worker' | 'admin'
   const [selectedService, setSelectedService] = useState(null);
   const [activeChatBooking, setActiveChatBooking] = useState(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isPartnerLoginOpen, setIsPartnerLoginOpen] = useState(false);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentCity, setCurrentCity] = useState('Celina, Delaware');
 
-  // Switch role seamlessly
-  const handleSwitchRole = (role) => {
-    setCurrentRole(role);
-    if (role === 'worker') {
-      setCurrentScreen('worker');
-    } else if (role === 'admin') {
-      setCurrentScreen('admin');
-    } else {
-      setCurrentScreen('main');
-      setActiveTab('home');
-    }
-  };
+  // Check URL hash for direct partner/staff login route (e.g. #partner, #worker, #admin)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#partner' || hash === '#worker' || hash === '#admin') {
+        setIsPartnerLoginOpen(true);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   // Handle Geolocation
   const requestBrowserLocation = () => {
@@ -69,84 +67,62 @@ function MainLayout() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center sm:p-4 select-none">
-      
-      {/* Mobile-first Phone Frame */}
-      <div className="w-full max-w-[430px] h-[100dvh] sm:h-[92vh] sm:max-h-[880px] bg-white sm:rounded-[40px] sm:shadow-[0_25px_70px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col relative sm:border-[8px] sm:border-slate-800">
-        
-        {/* Status Bar simulation (Time 8:00, Network, Battery) */}
-        <div className="w-full h-8 px-6 pt-2 pb-1 flex items-center justify-between text-xs font-bold text-slate-900 bg-white z-40 select-none shrink-0 border-b border-slate-50">
-          <span className="text-[13px] font-extrabold tracking-tight">8:00</span>
-          
-          {/* Quick Role Persona Badge (when not in splash) */}
-          {currentScreen !== 'splash' && (
-            <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-black text-slate-700">
-              <span className={`w-1.5 h-1.5 rounded-full ${currentRole === 'worker' ? 'bg-[#0EA5E0]' : currentRole === 'admin' ? 'bg-purple-600' : 'bg-emerald-500'}`} />
-              <span className="capitalize">{currentRole} Mode</span>
-            </div>
-          )}
+  const handlePartnerLoginSuccess = (role) => {
+    // If logged in as worker or admin, state will automatically re-render strictly into that dashboard
+    setIsPartnerLoginOpen(false);
+    if (window.location.hash) {
+      history.replaceState(null, '', ' ');
+    }
+  };
 
-          <div className="flex items-center gap-1.5 text-slate-800">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/>
-            </svg>
-            <div className="w-4 h-2.5 border border-slate-800 rounded-xs p-0.5 flex items-center">
-              <div className="w-full h-full bg-slate-800 rounded-2xs" />
-            </div>
-          </div>
+  const handleLogoutToCustomer = async () => {
+    await logout();
+    setCurrentScreen('main');
+    setActiveTab('home');
+  };
+
+  // ==========================================
+  // ROLE-BASED STRICT ROUTING
+  // ==========================================
+
+  // 1. If authenticated as Worker -> Strictly Worker Dashboard
+  if (currentUser?.role === 'worker') {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
+        <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+          <WorkerScreen
+            onOpenChat={(b) => {
+              setActiveChatBooking(b);
+              setCurrentScreen('chat');
+            }}
+            onLogout={handleLogoutToCustomer}
+          />
         </div>
+      </div>
+    );
+  }
 
-        {/* Global Multi-Role Navigation Bar (Switch effortlessly between Customer, Worker, and Admin) */}
-        {currentScreen !== 'splash' && (
-          <div className="bg-slate-100/90 border-b border-slate-200/60 px-4 py-1.5 flex items-center justify-between text-[11px] font-extrabold z-30 shrink-0">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handleSwitchRole('customer')}
-                className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
-                  currentRole === 'customer' && currentScreen === 'main'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                🧑 Customer
-              </button>
-              <button
-                onClick={() => handleSwitchRole('worker')}
-                className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
-                  currentRole === 'worker' || currentScreen === 'worker'
-                    ? 'bg-[#0EA5E0] text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                👷 Pro Worker
-              </button>
-              <button
-                onClick={() => handleSwitchRole('admin')}
-                className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
-                  currentRole === 'admin' || currentScreen === 'admin'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                ⚡ Admin
-              </button>
-            </div>
+  // 2. If authenticated as Admin -> Strictly Admin Control Center
+  if (currentUser?.role === 'admin') {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
+        <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+          <AdminScreen
+            onBack={handleLogoutToCustomer}
+            onLogout={handleLogoutToCustomer}
+          />
+        </div>
+      </div>
+    );
+  }
 
-            {currentScreen !== 'main' && (
-              <button
-                onClick={() => {
-                  setCurrentScreen('main');
-                  setCurrentRole('customer');
-                }}
-                className="text-[10px] text-[#0EA5E0] font-black underline cursor-pointer"
-              >
-                Exit to Home
-              </button>
-            )}
-          </div>
-        )}
-
+  // 3. Default: Customer Dashboard (Service Booking UI)
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
+      
+      {/* Clean Web App Container (No phone OS bezel, no hardcoded status bar) */}
+      <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+        
         {/* Dynamic Screen View */}
         <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
           
@@ -200,43 +176,12 @@ function MainLayout() {
 
               {activeTab === 'profile' && (
                 <ProfileScreen
-                  currentRole={currentRole}
-                  onSwitchRole={handleSwitchRole}
-                  onOpenAdmin={() => {
-                    setCurrentRole('admin');
-                    setCurrentScreen('admin');
-                  }}
-                  onOpenWorker={() => {
-                    setCurrentRole('worker');
-                    setCurrentScreen('worker');
-                  }}
+                  onOpenPartnerLogin={() => setIsPartnerLoginOpen(true)}
                   onOpenAuth={() => setIsAuthModalOpen(true)}
                   onViewSplash={() => setCurrentScreen('splash')}
                 />
               )}
             </>
-          )}
-
-          {currentScreen === 'worker' && (
-            <WorkerScreen
-              onOpenChat={(b) => {
-                setActiveChatBooking(b);
-                setCurrentScreen('chat');
-              }}
-              onBack={() => {
-                setCurrentScreen('main');
-                setCurrentRole('customer');
-              }}
-            />
-          )}
-
-          {currentScreen === 'admin' && (
-            <AdminScreen 
-              onBack={() => {
-                setCurrentScreen('main');
-                setCurrentRole('customer');
-              }} 
-            />
           )}
 
           {currentScreen === 'detail' && selectedService && (
@@ -262,13 +207,7 @@ function MainLayout() {
                 workerName: 'Rajesh Sharma',
                 serviceTitle: 'Home Service'
               }}
-              onBack={() => {
-                if (currentRole === 'worker') {
-                  setCurrentScreen('worker');
-                } else {
-                  setCurrentScreen('main');
-                }
-              }}
+              onBack={() => setCurrentScreen('main')}
             />
           )}
 
@@ -276,7 +215,7 @@ function MainLayout() {
 
         {/* Floating Dark Pill Bottom Navigation Bar (Shown on Main Customer Screen) */}
         {currentScreen === 'main' && (
-          <div className="absolute inset-x-0 bottom-4 px-6 z-40 pointer-events-none flex justify-center">
+          <div className="fixed sm:absolute inset-x-0 bottom-4 px-6 z-40 pointer-events-none flex justify-center">
             <nav className="pointer-events-auto bg-[#181A20] text-white rounded-full px-4 py-2 shadow-floating flex items-center justify-between gap-5 border border-white/10 backdrop-blur-md">
               
               {/* 1. Home */}
@@ -346,13 +285,25 @@ function MainLayout() {
           }}
         />
 
-        {/* Authentication Modal */}
+        {/* Customer Authentication Modal */}
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onSuccess={() => {
             setCurrentScreen('main');
           }}
+        />
+
+        {/* Separate Partner & Staff Portal Modal (Workers & Admins) */}
+        <PartnerLoginModal
+          isOpen={isPartnerLoginOpen}
+          onClose={() => {
+            setIsPartnerLoginOpen(false);
+            if (window.location.hash) {
+              history.replaceState(null, '', ' ');
+            }
+          }}
+          onSuccess={handlePartnerLoginSuccess}
         />
 
         {/* City Location Picker Dialog */}

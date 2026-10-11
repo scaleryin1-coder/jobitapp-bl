@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Power,
   ChevronRight,
-  Filter
+  Filter,
+  LogOut
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -31,7 +32,7 @@ import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { initialCategories, initialBanners } from '../data/seedData';
 
-export function AdminScreen({ onBack }) {
+export function AdminScreen({ onBack, onLogout }) {
   const [tab, setTab] = useState('dispatch'); // 'dispatch' | 'workers' | 'categories' | 'banners'
   const [bookings, setBookings] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -194,9 +195,18 @@ export function AdminScreen({ onBack }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[11px] font-extrabold">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Super Admin</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[11px] font-extrabold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Super Admin</span>
+          </div>
+          <button
+            onClick={onLogout || onBack}
+            className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center transition cursor-pointer"
+            title="Sign Out of Admin Control"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </header>
 

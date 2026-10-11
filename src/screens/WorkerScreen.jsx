@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   User,
   MessageCircle,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -28,7 +29,7 @@ import {
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 
-export function WorkerScreen({ onOpenChat, onBack }) {
+export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const { currentUser } = useAuth();
   const [workers, setWorkers] = useState([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState('worker_rajesh');
@@ -147,8 +148,8 @@ export function WorkerScreen({ onOpenChat, onBack }) {
             </div>
           </div>
 
-          {/* Quick Worker Persona Switcher (For easy prototype testing) */}
-          <div className="relative">
+          {/* Quick Worker Persona Switcher & Exit Button */}
+          <div className="flex items-center gap-1.5">
             <select
               value={selectedWorkerId}
               onChange={(e) => setSelectedWorkerId(e.target.value)}
@@ -160,6 +161,14 @@ export function WorkerScreen({ onOpenChat, onBack }) {
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={onLogout || onBack}
+              className="p-1.5 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition cursor-pointer"
+              title="Sign Out of Worker Mode"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 

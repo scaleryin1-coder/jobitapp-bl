@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
             }
           }
         } catch {
-          // Quiet offline fallback
+          // Offline fallback
         } finally {
           setLoading(false);
         }
@@ -75,9 +75,53 @@ export function AuthProvider({ children }) {
       try {
         const userRef = doc(db, 'users', uid);
         await setDoc(userRef, profile, { merge: true });
-      } catch {
-        // Fallback to local storage
-      }
+      } catch {}
+    }
+
+    setCurrentUser(profile);
+    localStorage.setItem('jobit_user', JSON.stringify(profile));
+    return profile;
+  };
+
+  const loginAsWorker = async (worker) => {
+    const profile = {
+      uid: worker.id,
+      workerId: worker.id,
+      name: worker.name,
+      phone: worker.phone,
+      role: 'worker',
+      skill: worker.skill,
+      avatar: worker.avatar,
+      vehicle: worker.vehicle,
+      rating: worker.rating,
+      city: worker.city || 'Celina, Delaware'
+    };
+
+    if (isFirebaseConfigured && db) {
+      try {
+        await setDoc(doc(db, 'users', worker.id), profile, { merge: true });
+      } catch {}
+    }
+
+    setCurrentUser(profile);
+    localStorage.setItem('jobit_user', JSON.stringify(profile));
+    return profile;
+  };
+
+  const loginAsAdmin = async (adminPayload = {}) => {
+    const profile = {
+      uid: 'admin_master',
+      name: adminPayload.name || 'Master Admin',
+      email: adminPayload.email || 'admin@jobit.com',
+      phone: '98765 00000',
+      role: 'admin',
+      city: 'Headquarters'
+    };
+
+    if (isFirebaseConfigured && db) {
+      try {
+        await setDoc(doc(db, 'users', 'admin_master'), profile, { merge: true });
+      } catch {}
     }
 
     setCurrentUser(profile);
@@ -94,9 +138,7 @@ export function AuthProvider({ children }) {
     if (isFirebaseConfigured && db && currentUser.uid) {
       try {
         await setDoc(doc(db, 'users', currentUser.uid), updates, { merge: true });
-      } catch {
-        // Fallback
-      }
+      } catch {}
     }
   };
 
@@ -104,9 +146,7 @@ export function AuthProvider({ children }) {
     if (isFirebaseConfigured && auth) {
       try {
         await fbSignOut(auth);
-      } catch {
-        // Fallback
-      }
+      } catch {}
     }
     setCurrentUser(null);
     localStorage.removeItem('jobit_user');
@@ -118,6 +158,8 @@ export function AuthProvider({ children }) {
         currentUser,
         loading,
         loginWithPhone,
+        loginAsWorker,
+        loginAsAdmin,
         updateUserProfile,
         logout,
         isFirebaseConfigured
