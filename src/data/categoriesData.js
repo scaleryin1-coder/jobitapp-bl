@@ -1,3 +1,5 @@
+import mehndiArtImg from '../assets/images/mehndi_henna_artist_1791804672044.jpg';
+
 // All 20 main categories with verified icons and their specific issues/sub-categories
 export const ALL_MAIN_CATEGORIES = [
   {
@@ -275,6 +277,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_mehndi',
     name: 'Mehndi Artist',
     icon: '🖐️',
+    image: mehndiArtImg,
     color: '#FFF1EE', // soft peach/coral
     basePrice: 599,
     subCategories: [
