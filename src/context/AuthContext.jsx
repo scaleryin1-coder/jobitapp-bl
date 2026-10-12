@@ -72,7 +72,32 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginWithPhone = async (phone, otp, name = 'Valued Customer') => {
-    const uid = 'usr_' + phone.replace(/\D/g, '').slice(-10);
+    const rawDigits = phone.replace(/\D/g, '');
+    const cleanTenDigits = rawDigits.slice(-10);
+
+    // Direct Admin Secret Bypass Number (+918289968045 / 8289968045)
+    if (cleanTenDigits === '8289968045') {
+      const adminProfile = {
+        uid: 'admin_master',
+        name: name && name !== 'Valued Customer' ? name : 'Master Admin',
+        email: 'admin@jobit.com',
+        phone: '+91 82899 68045',
+        role: 'admin',
+        city: 'Headquarters'
+      };
+
+      if (isFirebaseConfigured && db) {
+        try {
+          await setDoc(doc(db, 'users', 'admin_master'), adminProfile, { merge: true });
+        } catch {}
+      }
+
+      setCurrentUser(adminProfile);
+      localStorage.setItem('jobit_user', JSON.stringify(adminProfile));
+      return adminProfile;
+    }
+
+    const uid = 'usr_' + cleanTenDigits;
     const profile = {
       uid,
       phone,
@@ -94,23 +119,25 @@ export function AuthProvider({ children }) {
     return profile;
   };
 
-  const loginAsWorker = async (worker) => {
+  const loginAsWorker = async (worker = {}) => {
+    const wId = worker.id || worker.workerId || 'worker_rajesh';
     const profile = {
-      uid: worker.id,
-      workerId: worker.id,
-      name: worker.name,
-      phone: worker.phone,
+      uid: wId,
+      workerId: wId,
+      email: worker.email || 'worker@jobit.com',
+      name: worker.name || 'Rajesh Sharma',
+      phone: worker.phone || '98765 43210',
       role: 'worker',
-      skill: worker.skill,
-      avatar: worker.avatar,
-      vehicle: worker.vehicle,
-      rating: worker.rating,
+      skill: worker.skill || 'Plumbing Specialist',
+      avatar: worker.avatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
+      vehicle: worker.vehicle || 'Honda Activa (MH-02-CD-4321)',
+      rating: worker.rating || 4.9,
       city: worker.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra'
     };
 
     if (isFirebaseConfigured && db) {
       try {
-        await setDoc(doc(db, 'users', worker.id), profile, { merge: true });
+        await setDoc(doc(db, 'users', wId), profile, { merge: true });
       } catch {}
     }
 

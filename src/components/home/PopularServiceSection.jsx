@@ -54,22 +54,26 @@ export function PopularServiceSection({
   const popularList = POPULAR_SERVICES_CONFIG.map((cfg) => {
     const existing = (services || []).find(cfg.match);
 
+    const activeImage = existing?.heroImage || existing?.imageUrl || existing?.image || cfg.image;
+    const activePrice = existing?.price !== undefined && existing?.price !== null ? existing.price : cfg.defaultPrice;
+    const activeTitle = existing?.title || cfg.title;
+
     return {
       id: existing?.id || `serv_popular_${cfg.key}`,
-      title: cfg.title,
-      categoryName: cfg.categoryName,
+      title: activeTitle,
+      categoryName: existing?.categoryName || cfg.categoryName,
       categoryId: existing?.categoryId || cfg.categoryId,
-      price: existing?.price || cfg.defaultPrice,
+      price: activePrice,
       rating: existing?.rating || 4.9,
       reviewCount: existing?.reviewCount || 190,
-      heroImage: cfg.image,
-      imageUrl: cfg.image,
-      image: cfg.image,
+      heroImage: activeImage,
+      imageUrl: activeImage,
+      image: activeImage,
       subCategories: existing?.subCategories || [
-        `${cfg.title} Inspection & Diagnostics`,
-        `${cfg.title} Standard Service & Maintenance`
+        `${activeTitle} Inspection & Diagnostics`,
+        `${activeTitle} Standard Service & Maintenance`
       ],
-      about: existing?.about || `Professional, verified ${cfg.title} delivered by certified European technicians in neat blue uniforms with high-precision equipment.`
+      about: existing?.about || `Professional, verified ${activeTitle} delivered by certified European technicians in neat blue uniforms with high-precision equipment.`
     };
   });
 

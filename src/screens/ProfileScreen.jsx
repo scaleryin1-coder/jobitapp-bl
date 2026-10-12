@@ -23,6 +23,7 @@ export function ProfileScreen({
 }) {
   const { currentUser, updateUserProfile, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(() => currentUser?.name || 'Customer');
   const [city, setCity] = useState(() => currentUser?.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra');
   const [becomeWorkerOpen, setBecomeWorkerOpen] = useState(false);
   const [serviceSkill, setServiceSkill] = useState('Plumbing');
@@ -169,29 +170,6 @@ export function ProfileScreen({
             <ChevronRight className="w-4 h-4 text-slate-400" />
           </button>
         )}
-
-        {/* Discreet Partner & Admin Portal Login */}
-        <div className="pt-4 pb-2">
-          <button
-            onClick={onOpenPartnerLogin}
-            className="w-full p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 transition flex items-center justify-between text-left cursor-pointer group"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-slate-800 text-slate-200 flex items-center justify-center">
-                <Lock className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-black text-slate-800 group-hover:text-slate-900">
-                  Staff & Partner Portal
-                </p>
-                <p className="text-[10px] text-slate-400">Worker & Admin Login</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-extrabold text-slate-500 bg-white px-2.5 py-1 rounded-full shadow-xs">
-              Portal 🔒
-            </span>
-          </button>
-        </div>
 
         {/* Customer Logout / Switch Account */}
         <button

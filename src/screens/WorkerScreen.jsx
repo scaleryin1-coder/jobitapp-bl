@@ -32,10 +32,16 @@ import { useAuth } from '../context/AuthContext';
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const { currentUser } = useAuth();
   const [workers, setWorkers] = useState([]);
-  const [selectedWorkerId, setSelectedWorkerId] = useState('worker_rajesh');
+  const [selectedWorkerId, setSelectedWorkerId] = useState(() => currentUser?.workerId || currentUser?.uid || 'worker_rajesh');
   const [bookings, setBookings] = useState([]);
   const [declinedJobIds, setDeclinedJobIds] = useState([]);
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history'
+
+  useEffect(() => {
+    if (currentUser?.workerId || (currentUser?.role === 'worker' && currentUser?.uid)) {
+      setSelectedWorkerId(currentUser.workerId || currentUser.uid);
+    }
+  }, [currentUser]);
 
   // Subscribe to real-time workers
   useEffect(() => {

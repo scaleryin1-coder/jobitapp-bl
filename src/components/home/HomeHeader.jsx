@@ -20,7 +20,9 @@ export function HomeHeader({
       {/* Left: User Avatar & Info */}
       <div className="flex items-center gap-3">
         {/* Profile Avatar */}
-        <div className="relative w-11 h-11 rounded-full ring-2 ring-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden shrink-0 bg-[#E0E7FF] flex items-center justify-center">
+        <div 
+          className="relative w-11 h-11 rounded-full ring-2 ring-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden shrink-0 bg-[#E0E7FF] flex items-center justify-center"
+        >
           {userPhoto ? (
             <img
               src={userPhoto}
@@ -55,17 +57,19 @@ export function HomeHeader({
         </div>
       </div>
 
-      {/* Right: Rounded-Square White Bell Button */}
-      <button
-        onClick={onOpenNotifications}
-        className="w-11 h-11 rounded-2xl bg-white shadow-[0_2px_14px_rgba(0,0,0,0.04)] border border-white hover:shadow-md transition active:scale-95 flex items-center justify-center relative cursor-pointer shrink-0"
-        title="Notifications"
-      >
-        <Bell className="w-5 h-5 text-[#111827] stroke-[2]" />
-        {unreadNotifCount > 0 && (
-          <span className="w-2.5 h-2.5 rounded-full bg-[#4B6EF5] absolute top-2.5 right-2.5 ring-2 ring-white" />
-        )}
-      </button>
+      {/* Right: Notification Bell Button */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onOpenNotifications}
+          className="w-11 h-11 rounded-2xl bg-white shadow-[0_2px_14px_rgba(0,0,0,0.04)] border border-white hover:shadow-md transition active:scale-95 flex items-center justify-center relative cursor-pointer shrink-0"
+          title="Notifications"
+        >
+          <Bell className="w-5 h-5 text-[#111827] stroke-[2]" />
+          {unreadNotifCount > 0 && (
+            <span className="w-2.5 h-2.5 rounded-full bg-[#4B6EF5] absolute top-2.5 right-2.5 ring-2 ring-white" />
+          )}
+        </button>
+      </div>
     </header>
   );
 }

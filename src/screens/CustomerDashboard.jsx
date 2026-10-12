@@ -23,7 +23,8 @@ export function CustomerDashboard({
   currentCity,
   onUpdateCity,
   onOpenSearch,
-  onOpenFilter
+  onOpenFilter,
+  onOpenPartnerLogin
 }) {
   const { currentUser } = useAuth();
 
