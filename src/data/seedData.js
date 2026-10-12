@@ -273,7 +273,7 @@ export const initialServices = [
     id: "serv_painting_1",
     workerId: "worker_rajesh",
     categoryId: "cat_painting",
-    categoryName: "Cleaning",
+    categoryName: "Painting",
     workerName: "Ramesh Pawar",
     title: "Furniture Painting",
     badge: "Precision Wood & Wall Finishing",

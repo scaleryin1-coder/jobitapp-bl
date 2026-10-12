@@ -539,6 +539,18 @@ export function CustomerDashboard({
                   <p className="text-[11px] mt-0.5">Try keywords like Plumbing, AC, Deep Cleaning, or Electrician</p>
                 </div>
               )}
+
+              {/* Quick direct route to full Search Service screen */}
+              <div 
+                onClick={() => {
+                  setIsSearchFocused(false);
+                  onOpenSearch?.();
+                }}
+                className="p-2.5 bg-slate-50 hover:bg-sky-50 text-center text-xs font-black text-[#0EA5E0] cursor-pointer transition flex items-center justify-center gap-1.5 border-t border-slate-100"
+              >
+                <span>View All In Search Service Directory</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
             </div>
           )}
 
@@ -571,12 +583,15 @@ export function CustomerDashboard({
               Swipe ➔
             </span>
           </div>
-          <button 
-            onClick={() => onNavigateTab?.('bookings')}
-            className="text-xs font-bold text-[#0EA5E0] hover:underline transition cursor-pointer"
-          >
-            My Bookings ➔
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => onOpenSearch?.()}
+              className="text-xs font-black text-[#0EA5E0] hover:text-[#0284C7] transition cursor-pointer flex items-center gap-0.5"
+            >
+              <span>See All</span>
+              <span className="text-[10px]">➔</span>
+            </button>
+          </div>
         </div>
 
         {/* Smooth Horizontal Carousel List */}

@@ -130,15 +130,28 @@ export function ServiceListScreen({
     return true;
   });
 
-  // Get nice display tag for category badge (e.g. 'Cleaning', 'Plumber', 'Repairing')
-  const getDisplayCategoryTag = (service) => {
+  // Get nice display tag and background style for category badge (e.g. 'Cleaning', 'Plumber', 'Repairing')
+  const getCategoryBadgeInfo = (service) => {
     const cat = service.categoryName || '';
-    if (cat.toLowerCase().includes('clean')) return 'Cleaning';
-    if (cat.toLowerCase().includes('plumb')) return 'Plumber';
-    if (cat.toLowerCase().includes('ac') || cat.toLowerCase().includes('repair')) return 'Repairing';
-    if (cat.toLowerCase().includes('elect')) return 'Electrician';
-    if (cat.toLowerCase().includes('paint')) return 'Painting';
-    return cat || 'Service';
+    const title = service.title || '';
+    const combined = (cat + ' ' + title).toLowerCase();
+
+    if (combined.includes('clean')) {
+      return { tag: 'Cleaning', className: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50' };
+    }
+    if (combined.includes('plumb')) {
+      return { tag: 'Plumber', className: 'bg-sky-50 text-[#0EA5E0] ring-1 ring-sky-200/50' };
+    }
+    if (combined.includes('repair') || combined.includes('ac')) {
+      return { tag: 'Repairing', className: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/50' };
+    }
+    if (combined.includes('elect')) {
+      return { tag: 'Electrician', className: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/50' };
+    }
+    if (combined.includes('paint')) {
+      return { tag: 'Painting', className: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200/50' };
+    }
+    return { tag: cat || 'Service', className: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200/60' };
   };
 
   return (
@@ -314,7 +327,7 @@ export function ServiceListScreen({
 
         {/* Services List matching reference image right screen */}
         {filteredServices.map((service) => {
-          const categoryTag = getDisplayCategoryTag(service);
+          const badgeInfo = getCategoryBadgeInfo(service);
           
           return (
             <div
@@ -360,8 +373,8 @@ export function ServiceListScreen({
 
                 {/* Top Right Tag: Light background pill tag indicating the category (e.g., 'Cleaning') */}
                 <div className="shrink-0">
-                  <span className="inline-block px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-[11px] font-black tracking-tight">
-                    {categoryTag}
+                  <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black tracking-tight ${badgeInfo.className}`}>
+                    {badgeInfo.tag}
                   </span>
                 </div>
               </div>
