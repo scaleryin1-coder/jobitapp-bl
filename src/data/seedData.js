@@ -1,5 +1,3 @@
-import mehndiArtImg from '../assets/images/mehndi_henna_artist_1791804672044.jpg';
-
 // High-quality imagery matching the reference visual style
 export const initialCategories = [
   {
@@ -602,10 +600,10 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: mehndiArtImg,
+    heroImage: "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80",
     gallery: [
-      mehndiArtImg,
-      "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=500&q=80"
+      "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=500&q=80"
     ],
     details: [
       "Bridal Mehndi full hands & feet",
