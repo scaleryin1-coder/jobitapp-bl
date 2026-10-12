@@ -11,8 +11,7 @@ import {
 } from 'lucide-react';
 import { initialCategories, initialServices } from '../data/seedData';
 import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
-import { db, isFirebaseConfigured } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { subscribeServices } from '../data/bookingService';
 
 export function ServiceListScreen({ 
   onBack, 
@@ -42,21 +41,13 @@ export function ServiceListScreen({
     }
   }, [initialSearch]);
 
-  // Firestore real-time sync for services if configured
+  // Dynamic real-time sync for services across local events & Firestore
   useEffect(() => {
-    if (!isFirebaseConfigured || !db) return;
-    let unsubServices = () => {};
-
-    try {
-      unsubServices = onSnapshot(collection(db, 'services'), (snapshot) => {
-        if (!snapshot.empty) {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setServices(items);
-        }
-      }, () => {});
-    } catch {
-      // quiet fallback
-    }
+    const unsubServices = subscribeServices((items) => {
+      if (items && Array.isArray(items)) {
+        setServices(items);
+      }
+    });
 
     return () => {
       unsubServices();
@@ -192,6 +183,69 @@ export function ServiceListScreen({
     }
     // Default fallback
     return { tag: cat || 'Service', className: 'bg-slate-100 text-slate-700' };
+  };
+
+  // Curated, high-resolution Unsplash stock photos of European technicians in neat blue/navy uniforms
+  const TECHNICIAN_UNIFORM_THUMBNAILS = {
+    plumber: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80', // European plumber in blue uniform with wrench fixing pipes
+    ac: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80', // European HVAC specialist in neat blue uniform servicing AC unit
+    cleaning: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80', // Professional cleaner in crisp navy uniform
+    electrician: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=600&q=80', // Electrician in navy uniform inspecting circuit breaker board
+    painting: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=600&q=80', // Craftsman painter in blue uniform with roller
+    carpenter: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80', // Carpenter in dark blue uniform measuring and assembling woodwork
+    construction: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80', // Construction engineer in navy workwear and hardhat on site
+    welding: 'https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?auto=format&fit=crop&w=600&q=80', // Metal fabricator in blue protective jacket welding
+    aluminium: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80', // Glazing and window technician in blue uniform
+    garden: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=600&q=80', // European gardener in blue work overalls working in outdoor garden space
+    pest: 'https://images.unsplash.com/photo-1628177142898-93e36e4e3a50?auto=format&fit=crop&w=600&q=80', // Pest control technician in blue protective workwear
+    bike: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=600&q=80', // Two-wheeler mechanic in navy uniform
+    car: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80', // Automotive technician in neat navy uniform inspecting car engine
+    driver: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=600&q=80', // Professional chauffeur/driver wearing neat dark blue uniform next to modern car
+    moving: 'https://images.unsplash.com/photo-1600518464441-9154a4dea21b?auto=format&fit=crop&w=600&q=80', // Shifting and logistics team in blue uniform shirts
+    security: 'https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80', // Security automation technician in blue uniform
+    electronics: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80', // Electronics specialist in navy workwear troubleshooting appliance
+    laundry: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=600&q=80', // Laundry professional in neat navy uniform
+    homesupport: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=600&q=80', // Domestic support professional in neat blue uniform
+    watertank: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=600&q=80', // Maintenance technician in navy utility uniform
+    beauty: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=600&q=80', // Professional salon aesthetician
+    mehndi: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=600&q=80' // Traditional henna artist
+  };
+
+  const getTechnicianServiceThumbnail = (service) => {
+    if (!service) return TECHNICIAN_UNIFORM_THUMBNAILS.plumber;
+
+    // Manual direct Image URL explicitly set by Admin takes immediate precedence
+    const manualImage = service.heroImage || service.imageUrl || service.image;
+    if (manualImage && typeof manualImage === 'string' && manualImage.trim() !== '') {
+      return manualImage;
+    }
+    
+    const text = `${service.categoryId || ''} ${service.categoryName || ''} ${service.title || ''}`.toLowerCase();
+    
+    if (text.includes('plumb')) return TECHNICIAN_UNIFORM_THUMBNAILS.plumber;
+    if (text.includes('ac') || text.includes('air') || text.includes('hvac') || text.includes('cool')) return TECHNICIAN_UNIFORM_THUMBNAILS.ac;
+    if (text.includes('clean')) return TECHNICIAN_UNIFORM_THUMBNAILS.cleaning;
+    if (text.includes('elect')) return TECHNICIAN_UNIFORM_THUMBNAILS.electrician;
+    if (text.includes('paint')) return TECHNICIAN_UNIFORM_THUMBNAILS.painting;
+    if (text.includes('carp')) return TECHNICIAN_UNIFORM_THUMBNAILS.carpenter;
+    if (text.includes('construct') || text.includes('mason') || text.includes('civil')) return TECHNICIAN_UNIFORM_THUMBNAILS.construction;
+    if (text.includes('weld')) return TECHNICIAN_UNIFORM_THUMBNAILS.welding;
+    if (text.includes('alumin') || text.includes('glass') || text.includes('window')) return TECHNICIAN_UNIFORM_THUMBNAILS.aluminium;
+    if (text.includes('garden') || text.includes('lawn')) return TECHNICIAN_UNIFORM_THUMBNAILS.garden;
+    if (text.includes('pest') || text.includes('termite')) return TECHNICIAN_UNIFORM_THUMBNAILS.pest;
+    if (text.includes('bike') || text.includes('motor')) return TECHNICIAN_UNIFORM_THUMBNAILS.bike;
+    if (text.includes('driver') || text.includes('chauffeur')) return TECHNICIAN_UNIFORM_THUMBNAILS.driver;
+    if (text.includes('car') || text.includes('auto')) return TECHNICIAN_UNIFORM_THUMBNAILS.car;
+    if (text.includes('mov') || text.includes('shift') || text.includes('lift') || text.includes('labour')) return TECHNICIAN_UNIFORM_THUMBNAILS.moving;
+    if (text.includes('secur') || text.includes('cctv') || text.includes('smart') || text.includes('lock')) return TECHNICIAN_UNIFORM_THUMBNAILS.security;
+    if (text.includes('electron') || text.includes('appliance') || text.includes('tv')) return TECHNICIAN_UNIFORM_THUMBNAILS.electronics;
+    if (text.includes('laund') || text.includes('wash') || text.includes('iron')) return TECHNICIAN_UNIFORM_THUMBNAILS.laundry;
+    if (text.includes('support') || text.includes('elder') || text.includes('help')) return TECHNICIAN_UNIFORM_THUMBNAILS.homesupport;
+    if (text.includes('tank') || text.includes('waste') || text.includes('sump')) return TECHNICIAN_UNIFORM_THUMBNAILS.watertank;
+    if (text.includes('beaut') || text.includes('salon') || text.includes('spa')) return TECHNICIAN_UNIFORM_THUMBNAILS.beauty;
+    if (text.includes('mehndi') || text.includes('henna')) return TECHNICIAN_UNIFORM_THUMBNAILS.mehndi;
+
+    return TECHNICIAN_UNIFORM_THUMBNAILS.plumber;
   };
 
   return (
@@ -385,16 +439,16 @@ export function ServiceListScreen({
               {/* Card Top Row: Left Thumbnail, Middle Content, Top Right Tag */}
               <div className="flex items-start gap-3">
                 
-                {/* Thumbnail image on the left strictly constrained */}
+                {/* Thumbnail image on the left strictly constrained with proper object-fit: cover and border-radius */}
                 <div 
                   className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-200/60 shadow-2xs relative"
-                  style={{ width: '4.75rem', height: '4.75rem', minWidth: '4.75rem', minHeight: '4.75rem' }}
+                  style={{ width: '4.75rem', height: '4.75rem', minWidth: '4.75rem', minHeight: '4.75rem', borderRadius: '1rem' }}
                 >
                   <img
-                    src={service.heroImage || "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80"}
+                    src={getTechnicianServiceThumbnail(service)}
                     alt={service.title}
-                    className="w-full h-full object-cover block"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    className="w-full h-full object-cover block rounded-2xl"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '1rem' }}
                     loading="lazy"
                   />
                 </div>

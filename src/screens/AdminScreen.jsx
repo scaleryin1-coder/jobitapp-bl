@@ -7,77 +7,135 @@ import {
   Check, 
   Image as ImageIcon, 
   Tag, 
-  ShieldCheck,
+  ShieldCheck, 
   CheckCircle2, 
-  X,
-  Users,
-  Briefcase,
-  Clock,
-  MapPin,
-  Phone,
-  AlertCircle,
-  Power,
-  ChevronRight,
-  Filter,
-  LogOut
+  X, 
+  Users, 
+  Briefcase, 
+  Clock, 
+  MapPin, 
+  Phone, 
+  AlertCircle, 
+  Power, 
+  ChevronRight, 
+  Filter, 
+  LogOut,
+  Search,
+  Sparkles,
+  Layers,
+  Star,
+  ExternalLink
 } from 'lucide-react';
 import { 
   subscribeBookings, 
   subscribeWorkers, 
+  subscribeServices,
+  subscribeCategories,
   adminAssignJob, 
   updateBookingStatus, 
-  toggleWorkerDuty 
+  toggleWorkerDuty,
+  adminAddService,
+  adminUpdateService,
+  adminDeleteService,
+  adminAddCategory,
+  adminUpdateCategory,
+  adminDeleteCategory
 } from '../data/bookingService';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { initialCategories, initialBanners } from '../data/seedData';
+import { initialCategories, initialBanners, initialServices } from '../data/seedData';
+
+// Verified, high-resolution Unsplash technician photos for 1-click quick helper
+const TECHNICIAN_PRESETS = [
+  { label: 'Plumber in Blue', url: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80' },
+  { label: 'AC / HVAC Tech', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Electrician Pro', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Clean Home Pro', url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Woodwork Carpenter', url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Wall Painter', url: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Car Mechanic', url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Electronics Tech', url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80' }
+];
 
 export function AdminScreen({ onBack, onLogout }) {
-  const [tab, setTab] = useState('dispatch'); // 'dispatch' | 'workers' | 'categories' | 'banners'
+  const [tab, setTab] = useState('services'); // 'dispatch' | 'services' | 'categories' | 'workers' | 'banners'
   const [bookings, setBookings] = useState([]);
   const [workers, setWorkers] = useState([]);
-  const [categories, setCategories] = useState(initialCategories);
-  const [banners, setBanners] = useState(initialBanners);
+  const [services, setServices] = useState(initialServices || []);
+  const [categories, setCategories] = useState(initialCategories || []);
+  const [banners, setBanners] = useState(initialBanners || []);
 
   // Dispatch Filter
   const [dispatchFilter, setDispatchFilter] = useState('all'); // 'all' | 'pending' | 'ongoing' | 'completed'
 
-  // Modal for assigning / reassigning worker
+  // Services Filter & Search
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All');
+
+  // Modals for Worker Assignment
   const [assignModalBooking, setAssignModalBooking] = useState(null);
 
-  // Forms for Categories & Banners
+  // Modals for Services Management
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+
+  // Add Service Form
+  const [serviceForm, setServiceForm] = useState({
+    title: '',
+    categoryName: 'Electrician',
+    subCategory: '',
+    price: '300',
+    description: '',
+    imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80'
+  });
+
+  // Edit Service Form
+  const [editForm, setEditForm] = useState({
+    title: '',
+    categoryName: '',
+    subCategory: '',
+    price: '',
+    description: '',
+    imageUrl: ''
+  });
+
+  // Category Management Form State
   const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('⚡');
+  const [newCatBasePrice, setNewCatBasePrice] = useState('300');
+  const [newCatSubText, setNewCatSubText] = useState('');
   const [newCatImg, setNewCatImg] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editCatPrice, setEditCatPrice] = useState('');
+
+  // Banners Form State
   const [newBannerTitle, setNewBannerTitle] = useState('');
   const [newBannerSub, setNewBannerSub] = useState('');
   const [newBannerPrice, setNewBannerPrice] = useState('300');
   const [newBannerService, setNewBannerService] = useState('Home Repair');
   const [newBannerImg, setNewBannerImg] = useState('');
 
-  // Subscribe to real-time bookings & workers
+  // Real-time reactive subscriptions
   useEffect(() => {
-    const unsubB = subscribeBookings((list) => setBookings(list));
-    const unsubW = subscribeWorkers((list) => setWorkers(list));
+    const unsubB = subscribeBookings((list) => setBookings(list || []));
+    const unsubW = subscribeWorkers((list) => setWorkers(list || []));
+    const unsubS = subscribeServices((list) => setServices(list || []));
+    const unsubC = subscribeCategories((list) => setCategories(list || []));
+
     return () => {
       unsubB();
       unsubW();
+      unsubS();
+      unsubC();
     };
   }, []);
 
-  // Firestore sync for Categories & Banners
+  // Firestore sync for Banners
   useEffect(() => {
     if (!isFirebaseConfigured || !db) return;
-
-    let unsubCat = () => {};
     let unsubBan = () => {};
 
     try {
-      unsubCat = onSnapshot(collection(db, 'categories'), (snap) => {
-        if (!snap.empty) {
-          setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }
-      });
-
       unsubBan = onSnapshot(collection(db, 'banners'), (snap) => {
         if (!snap.empty) {
           setBanners(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -85,10 +143,7 @@ export function AdminScreen({ onBack, onLogout }) {
       });
     } catch {}
 
-    return () => {
-      unsubCat();
-      unsubBan();
-    };
+    return () => unsubBan();
   }, []);
 
   // Metrics
@@ -98,32 +153,117 @@ export function AdminScreen({ onBack, onLogout }) {
   const completedJobs = bookings.filter(b => b.status === 'completed');
   const onlineWorkers = workers.filter(w => w.isOnline);
 
+  // ==========================================
+  // DISPATCH OPERATIONS
+  // ==========================================
   const handleAssignWorker = async (worker) => {
     if (!assignModalBooking) return;
     await adminAssignJob(assignModalBooking.id, worker);
     setAssignModalBooking(null);
   };
 
+  // ==========================================
+  // SERVICE MANAGEMENT OPERATIONS
+  // ==========================================
+  const handleCreateService = async (e) => {
+    e.preventDefault();
+    if (!serviceForm.title.trim()) return;
+
+    await adminAddService({
+      title: serviceForm.title.trim(),
+      categoryName: serviceForm.categoryName.trim(),
+      subCategory: serviceForm.subCategory.trim(),
+      price: Number(serviceForm.price) || 300,
+      description: serviceForm.description.trim(),
+      heroImage: serviceForm.imageUrl.trim() || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80',
+      imageUrl: serviceForm.imageUrl.trim()
+    });
+
+    // Reset and close
+    setServiceForm({
+      title: '',
+      categoryName: categories[0]?.name || 'Electrician',
+      subCategory: '',
+      price: '300',
+      description: '',
+      imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80'
+    });
+    setIsAddServiceOpen(false);
+  };
+
+  const handleOpenEditService = (service) => {
+    setEditingService(service);
+    setEditForm({
+      title: service.title || '',
+      categoryName: service.categoryName || '',
+      subCategory: service.subCategory || service.subCategories?.[0] || '',
+      price: String(service.price || 300),
+      description: service.about || service.description || '',
+      imageUrl: service.heroImage || service.imageUrl || service.image || ''
+    });
+  };
+
+  const handleSaveEditService = async (e) => {
+    e.preventDefault();
+    if (!editingService) return;
+
+    await adminUpdateService(editingService.id, {
+      title: editForm.title.trim(),
+      categoryName: editForm.categoryName.trim(),
+      subCategory: editForm.subCategory.trim(),
+      price: Number(editForm.price) || 300,
+      about: editForm.description.trim(),
+      heroImage: editForm.imageUrl.trim(),
+      imageUrl: editForm.imageUrl.trim()
+    });
+
+    setEditingService(null);
+  };
+
+  const handleDeleteService = async (serviceId, serviceTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${serviceTitle}"? This will immediately remove it from user search and listings.`)) {
+      await adminDeleteService(serviceId);
+    }
+  };
+
+  // ==========================================
+  // CATEGORY OPERATIONS
+  // ==========================================
   const handleAddCategory = async (e) => {
     e.preventDefault();
-    if (!newCatName) return;
+    if (!newCatName.trim()) return;
 
-    const catObj = {
+    await adminAddCategory({
       name: newCatName.trim(),
-      image: newCatImg.trim() || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
-      order: categories.length + 1
-    };
+      icon: newCatIcon.trim() || '🛠️',
+      basePrice: Number(newCatBasePrice) || 300,
+      subCategoryText: newCatSubText.trim(),
+      image: newCatImg.trim()
+    });
 
-    if (isFirebaseConfigured && db) {
-      try {
-        await addDoc(collection(db, 'categories'), catObj);
-      } catch {}
-    }
-    setCategories(prev => [...prev, { id: 'cat_' + Date.now(), ...catObj }]);
     setNewCatName('');
+    setNewCatIcon('⚡');
+    setNewCatBasePrice('300');
+    setNewCatSubText('');
     setNewCatImg('');
   };
 
+  const handleUpdateCategoryPrice = async (catId) => {
+    if (!editCatPrice) return;
+    await adminUpdateCategory(catId, { basePrice: Number(editCatPrice) });
+    setEditingCategory(null);
+    setEditCatPrice('');
+  };
+
+  const handleDeleteCategory = async (id, name) => {
+    if (window.confirm(`Delete category "${name}"?`)) {
+      await adminDeleteCategory(id);
+    }
+  };
+
+  // ==========================================
+  // BANNER OPERATIONS
+  // ==========================================
   const handleAddBanner = async (e) => {
     e.preventDefault();
     if (!newBannerTitle) return;
@@ -149,15 +289,6 @@ export function AdminScreen({ onBack, onLogout }) {
     setNewBannerImg('');
   };
 
-  const handleDeleteCategory = async (id) => {
-    if (isFirebaseConfigured && db) {
-      try {
-        await deleteDoc(doc(db, 'categories', id));
-      } catch {}
-    }
-    setCategories(prev => prev.filter(c => c.id !== id));
-  };
-
   const handleDeleteBanner = async (id) => {
     if (isFirebaseConfigured && db) {
       try {
@@ -167,7 +298,16 @@ export function AdminScreen({ onBack, onLogout }) {
     setBanners(prev => prev.filter(b => b.id !== id));
   };
 
-  // Filtered dispatch list
+  // Filtered Services in Admin
+  const filteredServices = services.filter((s) => {
+    if (!s) return false;
+    const q = serviceSearch.toLowerCase().trim();
+    const matchSearch = !q || (s.title || '').toLowerCase().includes(q) || (s.categoryName || '').toLowerCase().includes(q) || (s.subCategory || '').toLowerCase().includes(q);
+    const matchCat = serviceCategoryFilter === 'All' || (s.categoryName || '').toLowerCase().includes(serviceCategoryFilter.toLowerCase());
+    return matchSearch && matchCat;
+  });
+
+  // Filtered Bookings in Dispatch
   const filteredBookings = bookings.filter(b => {
     if (dispatchFilter === 'pending') return b.status === 'pending';
     if (dispatchFilter === 'ongoing') return ['accepted', 'on_the_way', 'in_progress'].includes(b.status);
@@ -178,19 +318,20 @@ export function AdminScreen({ onBack, onLogout }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
-      {/* 1. Header */}
+      {/* 1. Master Header */}
       <header className="px-5 py-3 border-b border-slate-200/80 flex items-center justify-between sticky top-0 bg-white z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
             className="w-9 h-9 rounded-full bg-[#F1F3F5] text-slate-800 flex items-center justify-center hover:bg-slate-200 transition cursor-pointer"
+            title="Back to Customer App"
           >
             <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
           </button>
           <div>
             <h2 className="text-base font-extrabold text-slate-900">Admin Control Center</h2>
             <p className="text-[10px] text-purple-600 font-extrabold uppercase tracking-wider">
-              Hyperlocal Dispatch & Operations
+              Services, Pricing & Dispatch
             </p>
           </div>
         </div>
@@ -210,15 +351,15 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
       </header>
 
-      {/* 2. Master Operational Metrics Bar */}
+      {/* 2. Operational Metrics Bar */}
       <div className="px-5 py-3">
         <div className="grid grid-cols-4 gap-2">
           <div className="bg-white p-2.5 rounded-2xl border border-slate-200/70 shadow-xs text-center">
-            <p className="text-[9px] text-slate-400 font-bold uppercase">Total</p>
-            <p className="text-base font-black text-slate-900 mt-0.5">{totalBookingsCount}</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase">Services</p>
+            <p className="text-base font-black text-slate-900 mt-0.5">{services.length}</p>
           </div>
           <div className="bg-white p-2.5 rounded-2xl border border-amber-200 shadow-xs text-center bg-amber-50/30">
-            <p className="text-[9px] text-amber-600 font-bold uppercase">Unallocated</p>
+            <p className="text-[9px] text-amber-600 font-bold uppercase">Pending</p>
             <p className="text-base font-black text-amber-600 mt-0.5">{pendingJobs.length}</p>
           </div>
           <div className="bg-white p-2.5 rounded-2xl border border-sky-200 shadow-xs text-center bg-sky-50/30">
@@ -226,7 +367,7 @@ export function AdminScreen({ onBack, onLogout }) {
             <p className="text-base font-black text-[#0EA5E0] mt-0.5">{ongoingJobs.length}</p>
           </div>
           <div className="bg-white p-2.5 rounded-2xl border border-emerald-200 shadow-xs text-center bg-emerald-50/30">
-            <p className="text-[9px] text-emerald-600 font-bold uppercase">Pros Online</p>
+            <p className="text-[9px] text-emerald-600 font-bold uppercase">Pros Active</p>
             <p className="text-base font-black text-emerald-600 mt-0.5">
               {onlineWorkers.length}/{workers.length}
             </p>
@@ -236,45 +377,369 @@ export function AdminScreen({ onBack, onLogout }) {
 
       {/* 3. Navigation Tabs */}
       <div className="px-5 mb-3">
-        <div className="flex bg-[#E9ECEF] rounded-full p-1 text-xs font-bold overflow-x-auto no-scrollbar">
+        <div className="flex bg-[#E9ECEF] rounded-full p-1 text-xs font-bold overflow-x-auto no-scrollbar gap-1">
           <button
-            onClick={() => setTab('dispatch')}
-            className={`flex-1 py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer ${
-              tab === 'dispatch' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+            onClick={() => setTab('services')}
+            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'services' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Live Dispatch ({pendingJobs.length + ongoingJobs.length})
+            Services ({services.length})
+          </button>
+          <button
+            onClick={() => setTab('categories')}
+            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'categories' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Categories ({categories.length})
+          </button>
+          <button
+            onClick={() => setTab('dispatch')}
+            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'dispatch' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Dispatch ({pendingJobs.length + ongoingJobs.length})
           </button>
           <button
             onClick={() => setTab('workers')}
-            className={`flex-1 py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer ${
-              tab === 'workers' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'workers' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Pros ({workers.length})
           </button>
           <button
-            onClick={() => setTab('categories')}
-            className={`flex-1 py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer ${
-              tab === 'categories' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            Categories
-          </button>
-          <button
             onClick={() => setTab('banners')}
-            className={`flex-1 py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer ${
-              tab === 'banners' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'banners' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Banners
+            Banners ({banners.length})
           </button>
         </div>
       </div>
 
-      {/* 4. TAB: Live Dispatch & Bookings */}
+      {/* ========================================================= */}
+      {/* 4. TAB: SERVICES MANAGEMENT (Comprehensive CRUD & Prices) */}
+      {/* ========================================================= */}
+      {tab === 'services' && (
+        <div className="px-5 space-y-3.5 animate-fade-in">
+          
+          {/* Top Action Row: Search + "+ Add New Service" Button */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                placeholder="Search services or categories..."
+                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0] shadow-2xs"
+              />
+              {serviceSearch && (
+                <button
+                  onClick={() => setServiceSearch('')}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsAddServiceOpen(true)}
+              className="py-2 px-3.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm shadow-sky-400/20 active:scale-95 transition cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Add Service</span>
+            </button>
+          </div>
+
+          {/* Quick Category Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+            <button
+              onClick={() => setServiceCategoryFilter('All')}
+              className={`px-3 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                serviceCategoryFilter === 'All'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              All ({services.length})
+            </button>
+            {categories.slice(0, 10).map((cat) => (
+              <button
+                key={cat.id || cat.name}
+                onClick={() => setServiceCategoryFilter(cat.name)}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                  serviceCategoryFilter === cat.name
+                    ? 'bg-[#0EA5E0] text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Services List Counter */}
+          <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-0.5">
+            <span>Showing <strong className="text-slate-900 font-black">{filteredServices.length}</strong> active service cards</span>
+            {serviceCategoryFilter !== 'All' && (
+              <button
+                onClick={() => setServiceCategoryFilter('All')}
+                className="text-[#0EA5E0] font-bold hover:underline"
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+
+          {/* Service Cards List */}
+          <div className="space-y-3">
+            {filteredServices.map((service) => {
+              const currentImg = service.heroImage || service.imageUrl || service.image || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=300&q=80';
+
+              return (
+                <div
+                  key={service.id}
+                  className="p-3.5 sm:p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md transition-all space-y-2.5"
+                >
+                  {/* Card Header: Left Image Thumbnail, Middle Metadata, Right Action Buttons */}
+                  <div className="flex items-start gap-3">
+                    
+                    {/* Thumbnail Image Container (Proper object-fit: cover and rounded corners) */}
+                    <div 
+                      className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-200/70 shadow-2xs relative"
+                      style={{ width: '4.25rem', height: '4.25rem', minWidth: '4.25rem', minHeight: '4.25rem', borderRadius: '1rem' }}
+                    >
+                      <img
+                        src={currentImg}
+                        alt={service.title}
+                        className="w-full h-full object-cover block rounded-2xl"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '1rem' }}
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=300&q=80';
+                        }}
+                      />
+                    </div>
+
+                    {/* Middle Info */}
+                    <div className="flex-1 min-w-0 pr-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-extrabold text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full">
+                          {service.categoryName || 'Service'}
+                        </span>
+                        {service.subCategory && (
+                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full truncate max-w-[120px]">
+                            {service.subCategory}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="text-sm font-extrabold text-[#111827] mt-1 leading-snug truncate">
+                        {service.title}
+                      </h4>
+
+                      {/* Pricing Tag: Hourly rate badge */}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                          ₹{service.price}/hour
+                        </span>
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500 font-semibold">
+                          <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                          <span>{service.rating || 4.9}</span>
+                          <span className="text-slate-400">({service.reviewCount || 100})</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Edit & Delete Quick Buttons */}
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleOpenEditService(service)}
+                        className="py-1.5 px-3 rounded-xl bg-sky-50 hover:bg-[#0EA5E0] text-[#0EA5E0] hover:text-white text-xs font-bold flex items-center gap-1 transition cursor-pointer border border-sky-100"
+                        title="Edit service details & pricing"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteService(service.id, service.title)}
+                        className="p-1.5 rounded-xl bg-red-50 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition cursor-pointer self-end"
+                        title="Delete service"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Description snippet */}
+                  {(service.about || service.description) && (
+                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed bg-slate-50/70 p-2 rounded-xl border border-slate-100">
+                      {service.about || service.description}
+                    </p>
+                  )}
+
+                  {/* Image URL preview strip */}
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100/80">
+                    <div className="flex items-center gap-1 truncate max-w-[280px]">
+                      <ImageIcon className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span className="truncate">{currentImg}</span>
+                    </div>
+                    <span className="text-slate-400 shrink-0">ID: {service.id?.slice(-6)}</span>
+                  </div>
+
+                </div>
+              );
+            })}
+
+            {filteredServices.length === 0 && (
+              <div className="p-8 text-center bg-white rounded-3xl border border-slate-200/80 space-y-3">
+                <p className="text-sm font-bold text-slate-700">No services match your search</p>
+                <button
+                  onClick={() => {
+                    setServiceSearch('');
+                    setServiceCategoryFilter('All');
+                  }}
+                  className="text-xs font-bold text-[#0EA5E0] hover:underline"
+                >
+                  Reset filters
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 5. TAB: CATEGORIES MANAGEMENT */}
+      {/* ========================================================= */}
+      {tab === 'categories' && (
+        <div className="px-5 space-y-4 animate-fade-in">
+          
+          {/* Add Category Form */}
+          <form onSubmit={handleAddCategory} className="p-4 rounded-3xl bg-white border border-slate-200/80 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-extrabold text-slate-800">Add New Category</h4>
+              <span className="text-[10px] font-bold text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full">
+                Applies dynamically
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              <div className="col-span-3">
+                <input
+                  type="text"
+                  required
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Category Name (e.g. Solar Panel Care)"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={newCatIcon}
+                  onChange={(e) => setNewCatIcon(e.target.value)}
+                  placeholder="Icon ⚡"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-center focus:outline-none focus:border-[#0EA5E0]"
+                  title="Emoji icon for category badge"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">Base Price (₹)</label>
+                <input
+                  type="number"
+                  value={newCatBasePrice}
+                  onChange={(e) => setNewCatBasePrice(e.target.value)}
+                  placeholder="Base Price (₹)"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">Sub-Categories / Issues</label>
+                <input
+                  type="text"
+                  value={newCatSubText}
+                  onChange={(e) => setNewCatSubText(e.target.value)}
+                  placeholder="Issue 1, Issue 2, Issue 3"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
+            >
+              + Create Category
+            </button>
+          </form>
+
+          {/* Categories List */}
+          <div className="space-y-2.5">
+            {categories.map((c) => (
+              <div 
+                key={c.id || c.name} 
+                className="p-3.5 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-between shadow-xs hover:shadow-sm transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div 
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 border border-slate-100"
+                    style={{ backgroundColor: c.color || '#F1F5F9' }}
+                  >
+                    {c.icon || '🛠️'}
+                  </div>
+                  <div className="min-w-0">
+                    <h5 className="text-xs font-extrabold text-slate-900 truncate">{c.name}</h5>
+                    <p className="text-[11px] font-bold text-emerald-700">
+                      Base Rate: ₹{c.basePrice || 300}
+                    </p>
+                    {c.subCategories && (
+                      <p className="text-[10px] text-slate-400 truncate max-w-[200px]">
+                        {Array.isArray(c.subCategories) ? c.subCategories.slice(0, 3).join(', ') : ''}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => {
+                      setEditingCategory(c);
+                      setEditCatPrice(String(c.basePrice || 300));
+                    }}
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-[#0EA5E0] transition cursor-pointer"
+                    title="Edit base price"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(c.id, c.name)}
+                    className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition cursor-pointer"
+                    title="Delete category"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 6. TAB: LIVE DISPATCH */}
+      {/* ========================================================= */}
       {tab === 'dispatch' && (
-        <div className="px-5 space-y-3">
+        <div className="px-5 space-y-3 animate-fade-in">
           
           {/* Sub-filter pills */}
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
@@ -318,196 +783,126 @@ export function AdminScreen({ onBack, onLogout }) {
                         <span className="text-[10px] font-extrabold text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full">
                           {b.categoryName || 'Service'}
                         </span>
-                        {isPending && (
-                          <span className="text-[10px] font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full animate-pulse">
-                            UNALLOCATED
-                          </span>
-                        )}
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          ID: {b.id.slice(-6)}
+                        </span>
                       </div>
-                      <h4 className="text-sm font-extrabold text-slate-900 mt-1 leading-tight">
-                        {b.serviceTitle}
-                      </h4>
+                      <h4 className="text-sm font-extrabold text-slate-900 mt-1">{b.serviceTitle}</h4>
+                      <p className="text-xs font-bold text-slate-700">₹{b.price}</p>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-sm font-black text-slate-900">₹{b.price}</span>
-                      <p className={`text-[10px] font-bold mt-0.5 ${
-                        isPending ? 'text-amber-600' : isOngoing ? 'text-sky-600' : isCompleted ? 'text-emerald-600' : 'text-slate-400'
-                      }`}>
-                        {b.status.toUpperCase()}
-                      </p>
-                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
+                      isPending ? 'bg-amber-100 text-amber-800' :
+                      isOngoing ? 'bg-sky-100 text-[#0EA5E0]' :
+                      isCompleted ? 'bg-emerald-100 text-emerald-800' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {b.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
 
-                  {/* Customer & Location */}
-                  <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 space-y-1">
-                    <p className="font-bold text-slate-800">
-                      Customer: {b.customerName || 'Customer'} • <span className="font-normal text-slate-500">{b.customerPhone || '98765 00001'}</span>
-                    </p>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                  <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50 p-2.5 rounded-2xl">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{b.dateTime || 'Immediate Dispatch'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="truncate">{b.address}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <Clock className="w-3 h-3 shrink-0" />
-                      <span>{b.dateTime}</span>
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Customer: {b.customerName} ({b.customerPhone})</span>
                     </div>
                   </div>
 
-                  {/* Technician Allocation & Master Actions */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Technician</p>
-                      <p className="text-xs font-black text-slate-800">
-                        {b.workerName ? `${b.workerName}` : '⚠️ Not Assigned Yet'}
-                      </p>
-                    </div>
-
+                  {/* Assigned Worker / Action */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                     <div className="flex items-center gap-2">
-                      {isPending ? (
-                        <button
-                          onClick={() => setAssignModalBooking(b)}
-                          className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-black shadow-xs hover:opacity-95 active:scale-95 transition cursor-pointer"
-                        >
-                          + Assign Pro
-                        </button>
+                      {b.workerName ? (
+                        <>
+                          <img 
+                            src={b.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                            alt={b.workerName}
+                            className="w-6 h-6 rounded-full object-cover"
+                          />
+                          <span className="text-xs font-bold text-slate-800">
+                            Pro: {b.workerName}
+                          </span>
+                        </>
                       ) : (
-                        <button
-                          onClick={() => setAssignModalBooking(b)}
-                          className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition cursor-pointer"
-                        >
-                          Reassign
-                        </button>
-                      )}
-
-                      {isOngoing && (
-                        <button
-                          onClick={() => updateBookingStatus(b.id, 'completed', { completedByAdmin: true })}
-                          className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[11px] font-bold"
-                          title="Force Complete"
-                        >
-                          Force Done
-                        </button>
+                        <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          Unallocated (Needs Dispatch)
+                        </span>
                       )}
                     </div>
+
+                    <button
+                      onClick={() => setAssignModalBooking(b)}
+                      className="px-3 py-1.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-full text-xs font-bold shadow-xs transition cursor-pointer"
+                    >
+                      {b.workerName ? 'Reassign' : 'Dispatch Pro'}
+                    </button>
                   </div>
                 </div>
               );
             })}
-
-            {filteredBookings.length === 0 && (
-              <div className="py-12 text-center bg-white rounded-3xl border border-slate-100 p-6">
-                <CheckCircle2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-slate-700">No jobs in this filter</h4>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* 5. TAB: Registered Workers Directory */}
+      {/* ========================================================= */}
+      {/* 7. TAB: WORKERS MANAGEMENT */}
+      {/* ========================================================= */}
       {tab === 'workers' && (
-        <div className="px-5 space-y-3">
-          <div className="flex items-center justify-between pb-1">
-            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
-              Technician Fleet ({workers.length})
-            </h3>
-            <span className="text-xs font-extrabold text-emerald-600">
-              {onlineWorkers.length} Active On-Duty
+        <div className="px-5 space-y-3 animate-fade-in">
+          <div className="flex items-center justify-between mb-1">
+            <h4 className="text-xs font-extrabold text-slate-700">Verified Technicians Roster</h4>
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+              {onlineWorkers.length} Active Now
             </span>
           </div>
 
-          {workers.map((w) => {
-            const workerActiveJobs = bookings.filter(b => b.workerId === w.id && ['accepted', 'on_the_way', 'in_progress'].includes(b.status));
-
-            return (
+          <div className="space-y-2.5">
+            {workers.map((w) => (
               <div 
                 key={w.id} 
-                className="p-4 rounded-3xl bg-white border border-slate-200/70 shadow-xs flex items-center justify-between"
+                className="p-3.5 rounded-3xl bg-white border border-slate-200/70 shadow-xs flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <img 
-                      src={w.avatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"} 
+                    <img
+                      src={w.avatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
                       alt={w.name}
-                      className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100"
+                      className="w-11 h-11 rounded-2xl object-cover"
                     />
-                    <span className={`w-3 h-3 rounded-full absolute -top-1 -right-1 ring-2 ring-white ${w.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    <span 
+                      className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                        w.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                      }`}
+                    />
                   </div>
-
                   <div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="text-xs font-extrabold text-slate-900">{w.name}</h4>
-                      <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
-                        {w.skill}
-                      </span>
+                    <h5 className="text-xs font-extrabold text-slate-900">{w.name}</h5>
+                    <p className="text-[11px] font-semibold text-slate-400">{w.skill} • {w.phone}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
+                      <span>★ {w.rating || '4.9'}</span>
+                      <span>• {w.completedJobs || 120} jobs</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      +91 {w.phone} • ★ {w.rating || 4.9} ({w.jobsCompleted || 0} jobs)
-                    </p>
-                    <p className="text-[10px] text-sky-600 font-extrabold mt-0.5">
-                      {workerActiveJobs.length > 0 ? `In Task (${workerActiveJobs.length} active)` : 'Available for Dispatches'}
-                    </p>
                   </div>
                 </div>
 
                 <button
                   onClick={() => toggleWorkerDuty(w.id, !w.isOnline)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-black transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                     w.isOnline 
-                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' 
+                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  <Power className="w-3 h-3" />
+                  <Power className="w-3.5 h-3.5" />
                   <span>{w.isOnline ? 'Online' : 'Offline'}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 6. TAB: Categories (Kept intact) */}
-      {tab === 'categories' && (
-        <div className="px-5 space-y-4">
-          <form onSubmit={handleAddCategory} className="p-4 rounded-3xl bg-white border border-slate-200/80 space-y-3 shadow-xs">
-            <h4 className="text-xs font-bold text-slate-800">Add New Category</h4>
-            <input
-              type="text"
-              required
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              placeholder="Category Name (e.g. Gardening, Appliance)"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
-            />
-            <input
-              type="url"
-              value={newCatImg}
-              onChange={(e) => setNewCatImg(e.target.value)}
-              placeholder="Thumbnail Image URL (optional)"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
-            />
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-bold shadow-sm"
-            >
-              + Create Category
-            </button>
-          </form>
-
-          <div className="space-y-2">
-            {categories.map((c) => (
-              <div key={c.id} className="p-3 rounded-2xl bg-white border border-slate-100 flex items-center justify-between shadow-xs">
-                <div className="flex items-center gap-3">
-                  <img src={c.image} alt={c.name} className="w-10 h-10 rounded-xl object-cover" />
-                  <span className="text-xs font-bold text-slate-800">{c.name}</span>
-                </div>
-                <button
-                  onClick={() => handleDeleteCategory(c.id)}
-                  className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
@@ -515,11 +910,13 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
       )}
 
-      {/* 7. TAB: Carousel Banners (Kept intact) */}
+      {/* ========================================================= */}
+      {/* 8. TAB: CAROUSEL BANNERS */}
+      {/* ========================================================= */}
       {tab === 'banners' && (
-        <div className="px-5 space-y-4">
+        <div className="px-5 space-y-4 animate-fade-in">
           <form onSubmit={handleAddBanner} className="p-4 rounded-3xl bg-white border border-slate-200/80 space-y-3 shadow-xs">
-            <h4 className="text-xs font-bold text-slate-800">Add Carousel Banner</h4>
+            <h4 className="text-xs font-extrabold text-slate-800">Add Carousel Banner</h4>
             <input
               type="text"
               required
@@ -560,7 +957,7 @@ export function AdminScreen({ onBack, onLogout }) {
             />
             <button
               type="submit"
-              className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-bold shadow-sm"
+              className="w-full py-2.5 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
             >
               + Add Promotion Banner
             </button>
@@ -568,14 +965,14 @@ export function AdminScreen({ onBack, onLogout }) {
 
           <div className="space-y-2">
             {banners.map((b) => (
-              <div key={b.id} className="p-3 rounded-2xl bg-white border border-slate-100 flex items-center justify-between shadow-xs">
+              <div key={b.id} className="p-3.5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between shadow-xs">
                 <div>
-                  <h5 className="text-xs font-bold text-slate-800">{b.title}</h5>
+                  <h5 className="text-xs font-extrabold text-slate-800">{b.title}</h5>
                   <p className="text-[11px] text-slate-400">{b.serviceName} • ₹{b.price}/hr</p>
                 </div>
                 <button
                   onClick={() => handleDeleteBanner(b.id)}
-                  className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100"
+                  className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -585,7 +982,423 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
       )}
 
-      {/* 8. Modal to Manually Assign/Reassign Technician */}
+      {/* ========================================================= */}
+      {/* 9. MODAL: ADD NEW SERVICE */}
+      {/* ========================================================= */}
+      {isAddServiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h4 className="text-sm font-extrabold text-slate-900">Add New Service</h4>
+                <p className="text-[11px] text-slate-400">Instantly publishes to Search, Home & Booking pages</p>
+              </div>
+              <button 
+                onClick={() => setIsAddServiceOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateService} className="mt-4 space-y-3.5">
+              
+              {/* Service Name */}
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                  Service Name / Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={serviceForm.title}
+                  onChange={(e) => setServiceForm({ ...serviceForm, title: e.target.value })}
+                  placeholder="e.g. Copper Pipe & Water Filter Installation"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Category & Sub-Category */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                    Main Category *
+                  </label>
+                  <select
+                    value={serviceForm.categoryName}
+                    onChange={(e) => setServiceForm({ ...serviceForm, categoryName: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                    Sub-Category / Issue
+                  </label>
+                  <input
+                    type="text"
+                    value={serviceForm.subCategory}
+                    onChange={(e) => setServiceForm({ ...serviceForm, subCategory: e.target.value })}
+                    placeholder="e.g. Pipe Leakage Fix"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Hourly Price */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-extrabold text-slate-700">
+                    Hourly Price (₹) *
+                  </label>
+                  <span className="text-[10px] text-emerald-600 font-bold">
+                    Renders as ₹{serviceForm.price || 300}/hour
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-extrabold text-slate-400">₹</span>
+                  <input
+                    type="number"
+                    min="50"
+                    step="10"
+                    required
+                    value={serviceForm.price}
+                    onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                    placeholder="300"
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Manual Image URL Management */}
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                  Image URL (Direct link or Unsplash photo) *
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={serviceForm.imageUrl}
+                  onChange={(e) => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
+                  placeholder="https://images.unsplash.com/photo-..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                />
+
+                {/* Live Image Preview */}
+                <div className="mt-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                  <div 
+                    className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-200 border border-slate-300 relative shadow-2xs"
+                    style={{ width: '3.5rem', height: '3.5rem' }}
+                  >
+                    <img
+                      src={serviceForm.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80'}
+                      alt="Preview"
+                      className="w-full h-full object-cover block"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80';
+                      }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-slate-700">Live Thumbnail Preview</p>
+                    <p className="text-[10px] text-slate-400">Card thumbnail with object-fit: cover</p>
+                  </div>
+                </div>
+
+                {/* Quick Presets for European Technicians in Blue Uniforms */}
+                <div className="mt-2">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-1">
+                    Quick Presets (European Techs in Blue):
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {TECHNICIAN_PRESETS.slice(0, 4).map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setServiceForm({ ...serviceForm, imageUrl: p.url })}
+                        className="px-2 py-0.5 rounded-lg bg-sky-50 text-[#0EA5E0] hover:bg-[#0EA5E0] hover:text-white text-[10px] font-bold border border-sky-100 transition cursor-pointer"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description / About */}
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                  Description / About Service
+                </label>
+                <textarea
+                  rows={2}
+                  value={serviceForm.description}
+                  onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                  placeholder="Certified technicians with high-pressure diagnostic equipment and genuine replacement parts."
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition resize-none"
+                />
+              </div>
+
+              {/* Submit / Cancel */}
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddServiceOpen(false)}
+                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
+                >
+                  Save & Publish
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 10. MODAL: EDIT EXISTING SERVICE & PRICES */}
+      {/* ========================================================= */}
+      {editingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h4 className="text-sm font-extrabold text-slate-900">Edit Service & Price</h4>
+                <p className="text-[11px] text-slate-400">Updates service cards, search, and booking immediately</p>
+              </div>
+              <button 
+                onClick={() => setEditingService(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditService} className="mt-4 space-y-3.5">
+              
+              {/* Service Title */}
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                  Service Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Main Category & Sub-Category */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                    Category *
+                  </label>
+                  <select
+                    value={editForm.categoryName}
+                    onChange={(e) => setEditForm({ ...editForm, categoryName: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                    Sub-Category
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.subCategory}
+                    onChange={(e) => setEditForm({ ...editForm, subCategory: e.target.value })}
+                    placeholder="Sub-issue title"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Price / Hourly Rate */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-extrabold text-slate-700">
+                    Hourly Price (₹) *
+                  </label>
+                  <span className="text-[11px] font-extrabold text-emerald-700">
+                    Displays as: ₹{editForm.price}/hour
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-extrabold text-slate-400">₹</span>
+                  <input
+                    type="number"
+                    min="50"
+                    step="10"
+                    required
+                    value={editForm.price}
+                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Image URL Manual Management */}
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                  Image URL (Manual Link)
+                </label>
+                <input
+                  type="url"
+                  value={editForm.imageUrl}
+                  onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
+                />
+
+                {/* Live Image Preview */}
+                <div className="mt-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                  <div 
+                    className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-200 border border-slate-300 relative shadow-2xs"
+                    style={{ width: '3.5rem', height: '3.5rem' }}
+                  >
+                    <img
+                      src={editForm.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80'}
+                      alt="Preview"
+                      className="w-full h-full object-cover block"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80';
+                      }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-slate-700">Updated Image Preview</p>
+                    <p className="text-[10px] text-slate-400">Will render on service listing cards</p>
+                  </div>
+                </div>
+
+                {/* Quick Presets for Technicians in Blue Uniforms */}
+                <div className="mt-2">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-1">
+                    Technician Stock Presets:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {TECHNICIAN_PRESETS.map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setEditForm({ ...editForm, imageUrl: p.url })}
+                        className="px-2 py-0.5 rounded-lg bg-sky-50 text-[#0EA5E0] hover:bg-[#0EA5E0] hover:text-white text-[10px] font-bold border border-sky-100 transition cursor-pointer"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
+                  Description / Details
+                </label>
+                <textarea
+                  rows={2}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingService(null)}
+                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 11. MODAL: EDIT CATEGORY BASE PRICE */}
+      {/* ========================================================= */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h4 className="text-sm font-extrabold text-slate-900">Edit {editingCategory.name} Rate</h4>
+              <button 
+                onClick={() => setEditingCategory(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Base Price (₹)</label>
+                <input
+                  type="number"
+                  value={editCatPrice}
+                  onChange={(e) => setEditCatPrice(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingCategory(null)}
+                  className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleUpdateCategoryPrice(editingCategory.id)}
+                  className="flex-1 py-2 rounded-xl bg-[#0EA5E0] text-white text-xs font-bold shadow-xs"
+                >
+                  Update
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 12. MODAL: MANUALLY ASSIGN/DISPATCH TECHNICIAN */}
+      {/* ========================================================= */}
       {assignModalBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100">

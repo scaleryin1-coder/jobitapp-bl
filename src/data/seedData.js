@@ -169,7 +169,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=900&q=80",
+    heroImage: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=900&q=80",
     gallery: [
       "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=500&q=80",
       "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&w=500&q=80",
@@ -342,7 +342,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=800&q=80",
+    heroImage: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80",
     details: ["Wall plaster & patch repair", "Floor tiling & level repair", "Brickwork masonry"],
     faqs: [{ q: "Is cement included?", a: "Materials can be arranged on request." }]
   },
@@ -362,7 +362,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=800&q=80",
+    heroImage: "https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?auto=format&fit=crop&w=800&q=80",
     details: ["Iron gate hinge welding", "Window grill reinforcement", "Staircase metal railing repair"],
     faqs: [{ q: "Do you bring the welding unit?", a: "Yes, portable high-power arc welding machine is carried." }]
   },
@@ -402,7 +402,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1558904541-efa8c4a08931?auto=format&fit=crop&w=800&q=80",
+    heroImage: "https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=800&q=80",
     details: ["Lawn mowing & hedge pruning", "Organic fertilizer treatment", "Potted plants trimming"],
     faqs: [{ q: "Do you take green waste away?", a: "Yes, full garden debris clearing is provided." }]
   },
@@ -422,7 +422,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=800&q=80",
+    heroImage: "https://images.unsplash.com/photo-1628177142898-93e36e4e3a50?auto=format&fit=crop&w=800&q=80",
     details: ["Kitchen cockroach gel application", "Bed bug fumigation treatment", "Anti-termite piping treatment"],
     faqs: [{ q: "Is it safe for pets and babies?", a: "Yes, certified non-toxic eco-friendly gel chemicals used." }]
   },
@@ -447,6 +447,26 @@ export const initialServices = [
     faqs: [{ q: "Do you provide original oils?", a: "Yes, Motul and Castrol genuine lubricants supplied." }]
   },
   {
+    id: "serv_driver_1",
+    workerId: "worker_rajesh",
+    categoryId: "cat_car",
+    categoryName: "Driver",
+    workerName: "Vikram Executive Chauffeur",
+    title: "Driver",
+    badge: "Professional Chauffeur",
+    about: "Experienced professional chauffeur wearing a neat dark blue uniform for city transit, business trips, airport pick-ups, and family vehicle driving.",
+    price: 399,
+    rating: 4.9,
+    reviewCount: 210,
+    ordersCompleted: 340,
+    city: "Melattur, Kerala",
+    available: true,
+    approved: true,
+    heroImage: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=800&q=80",
+    details: ["Professional chauffeur in neat dark blue uniform", "Safe city & highway driving", "Punctual airport & corporate transfers"],
+    faqs: [{ q: "Is the driver background verified?", a: "Yes, verified commercial driving license and safety background check." }]
+  },
+  {
     id: "serv_car_1",
     workerId: "worker_rajesh",
     categoryId: "cat_car",
@@ -462,7 +482,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80",
+    heroImage: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80",
     details: ["OBD scanner digital health check", "Battery jump start & voltage test", "Coolant flush & top-up"],
     faqs: [{ q: "Can you fix breakdown on road?", a: "Yes, mobile emergency assistance unit deployed." }]
   },
@@ -522,7 +542,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=800&q=80",
+    heroImage: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80",
     details: ["LED TV wall mount & calibration", "Microwave heating element repair", "Washing machine motor/drain issue"],
     faqs: [{ q: "Do you carry spare capacitors and boards?", a: "Standard electrical components are brought on site." }]
   },

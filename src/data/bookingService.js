@@ -6,14 +6,20 @@ import {
   setDoc, 
   updateDoc, 
   addDoc, 
+  deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
-import { initialWorkers } from './seedData';
+import { initialWorkers, initialServices, initialCategories } from './seedData';
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
 const STORAGE_KEY_WORKERS = 'jobit_workers';
+const STORAGE_KEY_SERVICES = 'jobit_services';
+const STORAGE_KEY_CATEGORIES = 'jobit_categories';
+
 const EVENT_BOOKINGS_CHANGED = 'jobit_bookings_changed';
 const EVENT_WORKERS_CHANGED = 'jobit_workers_changed';
+const EVENT_SERVICES_CHANGED = 'jobit_services_changed';
+const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
 
 // Get local stored items safely
 export function getLocalBookings() {
@@ -284,6 +290,295 @@ export async function toggleWorkerDuty(workerId, isOnline) {
       await updateDoc(doc(db, 'workers', workerId), { isOnline });
     } catch (e) {
       console.warn('Firestore toggle duty fallback', e);
+    }
+  }
+}
+
+// ==========================================
+// DYNAMIC SERVICES DATA & OPERATIONS
+// ==========================================
+
+export function getLocalServices() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SERVICES);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(initialServices || []));
+      return initialServices || [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : (initialServices || []);
+  } catch {
+    return initialServices || [];
+  }
+}
+
+export function saveLocalServices(servicesList) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(servicesList));
+    window.dispatchEvent(new CustomEvent(EVENT_SERVICES_CHANGED, { detail: servicesList }));
+  } catch (err) {
+    console.warn('Failed to save local services', err);
+  }
+}
+
+export function subscribeServices(callback) {
+  let unsubFirestore = () => {};
+
+  const handleLocalChange = () => {
+    callback(getLocalServices());
+  };
+
+  window.addEventListener(EVENT_SERVICES_CHANGED, handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  // Initial local state push
+  callback(getLocalServices());
+
+  // Firestore sync if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      unsubFirestore = onSnapshot(collection(db, 'services'), (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          saveLocalServices(list);
+          callback(list);
+        }
+      }, (err) => console.warn('Firestore subscribeServices err', err));
+    } catch (err) {
+      console.warn('Firestore subscribeServices setup err', err);
+    }
+  }
+
+  return () => {
+    window.removeEventListener(EVENT_SERVICES_CHANGED, handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+    unsubFirestore();
+  };
+}
+
+export async function adminAddService(serviceData) {
+  const current = getLocalServices();
+  const newId = serviceData.id || `serv_${Date.now()}`;
+  
+  const formatted = {
+    id: newId,
+    title: serviceData.title || 'Home Service',
+    categoryName: serviceData.categoryName || 'General',
+    categoryId: serviceData.categoryId || `cat_${(serviceData.categoryName || 'general').toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+    subCategory: serviceData.subCategory || serviceData.subCategories?.[0] || '',
+    subCategories: serviceData.subCategories && serviceData.subCategories.length > 0 
+      ? serviceData.subCategories 
+      : (serviceData.subCategory ? [serviceData.subCategory] : []),
+    about: serviceData.about || serviceData.description || 'Verified on-demand professional home service with upfront fixed pricing and expert tools.',
+    price: Number(serviceData.price) || 300,
+    rating: Number(serviceData.rating) || 4.9,
+    reviewCount: Number(serviceData.reviewCount) || 120,
+    ordersCompleted: Number(serviceData.ordersCompleted) || 150,
+    city: serviceData.city || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
+    available: serviceData.available !== false,
+    approved: true,
+    heroImage: serviceData.heroImage || serviceData.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=800&q=80',
+    imageUrl: serviceData.heroImage || serviceData.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=800&q=80',
+    gallery: [
+      serviceData.heroImage || serviceData.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=800&q=80'
+    ],
+    details: serviceData.details || [
+      'Verified specialist with safety background clearance',
+      'Doorstep diagnostic and transparent repair quotation',
+      '30-day service warranty on all completed tasks'
+    ],
+    createdAt: new Date().toISOString()
+  };
+
+  const updated = [formatted, ...current];
+  saveLocalServices(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'services', formatted.id), {
+        ...formatted,
+        serverTimestamp: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn('Firestore adminAddService fallback', e);
+    }
+  }
+
+  return formatted;
+}
+
+export async function adminUpdateService(serviceId, updates) {
+  const current = getLocalServices();
+  const updated = current.map(s => {
+    if (s.id === serviceId) {
+      const merged = { ...s, ...updates };
+      if (updates.price !== undefined) {
+        merged.price = Number(updates.price);
+      }
+      if (updates.heroImage) {
+        merged.heroImage = updates.heroImage;
+        merged.imageUrl = updates.heroImage;
+        if (!merged.gallery || merged.gallery.length === 0) {
+          merged.gallery = [updates.heroImage];
+        } else {
+          merged.gallery = [updates.heroImage, ...merged.gallery.slice(1)];
+        }
+      }
+      if (updates.subCategory && (!merged.subCategories || merged.subCategories.length === 0)) {
+        merged.subCategories = [updates.subCategory];
+      }
+      merged.updatedAt = new Date().toISOString();
+      return merged;
+    }
+    return s;
+  });
+
+  saveLocalServices(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'services', serviceId), {
+        ...updates,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Firestore adminUpdateService fallback', e);
+    }
+  }
+}
+
+export async function adminDeleteService(serviceId) {
+  const current = getLocalServices();
+  const updated = current.filter(s => s.id !== serviceId);
+  saveLocalServices(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await deleteDoc(doc(db, 'services', serviceId));
+    } catch (e) {
+      console.warn('Firestore adminDeleteService fallback', e);
+    }
+  }
+}
+
+// ==========================================
+// DYNAMIC CATEGORIES DATA & OPERATIONS
+// ==========================================
+
+export function getLocalCategories() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CATEGORIES);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(initialCategories || []));
+      return initialCategories || [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : (initialCategories || []);
+  } catch {
+    return initialCategories || [];
+  }
+}
+
+export function saveLocalCategories(catList) {
+  try {
+    localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(catList));
+    window.dispatchEvent(new CustomEvent(EVENT_CATEGORIES_CHANGED, { detail: catList }));
+  } catch (err) {
+    console.warn('Failed to save local categories', err);
+  }
+}
+
+export function subscribeCategories(callback) {
+  let unsubFirestore = () => {};
+
+  const handleLocalChange = () => {
+    callback(getLocalCategories());
+  };
+
+  window.addEventListener(EVENT_CATEGORIES_CHANGED, handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  callback(getLocalCategories());
+
+  if (isFirebaseConfigured && db) {
+    try {
+      unsubFirestore = onSnapshot(collection(db, 'categories'), (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          list.sort((a, b) => (a.order || 0) - (b.order || 0));
+          saveLocalCategories(list);
+          callback(list);
+        }
+      }, (err) => console.warn('Firestore subscribeCategories err', err));
+    } catch (err) {
+      console.warn('Firestore subscribeCategories setup err', err);
+    }
+  }
+
+  return () => {
+    window.removeEventListener(EVENT_CATEGORIES_CHANGED, handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+    unsubFirestore();
+  };
+}
+
+export async function adminAddCategory(catData) {
+  const current = getLocalCategories();
+  const newId = catData.id || `cat_${Date.now()}`;
+  const formatted = {
+    id: newId,
+    name: catData.name,
+    icon: catData.icon || '🛠️',
+    color: catData.color || '#E0F2FE',
+    basePrice: Number(catData.basePrice) || 300,
+    image: catData.image || catData.imageUrl || '',
+    subCategories: Array.isArray(catData.subCategories) 
+      ? catData.subCategories 
+      : (catData.subCategoryText ? catData.subCategoryText.split(',').map(s => s.trim()).filter(Boolean) : []),
+    order: (current.length || 0) + 1
+  };
+
+  const updated = [...current, formatted];
+  saveLocalCategories(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'categories', formatted.id), {
+        ...formatted,
+        serverTimestamp: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn('Firestore adminAddCategory fallback', e);
+    }
+  }
+
+  return formatted;
+}
+
+export async function adminUpdateCategory(catId, updates) {
+  const current = getLocalCategories();
+  const updated = current.map(c => c.id === catId ? { ...c, ...updates } : c);
+  saveLocalCategories(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'categories', catId), updates);
+    } catch (e) {
+      console.warn('Firestore adminUpdateCategory fallback', e);
+    }
+  }
+}
+
+export async function adminDeleteCategory(catId) {
+  const current = getLocalCategories();
+  const updated = current.filter(c => c.id !== catId);
+  saveLocalCategories(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await deleteDoc(doc(db, 'categories', catId));
+    } catch (e) {
+      console.warn('Firestore adminDeleteCategory fallback', e);
     }
   }
 }

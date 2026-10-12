@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { initialCategories, initialBanners, initialServices } from '../data/seedData';
+import { subscribeServices, subscribeCategories } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchSection } from '../components/home/HomeSearchSection';
@@ -61,45 +62,37 @@ export function CustomerDashboard({
     }
   }, [currentCity]);
 
-  // Firestore Real-time Sync (identical existing logic)
+  // Reactive real-time sync for categories, services & banners
   useEffect(() => {
-    if (!isFirebaseConfigured || !db) return;
+    const unsubServices = subscribeServices((items) => {
+      if (items && Array.isArray(items)) {
+        setServices(items);
+      }
+    });
 
-    let unsubCategories = () => {};
+    const unsubCategories = subscribeCategories((items) => {
+      if (items && Array.isArray(items)) {
+        setCategories(items);
+      }
+    });
+
     let unsubBanners = () => {};
-    let unsubServices = () => {};
-
-    try {
-      unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
-        if (!snapshot.empty) {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          items.sort((a, b) => (a.order || 0) - (b.order || 0));
-          setCategories(items);
-        }
-      }, () => {});
-
-      unsubBanners = onSnapshot(collection(db, 'banners'), (snapshot) => {
-        if (!snapshot.empty) {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          const active = items.filter(b => b?.active !== false).sort((a, b) => (a?.order || 0) - (b?.order || 0));
-          if (active.length > 0) setBanners(active);
-        }
-      }, () => {});
-
-      unsubServices = onSnapshot(collection(db, 'services'), (snapshot) => {
-        if (!snapshot.empty) {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setServices(items);
-        }
-      }, () => {});
-    } catch {
-      // Quiet fallback
+    if (isFirebaseConfigured && db) {
+      try {
+        unsubBanners = onSnapshot(collection(db, 'banners'), (snapshot) => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const active = items.filter(b => b?.active !== false).sort((a, b) => (a?.order || 0) - (b?.order || 0));
+            if (active.length > 0) setBanners(active);
+          }
+        }, () => {});
+      } catch {}
     }
 
     return () => {
+      unsubServices();
       unsubCategories();
       unsubBanners();
-      unsubServices();
     };
   }, []);
 
