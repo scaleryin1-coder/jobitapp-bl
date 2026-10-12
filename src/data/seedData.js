@@ -1,4 +1,5 @@
-import mehndiArtImg from '../assets/images/mehndi_henna_artist_1791804672044.jpg';
+// High-resolution reliable remote CDN image for Mehndi / Henna category
+const MEHNDI_ART_IMAGE_URL = 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80';
 
 // High-quality imagery matching the reference visual style
 export const initialCategories = [
@@ -622,9 +623,9 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: mehndiArtImg,
+    heroImage: MEHNDI_ART_IMAGE_URL,
     gallery: [
-      mehndiArtImg,
+      MEHNDI_ART_IMAGE_URL,
       "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=500&q=80"
     ],
     details: [

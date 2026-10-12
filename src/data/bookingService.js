@@ -206,20 +206,23 @@ export async function createBooking(payload) {
     ...payload
   };
 
-  // Update local state first for immediate UI response
+  // 1. Immediately update local state & dispatch custom event for instant cross-component sync
   const current = getLocalBookings();
   const updated = [newBooking, ...current];
   saveLocalBookings(updated);
 
-  // Sync to Firestore
+  // 2. Sync to Firestore with a fast timeout safety guarantee so network lag never freezes UI
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'bookings', newBooking.id), {
+      const firestorePromise = setDoc(doc(db, 'bookings', newBooking.id), {
         ...newBooking,
         serverTimestamp: serverTimestamp()
       });
+      // Allow up to 1200ms for network, but proceed regardless without blocking
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1200));
+      await Promise.race([firestorePromise, timeoutPromise]);
     } catch (e) {
-      console.warn('Firestore create booking fallback', e);
+      console.warn('Firestore create booking background fallback', e);
     }
   }
 

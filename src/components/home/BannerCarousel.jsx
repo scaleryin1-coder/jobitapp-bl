@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import acTechnicianImg from '../../assets/images/ac_technician_pro_1791796415312.jpg';
-import acUnitImg from '../../assets/images/ac_unit_clean_1791797286325.jpg';
-import plumberImg from '../../assets/images/european_plumber_pro_1791797259590.jpg';
+// Remote CDN URLs for banner images (with fallback support for 100% instant reliability)
+const AC_TECHNICIAN_REMOTE = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80';
+const AC_UNIT_REMOTE = 'https://images.unsplash.com/photo-1585338107529-13afc5f02586?auto=format&fit=crop&w=400&q=80';
+const PLUMBER_REMOTE = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80';
 
 export function BannerCarousel({
   banners = [],
@@ -104,9 +105,12 @@ export function BannerCarousel({
                       }}
                     >
                       <img
-                        src={acTechnicianImg}
-                        alt="European AC Technician"
+                        src={AC_TECHNICIAN_REMOTE}
+                        onError={(e) => { e.currentTarget.src = '/assets/images/ac_technician_pro_1791796415312.jpg'; }}
+                        alt="Professional AC Technician in Blue Uniform"
                         className="w-full h-full object-cover object-top"
+                        loading="eager"
+                        decoding="async"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     </div>
@@ -114,9 +118,12 @@ export function BannerCarousel({
                     {/* Clean AC Unit Graphic with Cool Air Stream on Right Side */}
                     <div className="absolute right-2 bottom-1 w-20 h-20 sm:w-22 sm:h-22 pointer-events-none z-10 drop-shadow-sm">
                       <img
-                        src={acUnitImg}
-                        alt="AC Service Unit"
+                        src={AC_UNIT_REMOTE}
+                        onError={(e) => { e.currentTarget.src = '/assets/images/ac_unit_clean_1791797286325.jpg'; }}
+                        alt="Modern AC Service Unit"
                         className="w-full h-full object-contain rounded-xl"
+                        loading="eager"
+                        decoding="async"
                       />
                     </div>
                   </>
@@ -133,9 +140,12 @@ export function BannerCarousel({
                     }}
                   >
                     <img
-                      src={plumberImg}
-                      alt="European Plumber at work"
+                      src={PLUMBER_REMOTE}
+                      onError={(e) => { e.currentTarget.src = '/assets/images/european_plumber_pro_1791797259590.jpg'; }}
+                      alt="Professional Plumber in Blue Uniform"
                       className="w-full h-full object-cover object-top"
+                      loading="eager"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>

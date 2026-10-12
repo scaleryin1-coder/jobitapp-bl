@@ -44,6 +44,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
 
   const handleConfirm = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
 
     const bookingPayload = {
@@ -75,11 +76,13 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
 
     setLoading(false);
     setIsSuccess(true);
+
+    // Smooth redirect within 1 second (800ms) to 'Booking Success' / 'My Bookings' tab
     setTimeout(() => {
       setIsSuccess(false);
       onSuccess?.();
       onClose();
-    }, 1400);
+    }, 800);
   };
 
   return (
