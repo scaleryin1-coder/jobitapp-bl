@@ -338,11 +338,15 @@ export function ServiceListScreen({
               <div className="flex items-start gap-3">
                 
                 {/* Left Side: Thumbnail image of the service worker/task */}
-                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-200/60 shadow-2xs">
+                <div 
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-200/60 shadow-2xs relative"
+                  style={{ width: '4.5rem', height: '4.5rem', minWidth: '4.5rem', minHeight: '4.5rem', overflow: 'hidden' }}
+                >
                   <img
                     src={service.heroImage || "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80"}
                     alt={service.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover block"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
 

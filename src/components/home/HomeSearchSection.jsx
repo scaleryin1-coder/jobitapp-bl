@@ -113,11 +113,17 @@ export function HomeSearchSection({
                   className="p-3 hover:bg-[#F5FBFF] transition cursor-pointer flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={service.heroImage || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=150&q=80'}
-                      alt={service.title}
-                      className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-100"
-                    />
+                    <div 
+                      className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-100 relative"
+                      style={{ width: '2.5rem', height: '2.5rem', minWidth: '2.5rem', minHeight: '2.5rem' }}
+                    >
+                      <img
+                        src={service.heroImage || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=150&q=80'}
+                        alt={service.title}
+                        className="w-full h-full object-cover block"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
                     <div>
                       <p className="text-xs font-black text-[#111827] group-hover:text-[#4B6EF5] transition leading-tight">
                         {service.title}
