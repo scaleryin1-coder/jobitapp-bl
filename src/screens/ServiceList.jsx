@@ -7,12 +7,10 @@ import {
   Star, 
   Eye, 
   Calendar,
-  X,
-  Sparkles,
-  ShieldCheck,
-  Check
+  X
 } from 'lucide-react';
 import { initialCategories, initialServices } from '../data/seedData';
+import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 
@@ -20,22 +18,34 @@ export function ServiceListScreen({
   onBack, 
   onSelectService, 
   onBookService,
-  initialCategory = 'All' 
+  initialCategory = 'All',
+  initialSearch = ''
 }) {
   const [services, setServices] = useState(initialServices || []);
-  const [categories, setCategories] = useState(initialCategories || []);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch || '');
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'All');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
-  // Firestore real-time sync for services & categories if configured
+  // Sync initialCategory & initialSearch if changed from parent
+  useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
+
+  // Firestore real-time sync for services if configured
   useEffect(() => {
     if (!isFirebaseConfigured || !db) return;
     let unsubServices = () => {};
-    let unsubCategories = () => {};
 
     try {
       unsubServices = onSnapshot(collection(db, 'services'), (snapshot) => {
@@ -44,24 +54,16 @@ export function ServiceListScreen({
           setServices(items);
         }
       }, () => {});
-
-      unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
-        if (!snapshot.empty) {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setCategories(items);
-        }
-      }, () => {});
     } catch {
       // quiet fallback
     }
 
     return () => {
       unsubServices();
-      unsubCategories();
     };
   }, []);
 
-  // Filter Categories: 'All', 'Cleaning', 'Plumber', 'Repairing', 'Painting', 'Electrician', etc.
+  // Filter Pills ordered exactly as in reference image (image_6.png)
   const filterPills = [
     'All',
     'Cleaning',
@@ -69,40 +71,64 @@ export function ServiceListScreen({
     'Repairing',
     'Electrician',
     'Painting',
-    'Carpenter'
+    'Carpenter',
+    'Construction',
+    'Welding',
+    'Aluminium',
+    'Garden',
+    'Pest Control',
+    'Bike Service',
+    'Car Mechanic',
+    'Moving & Labour',
+    'Security',
+    'Electronics',
+    'Laundry',
+    'Home Support',
+    'Beauty',
+    'Mehndi Artist',
+    'Water Tank'
   ];
 
   // Helper matching function for category pills
   const matchesCategory = (service, filter) => {
     if (!filter || filter === 'All') return true;
-    const catLower = filter.toLowerCase();
-    const serviceCat = (service.categoryName || '').toLowerCase();
-    const serviceTitle = (service.title || '').toLowerCase();
-    const serviceId = (service.categoryId || '').toLowerCase();
+    const catLower = filter.toLowerCase().trim();
+    const serviceCat = (service.categoryName || '').toLowerCase().trim();
+    const serviceTitle = (service.title || '').toLowerCase().trim();
+    const serviceId = (service.categoryId || '').toLowerCase().trim();
 
-    if (catLower === 'plumber' || catLower === 'plumbing') {
-      return serviceCat.includes('plumb') || serviceTitle.includes('plumb') || serviceId.includes('plumb');
-    }
-    if (catLower === 'cleaning') {
-      return serviceCat.includes('clean') || serviceTitle.includes('clean') || serviceId.includes('clean');
-    }
-    if (catLower === 'repairing' || catLower === 'repair') {
-      return serviceCat.includes('repair') || serviceCat.includes('ac') || serviceTitle.includes('repair') || serviceTitle.includes('ac');
-    }
-    if (catLower === 'electrician' || catLower === 'electrical') {
-      return serviceCat.includes('elect') || serviceTitle.includes('elect') || serviceId.includes('elect');
-    }
-    if (catLower === 'painting') {
-      return serviceCat.includes('paint') || serviceTitle.includes('paint') || serviceId.includes('paint');
-    }
-    if (catLower === 'carpenter') {
-      return serviceCat.includes('carp') || serviceTitle.includes('carp') || serviceId.includes('carp');
-    }
+    if (catLower.includes('clean') && (serviceCat.includes('clean') || serviceTitle.includes('clean'))) return true;
+    if (catLower.includes('plumb') && (serviceCat.includes('plumb') || serviceTitle.includes('plumb'))) return true;
+    if ((catLower.includes('repair') || catLower.includes('ac')) && (serviceCat.includes('ac') || serviceCat.includes('repair') || serviceTitle.includes('ac') || serviceTitle.includes('repair'))) return true;
+    if (catLower.includes('elect') && (serviceCat.includes('elect') || serviceTitle.includes('elect'))) return true;
+    if (catLower.includes('paint') && (serviceCat.includes('paint') || serviceTitle.includes('paint'))) return true;
+    if (catLower.includes('carp') && (serviceCat.includes('carp') || serviceTitle.includes('carp'))) return true;
+    if (catLower.includes('construct') && (serviceCat.includes('construct') || serviceTitle.includes('construct'))) return true;
+    if (catLower.includes('weld') && (serviceCat.includes('weld') || serviceTitle.includes('weld'))) return true;
+    if (catLower.includes('alumin') && (serviceCat.includes('alumin') || serviceTitle.includes('alumin'))) return true;
+    if (catLower.includes('garden') && (serviceCat.includes('garden') || serviceTitle.includes('garden'))) return true;
+    if (catLower.includes('pest') && (serviceCat.includes('pest') || serviceTitle.includes('pest'))) return true;
+    if (catLower.includes('bike') && (serviceCat.includes('bike') || serviceTitle.includes('bike'))) return true;
+    if (catLower.includes('car') && !catLower.includes('carp') && (serviceCat.includes('car') || serviceTitle.includes('car'))) return true;
+    if ((catLower.includes('mov') || catLower.includes('labour')) && (serviceCat.includes('mov') || serviceCat.includes('labour') || serviceTitle.includes('mov'))) return true;
+    if ((catLower.includes('secur') || catLower.includes('smart')) && (serviceCat.includes('secur') || serviceCat.includes('smart'))) return true;
+    if (catLower.includes('electron') && (serviceCat.includes('electron') || serviceTitle.includes('electron'))) return true;
+    if (catLower.includes('laund') && (serviceCat.includes('laund') || serviceTitle.includes('laund'))) return true;
+    if (catLower.includes('home support') && (serviceCat.includes('support') || serviceCat.includes('clean'))) return true;
+    if (catLower.includes('beaut') && (serviceCat.includes('beaut') || serviceTitle.includes('beaut'))) return true;
+    if ((catLower.includes('mehndi') || catLower.includes('henna')) && (serviceCat.includes('mehndi') || serviceTitle.includes('mehndi'))) return true;
+    if (catLower.includes('tank') && (serviceCat.includes('tank') || serviceTitle.includes('tank'))) return true;
 
-    return serviceCat.includes(catLower) || serviceTitle.includes(catLower);
+    return (
+      serviceCat === catLower ||
+      serviceCat.includes(catLower) ||
+      catLower.includes(serviceCat) ||
+      serviceTitle.includes(catLower) ||
+      serviceId.includes(catLower)
+    );
   };
 
-  // Filter services by category pill, search query, and drawer filters
+  // Filter services by category pill, search query, and quick rating/price
   const filteredServices = (services || []).filter(service => {
     if (!service) return false;
 
@@ -130,34 +156,48 @@ export function ServiceListScreen({
     return true;
   });
 
-  // Get nice display tag and background style for category badge (e.g. 'Cleaning', 'Plumber', 'Repairing')
+  // Category badge tag colors and labels matching image_6.png exactly
   const getCategoryBadgeInfo = (service) => {
     const cat = service.categoryName || '';
     const title = service.title || '';
     const combined = (cat + ' ' + title).toLowerCase();
 
-    if (combined.includes('clean')) {
-      return { tag: 'Cleaning', className: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50' };
-    }
+    // Plumber: light cyan badge with blue text
     if (combined.includes('plumb')) {
-      return { tag: 'Plumber', className: 'bg-sky-50 text-[#0EA5E0] ring-1 ring-sky-200/50' };
+      return { tag: 'Plumber', className: 'bg-[#E0F7FA] text-[#00A3E0]' };
     }
+    // AC / Repairing: light amber badge with amber text
     if (combined.includes('repair') || combined.includes('ac')) {
-      return { tag: 'Repairing', className: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/50' };
+      return { tag: 'Repairing', className: 'bg-[#FEF3C7] text-[#D97706]' };
     }
+    // Cleaning: light green badge with emerald text
+    if (combined.includes('clean')) {
+      return { tag: 'Cleaning', className: 'bg-[#D1FAE5] text-[#059669]' };
+    }
+    // Electrician: light blue badge with blue text
     if (combined.includes('elect')) {
-      return { tag: 'Electrician', className: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/50' };
+      return { tag: 'Electrician', className: 'bg-[#DBEAFE] text-[#2563EB]' };
     }
+    // Painting: soft lavender badge with purple text
     if (combined.includes('paint')) {
-      return { tag: 'Painting', className: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200/50' };
+      return { tag: 'Painting', className: 'bg-[#F3E8FF] text-[#9333EA]' };
     }
-    return { tag: cat || 'Service', className: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200/60' };
+    // Carpenter: soft pink badge with rose text
+    if (combined.includes('carp')) {
+      return { tag: 'Carpenter', className: 'bg-[#FEE2E2] text-[#DC2626]' };
+    }
+    // Electronics
+    if (combined.includes('electron')) {
+      return { tag: 'Electronics', className: 'bg-[#E0F2FE] text-[#0284C7]' };
+    }
+    // Default fallback
+    return { tag: cat || 'Service', className: 'bg-slate-100 text-slate-700' };
   };
 
   return (
     <div className="w-full min-h-screen bg-[#F8FAFC] pb-28 text-slate-900 select-none">
       
-      {/* 1. Top Bar: Clean header with Back arrow, 'Search Service' title, & options menu icon */}
+      {/* 1. Header: Back arrow, "Search Service" title, & More options menu icon */}
       <header className="bg-white px-5 pt-4 pb-3 border-b border-slate-100/80 sticky top-0 z-30 shadow-xs">
         <div className="flex items-center justify-between">
           <button
@@ -168,7 +208,7 @@ export function ServiceListScreen({
             <ArrowLeft className="w-4 h-4 stroke-[2.4]" />
           </button>
 
-          <h1 className="text-base font-black text-slate-900 tracking-tight">
+          <h1 className="text-base font-extrabold text-[#111827] tracking-tight">
             Search Service
           </h1>
 
@@ -188,6 +228,8 @@ export function ServiceListScreen({
                   onClick={() => {
                     setActiveCategory('All');
                     setSearchQuery('');
+                    setMinRating(0);
+                    setMaxPrice(1000);
                     setShowOptionsMenu(false);
                   }}
                   className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-[#0EA5E0] transition"
@@ -208,7 +250,7 @@ export function ServiceListScreen({
           </div>
         </div>
 
-        {/* 2. Rounded input bar with 'Search Popular Service...' placeholder & filter icon button */}
+        {/* 2. Search Input bar with "Search Popular Service..." placeholder & filter button */}
         <div className="mt-3.5 flex items-center gap-2.5">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -222,9 +264,10 @@ export function ServiceListScreen({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition"
+                className="absolute right-3 top-2.5 w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition text-[10px]"
+                title="Clear search"
               >
-                <X className="w-3 h-3" />
+                ✕
               </button>
             )}
           </div>
@@ -243,17 +286,17 @@ export function ServiceListScreen({
           </button>
         </div>
 
-        {/* 3. Category Filter Chips (Horizontally scrollable filter pill buttons right below search) */}
+        {/* 3. Horizontal Category Filter Chips matching image_6.png */}
         <div className="flex items-center gap-2 mt-3 overflow-x-auto no-scrollbar pb-1 pt-0.5">
           {filterPills.map((pill) => {
-            const isActive = activeCategory === pill;
+            const isActive = activeCategory.toLowerCase() === pill.toLowerCase();
             return (
               <button
                 key={pill}
                 onClick={() => setActiveCategory(pill)}
                 className={`px-4 py-1.5 rounded-full text-xs font-black transition-all duration-200 whitespace-nowrap cursor-pointer shrink-0 ${
                   isActive
-                    ? 'bg-[#0EA5E0] text-white shadow-sm shadow-sky-400/30'
+                    ? 'bg-[#00A3E0] text-white shadow-sm shadow-sky-400/30'
                     : 'bg-slate-100 hover:bg-slate-200/70 text-slate-700'
                 }`}
               >
@@ -264,7 +307,7 @@ export function ServiceListScreen({
         </div>
       </header>
 
-      {/* Filter Drawer / Accordion if active */}
+      {/* Quick Filter Drawer (Price & Rating only, strictly NO category selection blocks) */}
       {showFilterDrawer && (
         <div className="bg-white border-b border-slate-200/80 px-5 py-3 shadow-xs animate-fade-in">
           <div className="flex items-center justify-between mb-2">
@@ -274,7 +317,7 @@ export function ServiceListScreen({
                 setMinRating(0);
                 setMaxPrice(1000);
               }}
-              className="text-[11px] font-bold text-[#0EA5E0] hover:underline"
+              className="text-[11px] font-bold text-[#00A3E0] hover:underline cursor-pointer"
             >
               Reset
             </button>
@@ -286,8 +329,8 @@ export function ServiceListScreen({
                 <button
                   key={r}
                   onClick={() => setMinRating(r)}
-                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition ${
-                    minRating === r ? 'bg-sky-50 border-[#0EA5E0] text-[#0EA5E0]' : 'border-slate-200 text-slate-600'
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                    minRating === r ? 'bg-sky-50 border-[#00A3E0] text-[#00A3E0]' : 'border-slate-200 text-slate-600'
                   }`}
                 >
                   {r === 0 ? 'Any' : `★ ${r}+`}
@@ -300,8 +343,8 @@ export function ServiceListScreen({
                 <button
                   key={p}
                   onClick={() => setMaxPrice(p)}
-                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition ${
-                    maxPrice === p ? 'bg-sky-50 border-[#0EA5E0] text-[#0EA5E0]' : 'border-slate-200 text-slate-600'
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                    maxPrice === p ? 'bg-sky-50 border-[#00A3E0] text-[#00A3E0]' : 'border-slate-200 text-slate-600'
                   }`}
                 >
                   {p === 1000 ? 'Any' : `≤ ₹${p}`}
@@ -312,93 +355,99 @@ export function ServiceListScreen({
         </div>
       )}
 
-      {/* 4. Service Card Design (List View) */}
+      {/* 4. Results Section: Results Counter & Individual Service Cards */}
       <div className="px-5 pt-3.5 space-y-3.5">
         
-        {/* Results Counter */}
-        <div className="flex items-center justify-between text-xs text-slate-400 font-semibold px-0.5">
+        {/* Results Counter: "Showing X available services" */}
+        <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-0.5">
           <span>
-            Showing <strong className="text-slate-800">{filteredServices.length}</strong> available services
+            Showing <strong className="text-[#111827] font-black">{filteredServices.length}</strong> available services
           </span>
           {activeCategory !== 'All' && (
-            <span className="text-[#0EA5E0] font-bold">Category: {activeCategory}</span>
+            <button
+              onClick={() => setActiveCategory('All')}
+              className="text-[#00A3E0] font-bold hover:underline cursor-pointer"
+            >
+              Clear filter
+            </button>
           )}
         </div>
 
-        {/* Services List matching reference image right screen */}
+        {/* Individual Service Cards strictly matching image_6.png */}
         {filteredServices.map((service) => {
           const badgeInfo = getCategoryBadgeInfo(service);
           
           return (
             <div
               key={service.id}
-              className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-100/90 shadow-sm hover:shadow-md transition-all duration-200"
+              className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md transition-all duration-200"
             >
               {/* Card Top Row: Left Thumbnail, Middle Content, Top Right Tag */}
               <div className="flex items-start gap-3">
                 
-                {/* Left Side: Thumbnail image of the service worker/task */}
+                {/* Thumbnail image on the left strictly constrained */}
                 <div 
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-200/60 shadow-2xs relative"
-                  style={{ width: '4.5rem', height: '4.5rem', minWidth: '4.5rem', minHeight: '4.5rem', overflow: 'hidden' }}
+                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 bg-slate-100 ring-1 ring-slate-200/60 shadow-2xs relative"
+                  style={{ width: '4.75rem', height: '4.75rem', minWidth: '4.75rem', minHeight: '4.75rem' }}
                 >
                   <img
                     src={service.heroImage || "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80"}
                     alt={service.title}
                     className="w-full h-full object-cover block"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    loading="lazy"
                   />
                 </div>
 
                 {/* Middle: Service Title, Star rating with review count, Hourly rate/price */}
                 <div className="flex-1 min-w-0 pr-1">
-                  <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug truncate">
+                  <h3 className="text-sm sm:text-base font-extrabold text-[#111827] leading-snug truncate">
                     {service.title}
                   </h3>
 
-                  {/* Star rating with review count: e.g., ★ 4.8 (250 reviews) */}
+                  {/* Star rating with review count: e.g. ★ 4.8 (180 reviews) */}
                   <div className="flex items-center gap-1.5 mt-1 text-xs">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span className="font-extrabold text-slate-800">
+                    <span className="font-extrabold text-[#111827]">
                       {service.rating || '4.8'}
                     </span>
                     <span className="text-slate-400 font-medium text-[11px]">
-                      ({service.reviewCount || 250} reviews)
+                      ({service.reviewCount || 180} reviews)
                     </span>
                   </div>
 
-                  {/* Hourly rate/price: e.g., ₹800/hour or ₹300/hour */}
+                  {/* Hourly pricing: e.g. ₹300/hour */}
                   <div className="mt-1">
-                    <span className="text-xs sm:text-sm font-black text-slate-900">
-                      ₹{service.price || 80}/hour
+                    <span className="text-xs sm:text-sm font-extrabold text-[#111827]">
+                      ₹{service.price || 300}/hour
                     </span>
                   </div>
                 </div>
 
-                {/* Top Right Tag: Light background pill tag indicating the category (e.g., 'Cleaning') */}
+                {/* Top Right: Category tag pill */}
                 <div className="shrink-0">
-                  <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black tracking-tight ${badgeInfo.className}`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-extrabold tracking-tight ${badgeInfo.className}`}>
                     {badgeInfo.tag}
                   </span>
                 </div>
               </div>
 
-              {/* Bottom Action Buttons: Two side-by-side action buttons */}
+              {/* Bottom Action Buttons: Two distinct buttons */}
               <div className="grid grid-cols-2 gap-2.5 mt-3.5 pt-3 border-t border-slate-100/90">
                 
-                {/* Outlined/light button for 'View Details' (with an eye icon) */}
+                {/* Outlined button for 'View Details' (with eye icon) */}
                 <button
                   onClick={() => onSelectService?.(service)}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-black flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-2xs"
+                  className="w-full py-2.5 px-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 text-[#111827] text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-2xs"
                 >
-                  <Eye className="w-3.5 h-3.5 text-slate-600 stroke-[2.2]" />
+                  <Eye className="w-3.5 h-3.5 text-slate-700 stroke-[2.2]" />
                   <span>View Details</span>
                 </button>
 
-                {/* Solid primary blue button for 'Book Now' (with a calendar/booking icon) */}
+                {/* Solid blue style button for 'Book Now' (with calendar icon) */}
                 <button
                   onClick={() => onBookService?.(service)}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-sm shadow-sky-400/25"
+                  className="w-full py-2.5 px-3 rounded-2xl bg-[#00A3E0] hover:bg-[#0284C7] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-sm shadow-sky-400/25"
                 >
                   <Calendar className="w-3.5 h-3.5 text-white stroke-[2.4]" />
                   <span>Book Now</span>
@@ -412,10 +461,10 @@ export function ServiceListScreen({
         {/* Empty State when no services match */}
         {filteredServices.length === 0 && (
           <div className="py-14 text-center bg-white rounded-3xl border border-slate-100 p-6">
-            <div className="w-12 h-12 rounded-full bg-sky-50 text-[#0EA5E0] flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-sky-50 text-[#00A3E0] flex items-center justify-center mx-auto mb-3">
               <Search className="w-6 h-6 stroke-[2]" />
             </div>
-            <h4 className="text-sm font-black text-slate-900">No Services Found</h4>
+            <h4 className="text-sm font-black text-[#111827]">No Services Found</h4>
             <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
               We couldn't find any services matching "{searchQuery}" in category "{activeCategory}".
             </p>
@@ -426,7 +475,7 @@ export function ServiceListScreen({
                 setMinRating(0);
                 setMaxPrice(1000);
               }}
-              className="mt-4 px-4 py-2 rounded-full bg-[#0EA5E0] text-white text-xs font-black shadow-xs cursor-pointer"
+              className="mt-4 px-4 py-2 rounded-full bg-[#00A3E0] text-white text-xs font-bold shadow-xs cursor-pointer hover:bg-[#0284C7] transition"
             >
               Show All Services
             </button>

@@ -1,98 +1,6 @@
 import React from 'react';
 import { LayoutGrid } from 'lucide-react';
-import { ALL_MAIN_CATEGORIES } from '../../data/categoriesData';
-
-// Dedicated colorful, high-fidelity vector icons for categories matching the reference
-function CategoryIcon({ categoryName = '' }) {
-  const norm = categoryName.toLowerCase().trim();
-  const matched = ALL_MAIN_CATEGORIES.find(c => 
-    c.name.toLowerCase() === norm ||
-    norm.includes(c.name.toLowerCase()) ||
-    c.name.toLowerCase().includes(norm)
-  );
-
-  if (matched) {
-    return (
-      <div 
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-2xs"
-        style={{ backgroundColor: matched.color }}
-      >
-        {matched.icon}
-      </div>
-    );
-  }
-
-  if (name.includes('cook') || name.includes('chef') || name.includes('food')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#FFF1E8] flex items-center justify-center text-xl">
-        🍳
-      </div>
-    );
-  }
-
-  if (name.includes('clean') || name.includes('wash') || name.includes('sanit')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#E0F8F3] flex items-center justify-center text-xl">
-        🧹
-      </div>
-    );
-  }
-
-  if (name.includes('ship') || name.includes('mov') || name.includes('deliver')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#EDE7F6] flex items-center justify-center text-xl">
-        🚚
-      </div>
-    );
-  }
-
-  if (name.includes('plumb') || name.includes('pipe') || name.includes('leak') || name.includes('tap')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#E0F2FE] flex items-center justify-center text-xl">
-        🔧
-      </div>
-    );
-  }
-
-  if (name.includes('ac') || name.includes('air') || name.includes('cool')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#E0F7FA] flex items-center justify-center text-xl">
-        ❄️
-      </div>
-    );
-  }
-
-  if (name.includes('elect') || name.includes('power') || name.includes('wire')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] flex items-center justify-center text-xl">
-        ⚡
-      </div>
-    );
-  }
-
-  if (name.includes('paint') || name.includes('brush') || name.includes('color')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#F3E8FF] flex items-center justify-center text-xl">
-        🎨
-      </div>
-    );
-  }
-
-  if (name.includes('carp') || name.includes('wood') || name.includes('furniture')) {
-    return (
-      <div className="w-10 h-10 rounded-xl bg-[#FEE2E2] flex items-center justify-center text-xl">
-        🪚
-      </div>
-    );
-  }
-
-  // Default clean fallback
-  return (
-    <div className="w-10 h-10 rounded-xl bg-[#EAF0FF] flex items-center justify-center text-xl">
-      ✨
-    </div>
-  );
-}
+import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 
 export function CategoryRow({
   categories = [],
@@ -124,7 +32,7 @@ export function CategoryRow({
           >
             {/* Category Icon / Image */}
             <div className="transition-transform group-hover:scale-105">
-              <CategoryIcon categoryName={cat.name} />
+              <CategoryBadgeIcon category={cat} categoryName={cat.name} />
             </div>
 
             {/* Category Name */}

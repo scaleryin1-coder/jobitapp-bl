@@ -1,10 +1,12 @@
-// All 20 main categories and their specific issues/sub-categories
+import mehndiArtImg from '../assets/images/mehndi_henna_artist_1791804672044.jpg';
+
+// All 20 main categories with verified icons and their specific issues/sub-categories
 export const ALL_MAIN_CATEGORIES = [
   {
     id: 'cat_electrician',
     name: 'Electrician',
     icon: '⚡',
-    color: '#FEF3C7',
+    color: '#FEF3C7', // soft yellow/amber
     basePrice: 299,
     subCategories: [
       'Wiring & Short Circuit Fix',
@@ -19,7 +21,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_ac',
     name: 'AC Service',
     icon: '❄️',
-    color: '#E0F7FA',
+    color: '#E0F2FE', // soft sky cyan
     basePrice: 450,
     subCategories: [
       'AC Service',
@@ -34,7 +36,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_plumber',
     name: 'Plumber',
     icon: '🔧',
-    color: '#E0F2FE',
+    color: '#E0F2FE', // soft blue/sky
     basePrice: 300,
     subCategories: [
       'Tap & Mixer Repair',
@@ -49,7 +51,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_carpenter',
     name: 'Carpenter',
     icon: '🪚',
-    color: '#FEE2E2',
+    color: '#FEE2E2', // soft warm red/pink
     basePrice: 350,
     subCategories: [
       'Furniture Repair & Assembly',
@@ -62,9 +64,9 @@ export const ALL_MAIN_CATEGORIES = [
   },
   {
     id: 'cat_painting',
-    name: 'Painting',
+    name: 'Painting & Wall Work',
     icon: '🎨',
-    color: '#F3E8FF',
+    color: '#F3E8FF', // soft purple/violet
     basePrice: 499,
     subCategories: [
       'Wall Touch-up & Patch Painting',
@@ -79,7 +81,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_construction',
     name: 'Construction',
     icon: '🏗️',
-    color: '#FFF7ED',
+    color: '#FFEDD5', // soft orange
     basePrice: 599,
     subCategories: [
       'Masonry & Brickwork Repair',
@@ -94,7 +96,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_welding',
     name: 'Welding',
     icon: '🔥',
-    color: '#FFEDD5',
+    color: '#FEE2E2', // soft flame red/orange
     basePrice: 399,
     subCategories: [
       'Main Gate & Grill Repair',
@@ -109,7 +111,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_aluminium',
     name: 'Aluminium Fabrication',
     icon: '🪟',
-    color: '#F1F5F9',
+    color: '#F1F5F9', // soft slate/window
     basePrice: 450,
     subCategories: [
       'Sliding Window Channel Repair',
@@ -122,9 +124,9 @@ export const ALL_MAIN_CATEGORIES = [
   },
   {
     id: 'cat_garden',
-    name: 'Garden Work',
-    icon: '🌿',
-    color: '#DCFCE7',
+    name: 'Garden & Outdoor Work',
+    icon: '🍃',
+    color: '#DCFCE7', // soft pastel mint green
     basePrice: 350,
     subCategories: [
       'Lawn Mowing & Grass Trimming',
@@ -139,7 +141,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_pest_control',
     name: 'Pest Control',
     icon: '🐜',
-    color: '#FEF9C3',
+    color: '#FEF9C3', // soft pastel lime
     basePrice: 599,
     subCategories: [
       'Cockroach Gel Treatment',
@@ -154,7 +156,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_bike',
     name: 'Bike Service',
     icon: '🏍️',
-    color: '#E0F2FE',
+    color: '#E0E7FF', // soft indigo
     basePrice: 349,
     subCategories: [
       'Doorstep General Bike Service',
@@ -169,7 +171,7 @@ export const ALL_MAIN_CATEGORIES = [
     id: 'cat_car',
     name: 'Car Mechanic',
     icon: '🚗',
-    color: '#EDE9FE',
+    color: '#FEE2E2', // soft red pastel
     basePrice: 599,
     subCategories: [
       'Periodic Car Service Inspection',
@@ -182,9 +184,9 @@ export const ALL_MAIN_CATEGORIES = [
   },
   {
     id: 'cat_moving',
-    name: 'Moving & Labour',
+    name: 'Moving & Labour Service',
     icon: '📦',
-    color: '#FEF3C7',
+    color: '#FEF3C7', // soft amber
     basePrice: 499,
     subCategories: [
       'Household Loading & Unloading',
@@ -197,9 +199,9 @@ export const ALL_MAIN_CATEGORIES = [
   },
   {
     id: 'cat_security',
-    name: 'Security/Smart Home',
-    icon: '📹',
-    color: '#E0E7FF',
+    name: 'Security & Smart Home',
+    icon: '🔒',
+    color: '#EDE9FE', // soft purple/lavender
     basePrice: 499,
     subCategories: [
       'CCTV Camera Installation',
@@ -213,13 +215,14 @@ export const ALL_MAIN_CATEGORIES = [
   {
     id: 'cat_electronics',
     name: 'Electronics Service',
-    icon: '📺',
-    color: '#FCE7F3',
+    icon: '🧺', // Washing machine / appliance style
+    altIcon: '🫧',
+    color: '#E0F2FE', // soft appliance cyan
     basePrice: 399,
     subCategories: [
+      'Washing Machine Drum & Motor',
       'LED/Smart TV Wall Mounting',
       'Refrigerator Cooling & Gas Fix',
-      'Washing Machine Drum & Motor',
       'Microwave Oven Heating Fix',
       'RO Water Purifier Filter Change',
       'Mixer Grinder & Induction Fix'
@@ -227,9 +230,9 @@ export const ALL_MAIN_CATEGORIES = [
   },
   {
     id: 'cat_laundry',
-    name: 'Laundry',
+    name: 'Laundry Service',
     icon: '🧺',
-    color: '#E0F8F3',
+    color: '#E0F8F3', // soft teal mint
     basePrice: 199,
     subCategories: [
       'Wash & Fold (Per KG)',
@@ -242,9 +245,9 @@ export const ALL_MAIN_CATEGORIES = [
   },
   {
     id: 'cat_home_support',
-    name: 'Home Support',
+    name: 'Home Support Service',
     icon: '🧹',
-    color: '#E2E8F0',
+    color: '#F1F5F9', // soft slate/pearl
     basePrice: 399,
     subCategories: [
       'Deep Home Sanitization',
@@ -258,8 +261,8 @@ export const ALL_MAIN_CATEGORIES = [
   {
     id: 'cat_beauty',
     name: 'Beauty & Personal Care',
-    icon: '💅',
-    color: '#FDF2F8',
+    icon: '💄',
+    color: '#FDF2F8', // soft pink
     basePrice: 499,
     subCategories: [
       'Haircut & Blowdry at Home',
@@ -273,8 +276,8 @@ export const ALL_MAIN_CATEGORIES = [
   {
     id: 'cat_mehndi',
     name: 'Mehndi Artist',
-    icon: '🌺',
-    color: '#FEF2F2',
+    icon: '🖐️',
+    color: '#FFF1EE', // soft peach/coral
     basePrice: 599,
     subCategories: [
       'Bridal Mehndi Full Hands & Feet',
@@ -288,8 +291,8 @@ export const ALL_MAIN_CATEGORIES = [
   {
     id: 'cat_water_tank',
     name: 'Water Tank & Waste Service',
-    icon: '🚰',
-    color: '#CFFAFE',
+    icon: '🛢️',
+    color: '#CFFAFE', // soft aqua/cyan
     basePrice: 599,
     subCategories: [
       'Overhead Sintex Tank Cleaning',
@@ -304,11 +307,34 @@ export const ALL_MAIN_CATEGORIES = [
 
 export function getSubCategoriesForCategory(categoryName = '') {
   const norm = categoryName.toLowerCase().trim();
-  const matched = ALL_MAIN_CATEGORIES.find(c => 
-    c.name.toLowerCase() === norm ||
-    norm.includes(c.name.toLowerCase()) ||
-    c.name.toLowerCase().includes(norm)
-  );
+  const matched = ALL_MAIN_CATEGORIES.find(c => {
+    const cNorm = c.name.toLowerCase();
+    return (
+      cNorm === norm ||
+      norm.includes(cNorm) ||
+      cNorm.includes(norm) ||
+      (norm.includes('ac') && cNorm.includes('ac')) ||
+      (norm.includes('plumb') && cNorm.includes('plumb')) ||
+      (norm.includes('elect') && cNorm.includes('elect')) ||
+      (norm.includes('clean') && (cNorm.includes('clean') || cNorm.includes('home support'))) ||
+      (norm.includes('paint') && cNorm.includes('paint')) ||
+      (norm.includes('carp') && cNorm.includes('carp')) ||
+      (norm.includes('construct') && cNorm.includes('construct')) ||
+      (norm.includes('weld') && cNorm.includes('weld')) ||
+      (norm.includes('alumin') && cNorm.includes('alumin')) ||
+      (norm.includes('garden') && cNorm.includes('garden')) ||
+      (norm.includes('pest') && cNorm.includes('pest')) ||
+      (norm.includes('bike') && cNorm.includes('bike')) ||
+      (norm.includes('car') && !norm.includes('carp') && cNorm.includes('car')) ||
+      ((norm.includes('mov') || norm.includes('shift') || norm.includes('labour')) && cNorm.includes('moving')) ||
+      ((norm.includes('secur') || norm.includes('cctv') || norm.includes('smart')) && cNorm.includes('security')) ||
+      ((norm.includes('electron') || norm.includes('tv') || norm.includes('fridge')) && cNorm.includes('electronics')) ||
+      ((norm.includes('laund') || norm.includes('wash') || norm.includes('iron')) && cNorm.includes('laundry')) ||
+      ((norm.includes('beaut') || norm.includes('salon') || norm.includes('makeup')) && cNorm.includes('beauty')) ||
+      ((norm.includes('mehndi') || norm.includes('henna')) && cNorm.includes('mehndi')) ||
+      ((norm.includes('tank') || norm.includes('waste') || norm.includes('sump')) && cNorm.includes('tank'))
+    );
+  });
 
   if (matched && matched.subCategories) {
     return matched.subCategories;

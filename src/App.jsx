@@ -175,8 +175,13 @@ function MainLayout() {
                   currentCity={currentCity}
                   onChangeCity={() => setCityPickerOpen(true)}
                   onUpdateCity={(city) => setCurrentCity(city)}
-                  onOpenSearch={() => {
+                  onOpenSearch={(query) => {
+                    setSearchQuery(query || '');
                     setSelectedCategoryName('All');
+                    setCurrentScreen('service-list');
+                  }}
+                  onOpenFilter={(catName) => {
+                    setSelectedCategoryName(catName || 'All');
                     setCurrentScreen('service-list');
                   }}
                   onOpenNotifications={() => alert("All bookings and offers are up-to-date!")}
@@ -195,6 +200,10 @@ function MainLayout() {
                   onSelectService={(serv) => {
                     setSelectedService(serv);
                     setCurrentScreen('detail');
+                  }}
+                  onBookService={(serv) => {
+                    setSelectedService(serv);
+                    setIsBookingModalOpen(true);
                   }}
                   onNavigateTab={(tab) => {
                     if (tab === 'bookings') setActiveTab('bookings');
@@ -236,6 +245,7 @@ function MainLayout() {
           {currentScreen === 'service-list' && (
             <ServiceListScreen
               initialCategory={selectedCategoryName}
+              initialSearch={searchQuery}
               onBack={() => setCurrentScreen('main')}
               onSelectService={(serv) => {
                 setSelectedService(serv);

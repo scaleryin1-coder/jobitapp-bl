@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, ChevronRight, Sparkles } from 'lucide-react';
 import { ALL_MAIN_CATEGORIES } from '../../data/categoriesData';
+import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 
 export function AllCategoriesModal({
   isOpen,
@@ -74,11 +75,8 @@ export function AllCategoriesModal({
                 className="bg-[#F8FAFC] hover:bg-[#EAF0FF] border border-slate-200/70 hover:border-[#4B6EF5] rounded-2xl p-3 cursor-pointer transition active:scale-98 group flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-2xs group-hover:scale-105 transition-transform"
-                    style={{ backgroundColor: cat.color }}
-                  >
-                    {cat.icon}
+                  <div className="group-hover:scale-105 transition-transform">
+                    <CategoryBadgeIcon category={cat} />
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#4B6EF5] group-hover:translate-x-0.5 transition-all" />
                 </div>

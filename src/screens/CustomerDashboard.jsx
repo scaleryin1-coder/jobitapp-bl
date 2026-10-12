@@ -9,16 +9,20 @@ import { BannerCarousel } from '../components/home/BannerCarousel';
 import { CategoryRow } from '../components/home/CategoryRow';
 import { PopularServiceSection } from '../components/home/PopularServiceSection';
 import { AllCategoriesModal } from '../components/home/AllCategoriesModal';
+import { FilterModal } from '../components/home/FilterModal';
+import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { NotificationModal } from './NotificationModal';
 import { LocationPickerModal } from './LocationPickerModal';
 
 export function CustomerDashboard({ 
   onSelectCategory, 
   onSelectService, 
+  onBookService,
   onNavigateTab,
   currentCity,
   onUpdateCity,
-  onOpenSearch
+  onOpenSearch,
+  onOpenFilter
 }) {
   const { currentUser } = useAuth();
 
@@ -43,6 +47,12 @@ export function CustomerDashboard({
 
   // Categories Modal State (Shows complete list of all 20 categories)
   const [isAllCategoriesOpen, setIsAllCategoriesOpen] = useState(false);
+
+  // Filter Menu State (All 20 Categories, Rating & Price Filters)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
+  const [minRatingFilter, setMinRatingFilter] = useState(0);
+  const [maxPriceFilter, setMaxPriceFilter] = useState(2000);
 
   // Sync prop changes for currentCity
   useEffect(() => {
@@ -93,17 +103,75 @@ export function CustomerDashboard({
     };
   }, []);
 
-  // Filter services by search query
+  // Filter services by search query and category/rating/price filter menu
   const searchResults = (services || []).filter(s => {
-    if (!searchQuery.trim()) return false;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      (s.title && s.title.toLowerCase().includes(q)) ||
-      (s.categoryName && s.categoryName.toLowerCase().includes(q)) ||
-      (s.badge && s.badge.toLowerCase().includes(q)) ||
-      (s.about && s.about.toLowerCase().includes(q)) ||
-      (s.details && s.details.some(d => d.toLowerCase().includes(q)))
-    );
+    if (!s) return false;
+
+    // If search query is typed
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesQuery = (
+        (s.title && s.title.toLowerCase().includes(q)) ||
+        (s.categoryName && s.categoryName.toLowerCase().includes(q)) ||
+        (s.badge && s.badge.toLowerCase().includes(q)) ||
+        (s.about && s.about.toLowerCase().includes(q)) ||
+        (s.details && s.details.some(d => d.toLowerCase().includes(q)))
+      );
+      if (!matchesQuery) return false;
+    } else if (selectedCategoryFilter === 'All' && minRatingFilter === 0 && maxPriceFilter === 2000) {
+      // No active search and no custom filter -> no dropdown list
+      return false;
+    }
+
+    // Category filter matching all 20 categories
+    if (selectedCategoryFilter !== 'All') {
+      const catLower = selectedCategoryFilter.toLowerCase().trim();
+      const sCat = (s.categoryName || '').toLowerCase().trim();
+      const sTitle = (s.title || '').toLowerCase().trim();
+      const sId = (s.categoryId || '').toLowerCase().trim();
+
+      const matchedCat = (
+        sCat === catLower ||
+        sCat.includes(catLower) ||
+        catLower.includes(sCat) ||
+        sTitle.includes(catLower) ||
+        sId.includes(catLower) ||
+        (catLower.includes('ac') && (sCat.includes('ac') || sTitle.includes('ac'))) ||
+        (catLower.includes('plumb') && (sCat.includes('plumb') || sTitle.includes('plumb'))) ||
+        (catLower.includes('elect') && (sCat.includes('elect') || sTitle.includes('elect'))) ||
+        (catLower.includes('carp') && (sCat.includes('carp') || sTitle.includes('carp'))) ||
+        (catLower.includes('paint') && (sCat.includes('paint') || sTitle.includes('paint'))) ||
+        (catLower.includes('construct') && (sCat.includes('construct') || sTitle.includes('construct') || sTitle.includes('mason'))) ||
+        (catLower.includes('weld') && (sCat.includes('weld') || sTitle.includes('weld'))) ||
+        (catLower.includes('alumin') && (sCat.includes('alumin') || sTitle.includes('fabricat') || sTitle.includes('window'))) ||
+        (catLower.includes('garden') && (sCat.includes('garden') || sTitle.includes('garden') || sTitle.includes('lawn'))) ||
+        (catLower.includes('pest') && (sCat.includes('pest') || sTitle.includes('pest') || sTitle.includes('termite'))) ||
+        (catLower.includes('bike') && (sCat.includes('bike') || sTitle.includes('bike') || sTitle.includes('wheeler'))) ||
+        (catLower.includes('car') && (sCat.includes('car') || sTitle.includes('car') || sTitle.includes('mechanic'))) ||
+        (catLower.includes('moving') && (sCat.includes('moving') || sTitle.includes('shift') || sTitle.includes('labour'))) ||
+        (catLower.includes('secur') && (sCat.includes('secur') || sTitle.includes('cctv') || sTitle.includes('lock') || sTitle.includes('smart'))) ||
+        (catLower.includes('electron') && (sCat.includes('electron') || sTitle.includes('tv') || sTitle.includes('appliance'))) ||
+        (catLower.includes('laund') && (sCat.includes('laund') || sTitle.includes('iron') || sTitle.includes('wash'))) ||
+        (catLower.includes('support') && (sCat.includes('support') || sCat.includes('clean') || sTitle.includes('domestic') || sTitle.includes('elderly'))) ||
+        (catLower.includes('beauty') && (sCat.includes('beauty') || sTitle.includes('salon') || sTitle.includes('spa'))) ||
+        (catLower.includes('mehndi') && (sCat.includes('mehndi') || sTitle.includes('henna') || sTitle.includes('mehndi'))) ||
+        (catLower.includes('tank') && (sCat.includes('tank') || sTitle.includes('tank') || sTitle.includes('water')))
+      );
+
+      if (!matchedCat) return false;
+    }
+
+    // Rating filter
+    if (minRatingFilter > 0 && (s.rating || 0) < minRatingFilter) {
+      return false;
+    }
+
+    // Price filter
+    if (maxPriceFilter < 2000 && (s.price || 0) > maxPriceFilter) {
+      return false;
+    }
+
+    return true;
   });
 
   return (
@@ -124,11 +192,17 @@ export function CustomerDashboard({
         setSearchQuery={setSearchQuery}
         isSearchFocused={isSearchFocused}
         setIsSearchFocused={setIsSearchFocused}
-        onOpenSearch={() => onOpenSearch?.()}
+        onOpenSearch={(q) => onOpenSearch?.(q || searchQuery)}
+        onOpenFilter={() => (onOpenFilter ? onOpenFilter(selectedCategoryFilter) : onOpenSearch?.(searchQuery))}
+        activeCategoryFilter={selectedCategoryFilter}
+        onClearFilter={() => {
+          setSelectedCategoryFilter('All');
+          setMinRatingFilter(0);
+          setMaxPriceFilter(2000);
+        }}
         searchResults={searchResults}
-        categories={categories}
-        onSelectCategory={(cat) => onSelectCategory?.(cat)}
         onSelectService={(serv) => onSelectService?.(serv)}
+        onBookService={(serv) => onBookService?.(serv)}
       />
 
       {/* 3. Promotional Banner / Carousel */}
@@ -157,6 +231,23 @@ export function CustomerDashboard({
         isOpen={isAllCategoriesOpen}
         onClose={() => setIsAllCategoriesOpen(false)}
         onSelectCategory={(cat) => onSelectCategory?.(cat)}
+      />
+
+      {/* Filter Menu Modal (Opened via Filter icon next to Search bar) */}
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        selectedCategory={selectedCategoryFilter}
+        onSelectCategory={(catName) => setSelectedCategoryFilter(catName)}
+        minRating={minRatingFilter}
+        onSelectRating={(r) => setMinRatingFilter(r)}
+        maxPrice={maxPriceFilter}
+        onSelectMaxPrice={(p) => setMaxPriceFilter(p)}
+        onReset={() => {
+          setSelectedCategoryFilter('All');
+          setMinRatingFilter(0);
+          setMaxPriceFilter(2000);
+        }}
       />
 
       {/* Notifications Modal (existing functional component) */}
