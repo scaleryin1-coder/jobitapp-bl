@@ -71,7 +71,56 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const loginWithPhone = async (phone, otp, name = 'Valued Customer') => {
+  const getLocalUserByPhone = (cleanTenDigits) => {
+    try {
+      const raw = localStorage.getItem('jobit_registered_users');
+      const users = raw ? JSON.parse(raw) : {};
+      return users[cleanTenDigits] || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveLocalUserByPhone = (cleanTenDigits, userProfile) => {
+    try {
+      const raw = localStorage.getItem('jobit_registered_users');
+      const users = raw ? JSON.parse(raw) : {};
+      users[cleanTenDigits] = userProfile;
+      localStorage.setItem('jobit_registered_users', JSON.stringify(users));
+    } catch {}
+  };
+
+  const checkPhoneRegistered = async (phone) => {
+    const rawDigits = phone.replace(/\D/g, '');
+    const cleanTenDigits = rawDigits.slice(-10);
+
+    if (cleanTenDigits === '8289968045') {
+      return { isRegistered: true, isAdmin: true };
+    }
+
+    // 1. Check local users map
+    const localExisting = getLocalUserByPhone(cleanTenDigits);
+    if (localExisting) {
+      return { isRegistered: true, user: localExisting };
+    }
+
+    // 2. Check Firestore if configured
+    if (isFirebaseConfigured && db) {
+      try {
+        const uid = 'usr_' + cleanTenDigits;
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists()) {
+          const user = { uid, ...snap.data() };
+          saveLocalUserByPhone(cleanTenDigits, user);
+          return { isRegistered: true, user };
+        }
+      } catch {}
+    }
+
+    return { isRegistered: false };
+  };
+
+  const loginWithPhone = async (phone, otp, name = '') => {
     const rawDigits = phone.replace(/\D/g, '');
     const cleanTenDigits = rawDigits.slice(-10);
 
@@ -79,7 +128,7 @@ export function AuthProvider({ children }) {
     if (cleanTenDigits === '8289968045') {
       const adminProfile = {
         uid: 'admin_master',
-        name: name && name !== 'Valued Customer' ? name : 'Master Admin',
+        name: 'Master Admin',
         email: 'admin@jobit.com',
         phone: '+91 82899 68045',
         role: 'admin',
@@ -98,14 +147,47 @@ export function AuthProvider({ children }) {
     }
 
     const uid = 'usr_' + cleanTenDigits;
+
+    // Single-Account Check: check if this mobile number is already registered
+    let existingProfile = getLocalUserByPhone(cleanTenDigits);
+
+    if (!existingProfile && isFirebaseConfigured && db) {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists()) {
+          existingProfile = { uid, ...snap.data() };
+        }
+      } catch {}
+    }
+
+    if (existingProfile) {
+      // Existing single account found -> Log directly into this existing account without duplicating
+      const mergedProfile = {
+        ...existingProfile,
+        uid,
+        phone: `+91 ${cleanTenDigits}`,
+        role: existingProfile.role || 'customer'
+      };
+      saveLocalUserByPhone(cleanTenDigits, mergedProfile);
+      setCurrentUser(mergedProfile);
+      localStorage.setItem('jobit_user', JSON.stringify(mergedProfile));
+      return mergedProfile;
+    }
+
+    // Brand new user registration for this single mobile number
+    const finalName = (name && name.trim()) ? name.trim() : 'Ferdin';
     const profile = {
       uid,
-      phone,
-      name: name || 'Valued Customer',
+      phone: `+91 ${cleanTenDigits}`,
+      name: finalName,
+      email: `${finalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'customer'}@example.com`,
       role: 'customer',
-      city: localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra',
-      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+      city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
+      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      createdAt: new Date().toISOString()
     };
+
+    saveLocalUserByPhone(cleanTenDigits, profile);
 
     if (isFirebaseConfigured && db) {
       try {
@@ -173,6 +255,14 @@ export function AuthProvider({ children }) {
     setCurrentUser(updated);
     localStorage.setItem('jobit_user', JSON.stringify(updated));
 
+    // Also update registered users cache if phone is present
+    if (updated.phone) {
+      const cleanDigits = updated.phone.replace(/\D/g, '').slice(-10);
+      if (cleanDigits) {
+        saveLocalUserByPhone(cleanDigits, updated);
+      }
+    }
+
     if (isFirebaseConfigured && db && currentUser.uid) {
       try {
         await setDoc(doc(db, 'users', currentUser.uid), updates, { merge: true });
@@ -195,6 +285,7 @@ export function AuthProvider({ children }) {
       value={{
         currentUser,
         loading,
+        checkPhoneRegistered,
         loginWithPhone,
         loginAsWorker,
         loginAsAdmin,

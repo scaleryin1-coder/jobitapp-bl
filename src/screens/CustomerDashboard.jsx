@@ -24,7 +24,7 @@ export function CustomerDashboard({
   onUpdateCity,
   onOpenSearch,
   onOpenFilter,
-  onOpenPartnerLogin
+  onOpenProfileDrawer
 }) {
   const { currentUser } = useAuth();
 
@@ -177,6 +177,7 @@ export function CustomerDashboard({
         locationName={locationName}
         onOpenLocationPicker={() => setIsLocationModalOpen(true)}
         onOpenNotifications={() => setIsNotificationOpen(true)}
+        onOpenProfileDrawer={onOpenProfileDrawer}
         unreadNotifCount={unreadNotifCount}
       />
 

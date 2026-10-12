@@ -4,13 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { isFirebaseConfigured } from '../firebase';
 
 export function AuthModal({ isOpen, onClose, onSuccess }) {
-  const { loginWithPhone } = useAuth();
+  const { loginWithPhone, checkPhoneRegistered } = useAuth();
   const [step, setStep] = useState('phone'); // 'phone' | 'otp' | 'name'
   const [phone, setPhone] = useState('9876543210');
   const [otp, setOtp] = useState('1234');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [existingUserFound, setExistingUserFound] = useState(null);
 
   if (!isOpen) return null;
 
@@ -56,6 +57,19 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
       return;
     }
     setError('');
+
+    // Pre-check if single account already exists for this phone
+    try {
+      const regStatus = await checkPhoneRegistered?.(phone);
+      if (regStatus?.isRegistered && regStatus?.user) {
+        setExistingUserFound(regStatus.user);
+      } else {
+        setExistingUserFound(null);
+      }
+    } catch {
+      setExistingUserFound(null);
+    }
+
     setStep('otp');
   };
 
@@ -74,6 +88,23 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
       return;
     }
     setError('');
+
+    // Strict Single Account check: If account is already registered with this mobile number,
+    // log directly into that single existing account without asking name again or creating duplicate!
+    if (existingUserFound) {
+      setLoading(true);
+      try {
+        await loginWithPhone(phone, otp, existingUserFound.name);
+        onSuccess?.();
+        onClose();
+      } catch (err) {
+        setError(err.message || 'Login failed');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setStep('name');
   };
 
@@ -81,7 +112,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await loginWithPhone(phone, otp, name.trim() || 'Valued Customer');
+      await loginWithPhone(phone, otp, name.trim() || 'Ferdin');
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -148,7 +179,14 @@ export function AuthModal({ isOpen, onClose, onSuccess }) {
               <Lock className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold text-slate-900">Verify Code</h3>
-            <p className="text-xs text-slate-500 mb-5">Sent 4-digit code to +91 {phone}</p>
+            {existingUserFound ? (
+              <div className="mb-4 mt-1 bg-blue-50 border border-blue-200/80 rounded-2xl p-2.5 text-xs text-blue-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#4B6EF5] shrink-0" />
+                <span>Welcome back, <strong>{existingUserFound.name}</strong>! Existing account identified.</span>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 mb-5">Sent 4-digit code to +91 {phone}</p>
+            )}
 
             <div className="mb-4">
               <input

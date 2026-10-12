@@ -6,6 +6,7 @@ export function HomeHeader({
   locationName = 'Melattur, Kerala',
   onOpenLocationPicker,
   onOpenNotifications,
+  onOpenProfileDrawer,
   unreadNotifCount = 0
 }) {
   // Extract user first name or fallback cleanly
@@ -17,11 +18,14 @@ export function HomeHeader({
 
   return (
     <header className="px-5 pt-4 pb-2 flex items-center justify-between">
-      {/* Left: User Avatar & Info */}
+      {/* Left: Interactive User Avatar & Info Header */}
       <div className="flex items-center gap-3">
-        {/* Profile Avatar */}
-        <div 
-          className="relative w-11 h-11 rounded-full ring-2 ring-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden shrink-0 bg-[#E0E7FF] flex items-center justify-center"
+        {/* Profile Avatar Button */}
+        <button 
+          type="button"
+          onClick={onOpenProfileDrawer}
+          title="View & Edit Profile Details"
+          className="relative w-11 h-11 rounded-full ring-2 ring-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-hidden shrink-0 bg-[#E0E7FF] flex items-center justify-center cursor-pointer active:scale-95 transition hover:ring-[#4B6EF5]/40"
         >
           {userPhoto ? (
             <img
@@ -37,13 +41,18 @@ export function HomeHeader({
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
-        </div>
+        </button>
 
         {/* User Greeting & Location */}
         <div>
-          <h2 className="text-[15px] font-black text-[#111827] tracking-tight leading-tight">
+          <button
+            type="button"
+            onClick={onOpenProfileDrawer}
+            className="text-[15px] font-black text-[#111827] tracking-tight leading-tight hover:text-[#4B6EF5] transition-colors cursor-pointer text-left block active:scale-98"
+            title="Open Profile Card"
+          >
             Hello, {displayName}
-          </h2>
+          </button>
           <button
             onClick={onOpenLocationPicker}
             className="flex items-center gap-1 mt-0.5 group text-left cursor-pointer transition active:scale-95"

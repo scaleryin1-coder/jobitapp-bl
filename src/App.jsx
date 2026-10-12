@@ -24,6 +24,7 @@ import { AdminScreen } from './screens/AdminScreen';
 import { WorkerScreen } from './screens/WorkerScreen';
 import { AuthModal } from './screens/AuthModal';
 import { PartnerLoginModal } from './screens/PartnerLoginModal';
+import { ProfileDrawerModal } from './screens/ProfileDrawerModal';
 import { BottomNav } from './components/BottomNav';
 
 function MainLayout() {
@@ -36,6 +37,7 @@ function MainLayout() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPartnerLoginOpen, setIsPartnerLoginOpen] = useState(false);
+  const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,6 +186,7 @@ function MainLayout() {
                     setSelectedCategoryName(catName || 'All');
                     setCurrentScreen('service-list');
                   }}
+                  onOpenProfileDrawer={() => setIsProfileDrawerOpen(true)}
                   onOpenNotifications={() => alert("All bookings and offers are up-to-date!")}
                   onSelectCategory={(cat) => {
                     const catName = cat?.name || 'Home Service';
@@ -312,6 +315,17 @@ function MainLayout() {
           onClose={() => setIsAuthModalOpen(false)}
           onSuccess={() => {
             setCurrentScreen('main');
+          }}
+        />
+
+        {/* Floating Profile Card / Drawer Modal */}
+        <ProfileDrawerModal
+          isOpen={isProfileDrawerOpen}
+          onClose={() => setIsProfileDrawerOpen(false)}
+          onLogoutComplete={() => {
+            setIsProfileDrawerOpen(false);
+            setCurrentScreen('splash');
+            setActiveTab('home');
           }}
         />
 

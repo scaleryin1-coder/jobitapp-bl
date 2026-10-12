@@ -23,15 +23,24 @@ export function ProfileScreen({
 }) {
   const { currentUser, updateUserProfile, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(() => currentUser?.name || 'Customer');
-  const [city, setCity] = useState(() => currentUser?.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra');
+  const [name, setName] = useState(() => currentUser?.name || 'Ferdin');
+  const [city, setCity] = useState(() => currentUser?.city || currentUser?.address || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
+  const [email, setEmail] = useState(() => currentUser?.email || 'ferdin@example.com');
   const [becomeWorkerOpen, setBecomeWorkerOpen] = useState(false);
   const [serviceSkill, setServiceSkill] = useState('Plumbing');
   const [workerApplied, setWorkerApplied] = useState(false);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    await updateUserProfile({ name, city });
+    await updateUserProfile({ 
+      name: name.trim() || 'Ferdin', 
+      city: city.trim(),
+      address: city.trim(),
+      email: email.trim() 
+    });
+    if (city.trim()) {
+      localStorage.setItem('jobit_user_location', city.trim());
+    }
     setIsEditing(false);
   };
 
@@ -118,17 +127,28 @@ export function ProfileScreen({
               />
             </div>
             <div>
-              <label className="text-[11px] font-bold text-slate-600 block mb-1">Current City / Location</label>
+              <label className="text-[11px] font-bold text-slate-600 block mb-1">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5]"
+                placeholder="e.g. ferdin@example.com"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-slate-600 block mb-1">Primary Address</label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5]"
+                placeholder="e.g. Melattur, Kerala"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-bold shadow-sm cursor-pointer"
+              className="w-full py-2.5 rounded-full bg-[#4B6EF5] text-white text-xs font-bold shadow-sm cursor-pointer hover:bg-[#3D5FE0] transition"
             >
               Save Changes
             </button>
