@@ -24,6 +24,7 @@ import { AdminScreen } from './screens/AdminScreen';
 import { WorkerScreen } from './screens/WorkerScreen';
 import { AuthModal } from './screens/AuthModal';
 import { PartnerLoginModal } from './screens/PartnerLoginModal';
+import { BottomNav } from './components/BottomNav';
 
 function MainLayout() {
   const { currentUser, logout } = useAuth();
@@ -151,10 +152,10 @@ function MainLayout() {
 
   // 3. Default: Customer Dashboard (Service Booking UI)
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
+    <div className="min-h-screen bg-[#E9F8FD] flex flex-col items-center justify-start select-none">
       
       {/* Clean Web App Container (No phone OS bezel, no hardcoded status bar) */}
-      <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+      <div className="w-full max-w-[440px] min-h-screen bg-white shadow-xl flex flex-col relative overflow-x-hidden">
         
         {/* Dynamic Screen View */}
         <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
@@ -268,65 +269,12 @@ function MainLayout() {
 
         </div>
 
-        {/* Floating Dark Pill Bottom Navigation Bar (Shown on Main Customer Screen) */}
+        {/* Bottom Navigation Bar matching reference design */}
         {currentScreen === 'main' && (
-          <div className="fixed sm:absolute inset-x-0 bottom-4 px-6 z-40 pointer-events-none flex justify-center">
-            <nav className="pointer-events-auto bg-[#181A20] text-white rounded-full px-4 py-2 shadow-floating flex items-center justify-between gap-5 border border-white/10 backdrop-blur-md">
-              
-              {/* 1. Home */}
-              <button
-                onClick={() => setActiveTab('home')}
-                className={`transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                  activeTab === 'home'
-                    ? 'w-10 h-10 rounded-full bg-[#0EA5E0] text-white shadow-glow'
-                    : 'w-9 h-9 rounded-full text-[#9CA3AF] hover:text-white'
-                }`}
-                title="Home"
-              >
-                <HomeIcon className="w-5 h-5 stroke-[2]" />
-              </button>
-
-              {/* 2. Chat */}
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                  activeTab === 'chat'
-                    ? 'w-10 h-10 rounded-full bg-[#0EA5E0] text-white shadow-glow'
-                    : 'w-9 h-9 rounded-full text-[#9CA3AF] hover:text-white'
-                }`}
-                title="Chat"
-              >
-                <MessageCircle className="w-5 h-5 stroke-[2]" />
-              </button>
-
-              {/* 3. Bookings Calendar */}
-              <button
-                onClick={() => setActiveTab('bookings')}
-                className={`transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                  activeTab === 'bookings'
-                    ? 'w-10 h-10 rounded-full bg-[#0EA5E0] text-white shadow-glow'
-                    : 'w-9 h-9 rounded-full text-[#9CA3AF] hover:text-white'
-                }`}
-                title="Bookings"
-              >
-                <Calendar className="w-5 h-5 stroke-[2]" />
-              </button>
-
-              {/* 4. Profile */}
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                  activeTab === 'profile'
-                    ? 'w-10 h-10 rounded-full bg-[#0EA5E0] text-white shadow-glow'
-                    : 'w-9 h-9 rounded-full text-[#9CA3AF] hover:text-white'
-                }`}
-                title="Profile"
-              >
-                <User className="w-5 h-5 stroke-[2]" />
-              </button>
-
-            </nav>
-          </div>
+          <BottomNav
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab)}
+          />
         )}
 
         {/* Booking Bottom Sheet */}

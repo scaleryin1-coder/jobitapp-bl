@@ -7,22 +7,28 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Manrope', 'system-ui', 'sans-serif'],
+        sans: ['Outfit', 'Manrope', 'system-ui', 'sans-serif'],
       },
       colors: {
+        primary: {
+          DEFAULT: '#4B6EF5',
+          hover: '#3D5FE0',
+          light: '#EAF0FF',
+        },
+        ice: {
+          50: '#F5FBFF',
+          100: '#E9F8FD',
+          200: '#D9F2FA',
+        },
         sky: {
           500: '#0EA5E0',
           400: '#38BDF8',
         },
-        banner: {
-          start: '#2B8FD8',
-          end: '#6FD0EE',
-        }
       },
       boxShadow: {
-        'glow': '0 10px 25px -5px rgba(14, 165, 224, 0.4)',
-        'card': '0 8px 24px -4px rgba(0, 0, 0, 0.06)',
-        'floating': '0 12px 30px rgba(0, 0, 0, 0.35)',
+        'soft': '0 4px 20px rgba(0, 0, 0, 0.04)',
+        'nav': '0 -4px 20px rgba(0, 0, 0, 0.05)',
+        'card': '0 8px 24px -4px rgba(0, 0, 0, 0.05)',
       }
     },
   },
