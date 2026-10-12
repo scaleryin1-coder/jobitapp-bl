@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Calendar, Clock, MapPin, FileText, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, MapPin, FileText, CheckCircle2, ShieldCheck, Sparkles, Check } from 'lucide-react';
 import { createBooking } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
+import { getSubCategoriesForCategory } from '../data/categoriesData';
 
 export function BookingModal({ service, isOpen, onClose, onSuccess }) {
   const { currentUser } = useAuth() || {};
@@ -16,6 +17,28 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Derive sub-categories for this service/category
+  const availableSubCategories = service
+    ? (service.subCategories && service.subCategories.length > 0
+        ? service.subCategories
+        : getSubCategoriesForCategory(service.categoryName || service.title))
+    : [];
+
+  const [selectedSubCategory, setSelectedSubCategory] = useState(
+    availableSubCategories[0] || 'Standard Service'
+  );
+
+  useEffect(() => {
+    if (service) {
+      const list = service.subCategories && service.subCategories.length > 0
+        ? service.subCategories
+        : getSubCategoriesForCategory(service.categoryName || service.title);
+      if (list && list.length > 0) {
+        setSelectedSubCategory(list[0]);
+      }
+    }
+  }, [service]);
 
   if (!isOpen || !service) return null;
 
@@ -32,12 +55,15 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
       preferredWorkerId: service.workerId || null,
       preferredWorkerName: service.workerName || null,
       serviceId: service.id,
-      serviceTitle: service.title,
-      categoryName: service.categoryName,
-      price: service.price,
+      serviceTitle: `${service.title} (${selectedSubCategory})`,
+      subCategory: selectedSubCategory,
+      categoryName: service.categoryName || service.title,
+      price: service.price || 350,
       address,
       dateTime: `${date} at ${timeSlot}`,
-      note: note.trim(),
+      note: note.trim() 
+        ? `Issue: ${selectedSubCategory}. Note: ${note.trim()}`
+        : `Issue: ${selectedSubCategory}`,
       status: 'pending' // Pending Assignment
     };
 
@@ -57,24 +83,24 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl relative border border-slate-100 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
+      <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl relative border border-slate-100 max-h-[92vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
           <div>
-            <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Book Service
+            <h3 className="text-lg font-black text-[#111827] tracking-tight">
+              Book {service.title}
             </h3>
             <p className="text-xs text-slate-400 font-semibold mt-0.5">
-              {service.title} • ₹{service.price}/hour
+              Instant appointment • ₹{service.price || 350} starting rate
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#F1F3F5] text-slate-600 flex items-center justify-center hover:bg-slate-200 transition"
+            className="w-9 h-9 rounded-full bg-[#F1F3F5] text-slate-600 flex items-center justify-center hover:bg-slate-200 transition cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2.2]" />
           </button>
         </div>
 
@@ -83,18 +109,54 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 mx-auto flex items-center justify-center mb-4">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h4 className="text-xl font-extrabold text-slate-900">Booking Confirmed!</h4>
+            <h4 className="text-xl font-black text-slate-900">Booking Confirmed!</h4>
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto">
-              Your service request is placed. A verified technician has been notified.
+              Your request for <strong className="text-slate-800">{selectedSubCategory}</strong> has been placed. A verified technician has been notified.
             </p>
           </div>
         ) : (
           <form onSubmit={handleConfirm} className="space-y-4 pt-4">
             
+            {/* IN-PAGE SUB-CATEGORY / ISSUE SELECTOR (No extra pages needed) */}
+            {availableSubCategories.length > 0 && (
+              <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <label className="text-xs font-black text-[#111827] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#4B6EF5]" />
+                    <span>Select Issue / Sub-Category</span>
+                  </label>
+                  <span className="text-[10px] font-extrabold text-[#4B6EF5] bg-[#EAF0FF] px-2 py-0.5 rounded-full">
+                    {availableSubCategories.length} Options
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {availableSubCategories.map((sub) => {
+                    const isSelected = selectedSubCategory === sub;
+                    return (
+                      <button
+                        type="button"
+                        key={sub}
+                        onClick={() => setSelectedSubCategory(sub)}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all text-left cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-[#4B6EF5] text-white shadow-sm shadow-[#4B6EF5]/20 scale-102 ring-2 ring-[#4B6EF5]/20'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/80'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        <span>{sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Address Input */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                <MapPin className="w-3.5 h-3.5 text-[#4B6EF5]" />
                 <span>Service Address</span>
               </label>
               <textarea
@@ -102,7 +164,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white"
                 placeholder="Enter complete street, house no., and landmark"
               />
             </div>
@@ -110,7 +172,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             {/* Date Picker */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                <Calendar className="w-3.5 h-3.5 text-[#4B6EF5]" />
                 <span>Preferred Date</span>
               </label>
               <input
@@ -118,14 +180,14 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white"
               />
             </div>
 
             {/* Time Slot Selector */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                <Clock className="w-3.5 h-3.5 text-[#4B6EF5]" />
                 <span>Time Slot</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -139,9 +201,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
                     type="button"
                     key={slot}
                     onClick={() => setTimeSlot(slot)}
-                    className={`p-2.5 rounded-2xl text-[11px] font-bold border transition ${
+                    className={`p-2.5 rounded-2xl text-[11px] font-bold border transition cursor-pointer ${
                       timeSlot === slot
-                        ? 'bg-sky-50 border-[#0EA5E0] text-[#0EA5E0]'
+                        ? 'bg-[#EAF0FF] border-[#4B6EF5] text-[#4B6EF5]'
                         : 'bg-[#F8FAFC] border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
@@ -154,15 +216,15 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             {/* Additional Note */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                <FileText className="w-3.5 h-3.5 text-[#4B6EF5]" />
                 <span>Notes for Worker (Optional)</span>
               </label>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
-                placeholder="e.g. Please bring extra 1/2 inch pipe fittings"
+                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white"
+                placeholder="e.g. Please bring extra spare parts or tools"
               />
             </div>
 
@@ -178,9 +240,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-extrabold text-sm shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] hover:opacity-95 active:scale-[0.99] transition"
+              className="w-full py-4 rounded-full bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-extrabold text-sm shadow-[0_12px_28px_-6px_rgba(75,110,245,0.45)] active:scale-[0.99] transition cursor-pointer"
             >
-              {loading ? 'Confirming...' : `Confirm Booking • ₹${service.price}`}
+              {loading ? 'Confirming...' : `Confirm Booking • ${selectedSubCategory}`}
             </button>
           </form>
         )}

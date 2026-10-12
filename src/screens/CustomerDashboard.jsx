@@ -8,6 +8,7 @@ import { HomeSearchSection } from '../components/home/HomeSearchSection';
 import { BannerCarousel } from '../components/home/BannerCarousel';
 import { CategoryRow } from '../components/home/CategoryRow';
 import { PopularServiceSection } from '../components/home/PopularServiceSection';
+import { AllCategoriesModal } from '../components/home/AllCategoriesModal';
 import { NotificationModal } from './NotificationModal';
 import { LocationPickerModal } from './LocationPickerModal';
 
@@ -39,6 +40,9 @@ export function CustomerDashboard({
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Categories Modal State (Shows complete list of all 20 categories)
+  const [isAllCategoriesOpen, setIsAllCategoriesOpen] = useState(false);
 
   // Sync prop changes for currentCity
   useEffect(() => {
@@ -138,7 +142,7 @@ export function CustomerDashboard({
       <CategoryRow
         categories={categories}
         onSelectCategory={(cat) => onSelectCategory?.(cat)}
-        onOpenAll={() => onOpenSearch?.()}
+        onOpenAll={() => setIsAllCategoriesOpen(true)}
       />
 
       {/* 5. Popular Service */}
@@ -146,6 +150,13 @@ export function CustomerDashboard({
         services={services}
         onSelectService={(serv) => onSelectService?.(serv)}
         onOpenAll={() => onOpenSearch?.()}
+      />
+
+      {/* All 20 Categories Modal (Opened via 'See All' in Service Category) */}
+      <AllCategoriesModal
+        isOpen={isAllCategoriesOpen}
+        onClose={() => setIsAllCategoriesOpen(false)}
+        onSelectCategory={(cat) => onSelectCategory?.(cat)}
       />
 
       {/* Notifications Modal (existing functional component) */}

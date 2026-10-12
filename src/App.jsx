@@ -181,8 +181,16 @@ function MainLayout() {
                   }}
                   onOpenNotifications={() => alert("All bookings and offers are up-to-date!")}
                   onSelectCategory={(cat) => {
-                    setSelectedCategoryName(cat?.name || 'All');
-                    setCurrentScreen('service-list');
+                    const catName = cat?.name || 'Home Service';
+                    const serviceObj = {
+                      id: `cat_${cat?.id || catName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+                      title: catName,
+                      categoryName: catName,
+                      price: cat?.basePrice || 350,
+                      subCategories: cat?.subCategories || []
+                    };
+                    setSelectedService(serviceObj);
+                    setIsBookingModalOpen(true);
                   }}
                   onSelectService={(serv) => {
                     setSelectedService(serv);

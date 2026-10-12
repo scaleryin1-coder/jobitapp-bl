@@ -1,9 +1,26 @@
 import React from 'react';
 import { LayoutGrid } from 'lucide-react';
+import { ALL_MAIN_CATEGORIES } from '../../data/categoriesData';
 
 // Dedicated colorful, high-fidelity vector icons for categories matching the reference
 function CategoryIcon({ categoryName = '' }) {
-  const name = categoryName.toLowerCase();
+  const norm = categoryName.toLowerCase().trim();
+  const matched = ALL_MAIN_CATEGORIES.find(c => 
+    c.name.toLowerCase() === norm ||
+    norm.includes(c.name.toLowerCase()) ||
+    c.name.toLowerCase().includes(norm)
+  );
+
+  if (matched) {
+    return (
+      <div 
+        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-2xs"
+        style={{ backgroundColor: matched.color }}
+      >
+        {matched.icon}
+      </div>
+    );
+  }
 
   if (name.includes('cook') || name.includes('chef') || name.includes('food')) {
     return (
