@@ -85,7 +85,8 @@ export const initialWorkers = [
     avatar: "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80",
     vehicle: "Bike • DL-04-AB-1234",
     experience: "8 years",
-    status: "available"
+    status: "approved",
+    workerStatus: "approved"
   },
   {
     id: "worker_amit",
@@ -101,7 +102,8 @@ export const initialWorkers = [
     avatar: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80",
     vehicle: "Scooter • DL-07-EF-5678",
     experience: "7 years",
-    status: "available"
+    status: "approved",
+    workerStatus: "approved"
   },
   {
     id: "worker_sunita",
@@ -117,7 +119,8 @@ export const initialWorkers = [
     avatar: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80",
     vehicle: "Van • DL-02-GH-9012",
     experience: "5 years",
-    status: "available"
+    status: "approved",
+    workerStatus: "approved"
   },
   {
     id: "worker_vikram",
@@ -133,7 +136,8 @@ export const initialWorkers = [
     avatar: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=300&q=80",
     vehicle: "Bike • DL-09-JK-3456",
     experience: "6 years",
-    status: "offline"
+    status: "approved",
+    workerStatus: "approved"
   },
   {
     id: "worker_ramesh",
@@ -149,7 +153,8 @@ export const initialWorkers = [
     avatar: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=300&q=80",
     vehicle: "Bike • DL-05-MN-7890",
     experience: "9 years",
-    status: "available"
+    status: "approved",
+    workerStatus: "approved"
   }
 ];
 

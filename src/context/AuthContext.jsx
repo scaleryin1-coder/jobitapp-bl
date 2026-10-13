@@ -16,6 +16,14 @@ const defaultAuthContext = {
 
 const AuthContext = createContext(defaultAuthContext);
 
+// Safe database operation wrapper to prevent network hangs when backend is offline
+const safeDbPromise = (promise, timeoutMs = 1500) => {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))
+  ]).catch(() => null);
+};
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -108,8 +116,8 @@ export function AuthProvider({ children }) {
     if (isFirebaseConfigured && db) {
       try {
         const uid = 'usr_' + cleanTenDigits;
-        const snap = await getDoc(doc(db, 'users', uid));
-        if (snap.exists()) {
+        const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
+        if (snap && snap.exists && snap.exists()) {
           const user = { uid, ...snap.data() };
           saveLocalUserByPhone(cleanTenDigits, user);
           return { isRegistered: true, user };
@@ -137,7 +145,7 @@ export function AuthProvider({ children }) {
 
       if (isFirebaseConfigured && db) {
         try {
-          await setDoc(doc(db, 'users', 'admin_master'), adminProfile, { merge: true });
+          await safeDbPromise(setDoc(doc(db, 'users', 'admin_master'), adminProfile, { merge: true }), 1500);
         } catch {}
       }
 
@@ -153,8 +161,8 @@ export function AuthProvider({ children }) {
 
     if (!existingProfile && isFirebaseConfigured && db) {
       try {
-        const snap = await getDoc(doc(db, 'users', uid));
-        if (snap.exists()) {
+        const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
+        if (snap && snap.exists && snap.exists()) {
           existingProfile = { uid, ...snap.data() };
         }
       } catch {}
@@ -184,7 +192,8 @@ export function AuthProvider({ children }) {
       name: finalName,
       email: `${finalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}@example.com`,
       role: selectedRole,
-      workerStatus: selectedRole === 'worker' ? (extraData.workerStatus || 'pending_verification') : undefined,
+      status: selectedRole === 'worker' ? (extraData.status || 'pending') : undefined,
+      workerStatus: selectedRole === 'worker' ? (extraData.workerStatus || extraData.status || 'pending') : undefined,
       city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
       photo: selectedRole === 'worker' 
         ? 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'
@@ -198,7 +207,7 @@ export function AuthProvider({ children }) {
     if (isFirebaseConfigured && db) {
       try {
         const userRef = doc(db, 'users', uid);
-        await setDoc(userRef, profile, { merge: true });
+        await safeDbPromise(setDoc(userRef, profile, { merge: true }), 1500);
       } catch {}
     }
 
@@ -220,12 +229,14 @@ export function AuthProvider({ children }) {
       avatar: worker.avatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
       vehicle: worker.vehicle || 'Honda Activa (MH-02-CD-4321)',
       rating: worker.rating || 4.9,
+      status: worker.status || 'approved',
+      workerStatus: worker.workerStatus || worker.status || 'approved',
       city: worker.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra'
     };
 
     if (isFirebaseConfigured && db) {
       try {
-        await setDoc(doc(db, 'users', wId), profile, { merge: true });
+        await safeDbPromise(setDoc(doc(db, 'users', wId), profile, { merge: true }), 1500);
       } catch {}
     }
 
@@ -239,14 +250,14 @@ export function AuthProvider({ children }) {
       uid: 'admin_master',
       name: adminPayload.name || 'Master Admin',
       email: adminPayload.email || 'admin@jobit.com',
-      phone: '98765 00000',
+      phone: '+91 82899 68045',
       role: 'admin',
       city: 'Headquarters'
     };
 
     if (isFirebaseConfigured && db) {
       try {
-        await setDoc(doc(db, 'users', 'admin_master'), profile, { merge: true });
+        await safeDbPromise(setDoc(doc(db, 'users', 'admin_master'), profile, { merge: true }), 1500);
       } catch {}
     }
 

@@ -178,15 +178,16 @@ export function AdminScreen({ onBack, onLogout }) {
   const pendingJobs = bookings.filter(b => b.status === 'pending');
   const ongoingJobs = bookings.filter(b => ['accepted', 'on_the_way', 'in_progress'].includes(b.status));
   const completedJobs = bookings.filter(b => b.status === 'completed');
-  const onlineWorkers = workers.filter(w => w.isOnline);
-  const pendingRegistrations = pendingWorkers.filter(p => p.status === 'pending_verification');
+  const approvedWorkers = workers.filter(w => w.status === 'approved' || w.workerStatus === 'approved');
+  const onlineWorkers = approvedWorkers.filter(w => w.isOnline);
+  const pendingRegistrations = pendingWorkers.filter(p => p.status === 'pending' || p.status === 'pending_verification' || !p.status);
 
   // ==========================================
   // PENDING ONBOARDING APPROVALS OPERATIONS
   // ==========================================
   const handleApproveWorker = async (workerApp) => {
     await approveWorkerApplication(workerApp.id);
-    setApprovalSuccessMsg(`Approved ${workerApp.name}! Pro has been moved to verified technicians.`);
+    setApprovalSuccessMsg(`Approved ${workerApp.name}! Pro status updated to "approved" and listed for platform bookings.`);
     setSelectedPendingWorker(null);
     setTimeout(() => setApprovalSuccessMsg(''), 4000);
   };
@@ -440,7 +441,7 @@ export function AdminScreen({ onBack, onLogout }) {
           >
             <p className="text-[9px] text-emerald-600 font-bold uppercase">Pros Active</p>
             <p className="text-base font-black text-emerald-600 mt-0.5">
-              {onlineWorkers.length}/{workers.length}
+              {onlineWorkers.length}/{approvedWorkers.length}
             </p>
           </div>
           <div 
@@ -482,7 +483,7 @@ export function AdminScreen({ onBack, onLogout }) {
               tab === 'users_workers' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Users & Pros ({workers.length + customers.length})
+            Users & Pros ({approvedWorkers.length + customers.length})
           </button>
           <button
             onClick={() => setTab('dispatch')}
@@ -666,7 +667,7 @@ export function AdminScreen({ onBack, onLogout }) {
               }`}
             >
               <Briefcase className="w-3.5 h-3.5" />
-              <span>Verified Technicians ({workers.length})</span>
+              <span>Verified Technicians ({approvedWorkers.length})</span>
             </button>
             <button
               onClick={() => setUserWorkerSubTab('customers')}
@@ -696,7 +697,7 @@ export function AdminScreen({ onBack, onLogout }) {
               </div>
 
               <div className="space-y-2.5">
-                {workers
+                {approvedWorkers
                   .filter(w => !workerSearch || 
                     (w.name || '').toLowerCase().includes(workerSearch.toLowerCase()) ||
                     (w.skill || '').toLowerCase().includes(workerSearch.toLowerCase()) ||
@@ -1812,7 +1813,7 @@ export function AdminScreen({ onBack, onLogout }) {
             </p>
 
             <div className="space-y-2 max-h-72 overflow-y-auto no-scrollbar">
-              {workers.map((worker) => (
+              {approvedWorkers.map((worker) => (
                 <div
                   key={worker.id}
                   onClick={() => handleAssignWorker(worker)}

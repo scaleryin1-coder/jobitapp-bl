@@ -28,6 +28,9 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
   const [workerPin, setWorkerPin] = useState('1234');
   
   // Admin state
+  const [adminAuthType, setAdminAuthType] = useState('phone'); // 'phone' | 'email'
+  const [adminPhone, setAdminPhone] = useState('8289968045');
+  const [adminOtp, setAdminOtp] = useState('123456');
   const [adminEmail, setAdminEmail] = useState('admin@jobit.com');
   const [adminPassword, setAdminPassword] = useState('admin123');
   
@@ -36,7 +39,9 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
 
   useEffect(() => {
     if (isOpen) {
-      setWorkers(getLocalWorkers());
+      const allWorkers = getLocalWorkers();
+      const approvedOnly = allWorkers.filter(w => w.status === 'approved' || w.workerStatus === 'approved');
+      setWorkers(approvedOnly);
       setError('');
     }
   }, [isOpen]);
@@ -90,6 +95,35 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
       onClose();
     } catch (err) {
       setError('Failed to log in as technician');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminPhoneSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const cleanTen = adminPhone.replace(/\D/g, '').slice(-10);
+    if (cleanTen !== '8289968045') {
+      setError('Invalid admin phone number. Master Admin phone is 8289968045.');
+      setLoading(false);
+      return;
+    }
+
+    if (!adminOtp || adminOtp.length < 4) {
+      setError('Please enter verification code (Mock OTP: 123456).');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await loginWithPhone('8289968045', adminOtp, 'Master Admin', 'admin');
+      onSuccess?.('admin');
+      onClose();
+    } catch (err) {
+      setError('Admin verification failed: ' + (err.message || 'Error'));
     } finally {
       setLoading(false);
     }
@@ -361,7 +395,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black text-purple-900 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Master Admin Rule (Critical)</span>
+                  <span>Master Admin Access</span>
                 </span>
                 <span className="text-[10px] bg-purple-200/60 text-purple-800 px-2 py-0.5 rounded-full font-black">
                   8289968045
@@ -373,71 +407,134 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
                 type="button"
                 onClick={async () => {
                   setLoading(true);
-                  await loginWithPhone('8289968045', '1234', 'Master Admin', 'admin');
+                  await loginWithPhone('8289968045', '123456', 'Master Admin', 'admin');
                   setLoading(false);
                   onSuccess?.('admin');
                   onClose();
                 }}
                 className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
               >
-                <span>👑 Login with Admin Phone 8289968045</span>
+                <span>👑 Quick 1-Tap Login (8289968045)</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleQuickAdminLogin}
-                className="w-full py-2 rounded-xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-100/50 text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span>📧 Instant Admin Email Login (admin@jobit.com)</span>
               </button>
             </div>
 
-            <form onSubmit={handleAdminSubmit} className="space-y-3">
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Admin Email
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="email"
-                    required
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-purple-600 outline-none"
-                    placeholder="admin@jobit.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Admin Password
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="password"
-                    required
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-purple-600 outline-none"
-                    placeholder="admin123"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-400 text-center mt-1">Credentials pre-filled (admin@jobit.com / admin123)</p>
-              </div>
-
+            {/* Auth Sub-mode Switcher */}
+            <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-md hover:opacity-95 transition cursor-pointer flex items-center justify-center gap-1.5"
+                type="button"
+                onClick={() => setAdminAuthType('phone')}
+                className={`flex-1 py-1.5 rounded-lg transition ${
+                  adminAuthType === 'phone' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-500'
+                }`}
               >
-                <span>{loading ? 'Verifying...' : 'Access Admin Control Center'}</span>
-                <ArrowRight className="w-4 h-4" />
+                Phone & Mock OTP
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => setAdminAuthType('email')}
+                className={`flex-1 py-1.5 rounded-lg transition ${
+                  adminAuthType === 'email' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-500'
+                }`}
+              >
+                Admin Credentials
+              </button>
+            </div>
+
+            {adminAuthType === 'phone' ? (
+              <form onSubmit={handleAdminPhoneSubmit} className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Admin Phone Number
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400">+91</span>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      required
+                      value={adminPhone}
+                      onChange={(e) => setAdminPhone(e.target.value.replace(/\D/g, '').slice(-10))}
+                      className="w-full pl-12 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-purple-600 outline-none"
+                      placeholder="8289968045"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Mock OTP Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    value={adminOtp}
+                    onChange={(e) => setAdminOtp(e.target.value)}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-center tracking-widest text-slate-900 focus:border-purple-600 outline-none"
+                    placeholder="123456"
+                  />
+                  <p className="text-[10px] text-purple-600 font-bold text-center mt-1">
+                    🔑 Mock OTP: 123456 (or any 6-digit code)
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 rounded-xl bg-purple-600 text-white font-black text-xs hover:bg-purple-700 shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>{loading ? 'Verifying Admin...' : 'Verify Phone & Access Dashboard'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleAdminSubmit} className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Admin Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="email"
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-purple-600 outline-none"
+                      placeholder="admin@jobit.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Admin Password
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="password"
+                      required
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-purple-600 outline-none"
+                      placeholder="admin123"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 text-center mt-1">Credentials pre-filled (admin@jobit.com / admin123)</p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-md hover:opacity-95 transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>{loading ? 'Verifying...' : 'Access Admin Control Center'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            )}
           </div>
         )}
 

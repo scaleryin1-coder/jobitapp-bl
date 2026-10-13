@@ -20,7 +20,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
   const [step, setStep] = useState('phone'); // 'phone' | 'otp' | 'name'
   const [selectedRole, setSelectedRole] = useState('customer'); // 'customer' | 'worker'
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('1234');
+  const [otp, setOtp] = useState('123456');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,12 +28,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
 
   if (!isOpen) return null;
 
-  // Direct Admin Rule (Critical): Phone 8289968045 ALWAYS logs in as Admin and redirects to Admin Dashboard!
-  const triggerAdminLogin = async () => {
+  // Direct Admin Login Helper with specific admin phone 8289968045
+  const triggerAdminLogin = async (customOtp = '123456') => {
     setLoading(true);
     setError('');
     try {
-      await loginWithPhone('8289968045', '1234', 'Master Admin', 'admin');
+      await loginWithPhone('8289968045', customOtp, 'Master Admin', 'admin');
       onSuccess?.('admin');
       onClose();
     } catch (err) {
@@ -47,24 +47,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     const raw = val.replace(/\D/g, '');
     const cleanTen = raw.slice(-10);
     setPhone(cleanTen);
-
-    // If exact admin phone number 8289968045 is entered, immediately trigger admin login
-    if (cleanTen === '8289968045') {
-      setTimeout(() => {
-        triggerAdminLogin();
-      }, 300);
-    }
+    setError('');
   };
 
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const cleanTen = phone.replace(/\D/g, '').slice(-10);
-
-    // Critical Admin check
-    if (cleanTen === '8289968045') {
-      await triggerAdminLogin();
-      return;
-    }
 
     if (!cleanTen || cleanTen.length < 10) {
       setError('Please enter a valid 10-digit mobile number');
@@ -74,14 +62,19 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
 
     // Pre-check if account already exists for this phone
     try {
-      const regStatus = await checkPhoneRegistered?.(cleanTen);
-      if (regStatus?.isRegistered && regStatus?.user) {
-        setExistingUserFound(regStatus.user);
-        if (regStatus.user.role) {
-          setSelectedRole(regStatus.user.role);
-        }
+      if (cleanTen === '8289968045') {
+        setSelectedRole('admin');
+        setExistingUserFound({ name: 'Master Admin', role: 'admin' });
       } else {
-        setExistingUserFound(null);
+        const regStatus = await checkPhoneRegistered?.(cleanTen);
+        if (regStatus?.isRegistered && regStatus?.user) {
+          setExistingUserFound(regStatus.user);
+          if (regStatus.user.role) {
+            setSelectedRole(regStatus.user.role);
+          }
+        } else {
+          setExistingUserFound(null);
+        }
       }
     } catch {
       setExistingUserFound(null);
@@ -91,20 +84,20 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
   };
 
   const handleVerifyOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const cleanTen = phone.replace(/\D/g, '').slice(-10);
 
-    // Critical Admin check
-    if (cleanTen === '8289968045') {
-      await triggerAdminLogin();
-      return;
-    }
-
     if (!otp || otp.length < 4) {
-      setError('Please enter 4-digit verification code');
+      setError('Please enter verification code (Mock OTP: 123456)');
       return;
     }
     setError('');
+
+    // Specific Admin Phone Check: 8289968045 grants Admin Access
+    if (cleanTen === '8289968045') {
+      await triggerAdminLogin(otp);
+      return;
+    }
 
     // If existing account found -> log in directly
     if (existingUserFound) {
@@ -133,11 +126,11 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
   };
 
   const handleFinishCustomer = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const cleanTen = phone.replace(/\D/g, '').slice(-10);
     setLoading(true);
     try {
-      const finalName = name.trim() || 'Ferdin';
+      const finalName = name.trim() || 'Valued Customer';
       await loginWithPhone(cleanTen, otp, finalName, 'customer');
       onSuccess?.('customer');
       onClose();
@@ -344,10 +337,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 className="w-full text-center tracking-[10px] py-3 bg-slate-50 border border-slate-200 rounded-2xl text-lg font-black text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                placeholder="1234"
+                placeholder="123456"
                 autoFocus
               />
-              <p className="text-[11px] text-slate-400 text-center font-semibold">Dev code: 1234 (any 4 digits)</p>
+              <p className="text-[11px] text-sky-600 bg-sky-50 py-1.5 px-2 rounded-xl text-center font-bold">
+                🔑 Mock OTP: Enter 123456 (or any 6-digit code)
+              </p>
             </div>
 
             {error && (

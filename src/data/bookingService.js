@@ -25,6 +25,17 @@ const EVENT_CUSTOMERS_CHANGED = 'jobit_customers_changed';
 const EVENT_SERVICES_CHANGED = 'jobit_services_changed';
 const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
 
+// Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
+export const safeDbPromise = (promise, timeoutMs = 2500) => {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))
+  ]).catch((err) => {
+    console.warn('Database safe operation notice', err);
+    return null;
+  });
+};
+
 // Get local stored items safely
 export function getLocalBookings() {
   try {
@@ -626,7 +637,8 @@ export const initialPendingWorkers = [
     accountNumber: '38291048291',
     ifscCode: 'SBIN0008421',
     upiId: 'anilkumar@oksbi',
-    status: 'pending_verification', // 'pending_verification' | 'verified' | 'rejected'
+    status: 'pending',
+    workerStatus: 'pending',
     appliedAt: new Date(Date.now() - 7200000).toISOString()
   },
   {
@@ -655,7 +667,8 @@ export const initialPendingWorkers = [
     accountNumber: '1420010049281',
     ifscCode: 'FDRL0001420',
     upiId: 'fathimabeevi@federal',
-    status: 'pending_verification',
+    status: 'pending',
+    workerStatus: 'pending',
     appliedAt: new Date(Date.now() - 14400000).toISOString()
   }
 ];
@@ -714,22 +727,26 @@ export function subscribePendingWorkers(callback) {
   };
 }
 
-// Multi-step Worker Onboarding Submission
+// Multi-step Worker Onboarding Submission - Fast, persistent and non-hanging
 export async function registerWorkerOnboarding(onboardingData) {
   const current = getPendingWorkers();
   const appId = 'app_worker_' + Date.now();
   
   const newApplication = {
     id: appId,
-    status: 'pending_verification',
+    status: 'pending',
+    workerStatus: 'pending',
     appliedAt: new Date().toISOString(),
     rating: 5.0,
     jobsCompleted: 0,
     isOnline: false,
-    ...onboardingData
+    ...onboardingData,
+    // Guarantee status is strictly 'pending'
+    status: 'pending',
+    workerStatus: 'pending'
   };
 
-  const updated = [newApplication, ...current];
+  const updated = [newApplication, ...current.filter(p => p.id !== appId)];
   savePendingWorkers(updated);
 
   // Also save in user profiles table as pending worker so they can log in
@@ -742,24 +759,32 @@ export async function registerWorkerOnboarding(onboardingData) {
         uid: appId,
         workerId: appId,
         role: 'worker',
-        workerStatus: 'pending_verification',
+        status: 'pending',
+        workerStatus: 'pending',
         ...newApplication
       };
       localStorage.setItem('jobit_registered_users', JSON.stringify(users));
     }
   } catch {}
 
+  // Sync to database with safe timeout so it never blocks UI indefinitely
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'pending_workers', appId), {
-        ...newApplication,
-        serverTimestamp: serverTimestamp()
-      });
-      await setDoc(doc(db, 'users', appId), {
-        ...newApplication,
-        role: 'worker',
-        workerStatus: 'pending_verification'
-      }, { merge: true });
+      await safeDbPromise(
+        Promise.all([
+          setDoc(doc(db, 'pending_workers', appId), {
+            ...newApplication,
+            submittedAt: new Date().toISOString()
+          }),
+          setDoc(doc(db, 'users', appId), {
+            ...newApplication,
+            role: 'worker',
+            status: 'pending',
+            workerStatus: 'pending'
+          }, { merge: true })
+        ]),
+        2500
+      );
     } catch (e) {
       console.warn('Firestore registerWorkerOnboarding fallback', e);
     }
@@ -768,17 +793,17 @@ export async function registerWorkerOnboarding(onboardingData) {
   return newApplication;
 }
 
-// Admin approves a worker registration
+// Admin approves a worker registration -> updates status to 'approved'
 export async function approveWorkerApplication(workerAppId) {
   const pending = getPendingWorkers();
   const target = pending.find(p => p.id === workerAppId);
   if (!target) return false;
 
-  // 1. Remove from pending list or mark verified
+  // 1. Remove from pending list
   const updatedPending = pending.filter(p => p.id !== workerAppId);
   savePendingWorkers(updatedPending);
 
-  // 2. Add to active verified workers roster
+  // 2. Add to active verified workers roster with strictly status: 'approved'
   const activeWorkers = getLocalWorkers();
   const verifiedWorker = {
     id: target.id.replace('app_', ''),
@@ -786,16 +811,16 @@ export async function approveWorkerApplication(workerAppId) {
     name: target.name,
     phone: target.phone,
     altPhone: target.altPhone || '',
-    email: target.email,
+    email: target.email || `${(target.name || 'pro').toLowerCase().replace(/\s+/g, '')}@jobit.com`,
     gender: target.gender || 'Not specified',
     dob: target.dob || '',
-    skill: target.categoryName || 'Home Services Pro',
-    categoryName: target.categoryName,
-    categoryId: target.categoryId,
+    skill: target.categoryName || target.skill || 'Home Services Pro',
+    categoryName: target.categoryName || target.skill,
+    categoryId: target.categoryId || 'cat_general',
     subSkills: target.subSkills || [],
     experience: target.experience ? `${target.experience} years` : '3 years',
-    baseRate: target.baseRate || 300,
-    address: target.address,
+    baseRate: target.baseRate || 350,
+    address: target.address || '',
     city: target.city || 'Melattur, Kerala',
     pincode: target.pincode || '',
     serviceRadius: target.serviceRadius || '15',
@@ -808,10 +833,10 @@ export async function approveWorkerApplication(workerAppId) {
     rating: target.rating || 5.0,
     jobsCompleted: 0,
     isOnline: true, // Auto set online upon approval
-    status: 'available',
-    workerStatus: 'verified',
+    status: 'approved',
+    workerStatus: 'approved',
     approvedAt: new Date().toISOString(),
-    avatar: target.avatar || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+    avatar: target.avatar || target.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
     vehicle: 'Bike'
   };
 
@@ -828,7 +853,8 @@ export async function approveWorkerApplication(workerAppId) {
         ...verifiedWorker,
         uid: verifiedWorker.id,
         role: 'worker',
-        workerStatus: 'verified'
+        status: 'approved',
+        workerStatus: 'approved'
       };
       localStorage.setItem('jobit_registered_users', JSON.stringify(users));
     }
@@ -840,22 +866,28 @@ export async function approveWorkerApplication(workerAppId) {
     if (activeCurrent) {
       const parsed = JSON.parse(activeCurrent);
       if (parsed.uid === target.id || parsed.id === target.id || parsed.phone === target.phone) {
-        const merged = { ...parsed, ...verifiedWorker, workerStatus: 'verified' };
+        const merged = { ...parsed, ...verifiedWorker, status: 'approved', workerStatus: 'approved' };
         localStorage.setItem('jobit_user', JSON.stringify(merged));
       }
     }
   } catch {}
 
-  // 5. Sync to Firestore if configured
+  // 5. Sync to database with safe timeout
   if (isFirebaseConfigured && db) {
     try {
-      await deleteDoc(doc(db, 'pending_workers', workerAppId));
-      await setDoc(doc(db, 'workers', verifiedWorker.id), verifiedWorker, { merge: true });
-      await setDoc(doc(db, 'users', verifiedWorker.id), {
-        ...verifiedWorker,
-        role: 'worker',
-        workerStatus: 'verified'
-      }, { merge: true });
+      await safeDbPromise(
+        Promise.all([
+          deleteDoc(doc(db, 'pending_workers', workerAppId)),
+          setDoc(doc(db, 'workers', verifiedWorker.id), verifiedWorker, { merge: true }),
+          setDoc(doc(db, 'users', verifiedWorker.id), {
+            ...verifiedWorker,
+            role: 'worker',
+            status: 'approved',
+            workerStatus: 'approved'
+          }, { merge: true })
+        ]),
+        2500
+      );
     } catch (e) {
       console.warn('Firestore approveWorker fallback', e);
     }
@@ -883,14 +915,22 @@ export async function rejectWorkerApplication(workerAppId, reason = 'Document ve
 
   if (isFirebaseConfigured && db) {
     try {
-      await updateDoc(doc(db, 'pending_workers', workerAppId), {
-        status: 'rejected',
-        workerStatus: 'rejected',
-        rejectedReason: reason,
-        rejectedAt: new Date().toISOString()
-      });
+      await safeDbPromise(
+        updateDoc(doc(db, 'pending_workers', workerAppId), {
+          status: 'rejected',
+          workerStatus: 'rejected',
+          rejectedReason: reason,
+          rejectedAt: new Date().toISOString()
+        }),
+        2000
+      );
     } catch {}
   }
+}
+
+// Only workers with status 'approved' should be listed for booking/jobs on the main platform
+export function getApprovedWorkers() {
+  return getLocalWorkers().filter(w => w.status === 'approved' || w.workerStatus === 'approved');
 }
 
 // Admin delete an active worker
@@ -901,7 +941,7 @@ export async function adminDeleteWorker(workerId) {
 
   if (isFirebaseConfigured && db) {
     try {
-      await deleteDoc(doc(db, 'workers', workerId));
+      await safeDbPromise(deleteDoc(doc(db, 'workers', workerId)), 2000);
     } catch {}
   }
 }

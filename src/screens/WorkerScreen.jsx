@@ -127,9 +127,8 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   };
 
   const isPendingVerification = 
-    (currentUser?.workerStatus === 'pending_verification') || 
-    (activeWorker?.status === 'pending_verification') || 
-    (activeWorker?.workerStatus === 'pending_verification');
+    (currentUser?.status === 'pending' || currentUser?.workerStatus === 'pending' || currentUser?.workerStatus === 'pending_verification') || 
+    (activeWorker?.status === 'pending' || activeWorker?.workerStatus === 'pending' || activeWorker?.status === 'pending_verification' || activeWorker?.workerStatus === 'pending_verification');
 
   // IF WORKER IS AWAITING ADMIN APPROVAL -> RENDER DEDICATED REVIEW SCREEN
   if (isPendingVerification) {

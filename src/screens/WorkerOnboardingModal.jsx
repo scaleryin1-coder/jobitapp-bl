@@ -274,6 +274,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     const onboardingPayload = {
       name: fullName.trim(),
       avatar: photoUrl,
+      photo: photoUrl,
       phone: primaryPhone.trim(),
       altPhone: altPhone.trim(),
       email: email.trim().toLowerCase(),
@@ -283,12 +284,19 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       city: city.trim(),
       pincode: pincode.trim(),
       serviceRadius,
+      category: primaryCategory,
       categoryName: primaryCategory,
       categoryId: `cat_${primaryCategory.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
       skill: primaryCategory,
       subSkills: selectedSubSkills,
       experience: experienceYears,
       baseRate: Number(baseRate) || 350,
+      documents: {
+        aadhaarNumber: aadhaarNumber.trim(),
+        idProofUrl,
+        idProofType,
+        photoUrl
+      },
       aadhaarNumber: aadhaarNumber.trim(),
       idProofUrl,
       idProofType,
@@ -297,30 +305,38 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       accountNumber: accountNumber.trim(),
       ifscCode: ifscCode.trim().toUpperCase(),
       upiId: upiId.trim(),
-      status: 'pending_verification',
-      workerStatus: 'pending_verification'
+      status: 'pending',
+      workerStatus: 'pending'
     };
 
     try {
       const savedApp = await registerWorkerOnboarding(onboardingPayload);
       
-      // Also automatically log in as this worker with 'pending_verification' status
-      await loginWithPhone(
-        primaryPhone, 
-        '1234', 
-        fullName.trim(), 
-        'worker', 
-        { 
-          workerId: savedApp.id, 
-          workerStatus: 'pending_verification',
-          ...onboardingPayload 
-        }
-      );
+      // Also automatically log in as this worker with 'pending' status
+      try {
+        await loginWithPhone(
+          primaryPhone, 
+          '123456', 
+          fullName.trim(), 
+          'worker', 
+          { 
+            workerId: savedApp.id, 
+            status: 'pending',
+            workerStatus: 'pending',
+            ...onboardingPayload 
+          }
+        );
+      } catch (loginErr) {
+        console.warn('Auto-login worker note:', loginErr);
+      }
 
       setSubmitting(false);
       setIsCompleted(true);
     } catch (err) {
+      console.error('Submission failed:', err);
       setErrorMsg(err.message || 'Submission failed. Please try again.');
+      setSubmitting(false);
+    } finally {
       setSubmitting(false);
     }
   };
@@ -392,9 +408,9 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 <span className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-[11px] font-black rounded-full uppercase tracking-wider mb-2">
                   Status: Pending Admin Approval
                 </span>
-                <h3 className="text-xl font-black text-slate-900">Application Submitted!</h3>
+                <h3 className="text-xl font-black text-slate-900">Application Submitted! Pending Admin Approval.</h3>
                 <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto mt-1 leading-relaxed">
-                  Thank you, <strong className="text-slate-800">{fullName}</strong>. Your KYC profile has been dispatched to the Master Admin control team for verification.
+                  Thank you, <strong className="text-slate-800">{fullName}</strong>. Your KYC profile and trade details have been submitted to the Master Admin control team for verification.
                 </p>
               </div>
 
