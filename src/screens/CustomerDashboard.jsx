@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchSection } from '../components/home/HomeSearchSection';
 import { PromotionalHeroBanner } from '../components/home/PromotionalHeroBanner';
-import { BannerCarousel } from '../components/home/BannerCarousel';
+import { AcServiceBanner } from '../components/home/AcServiceBanner';
 import { CategoryRow } from '../components/home/CategoryRow';
 import { PopularServiceSection } from '../components/home/PopularServiceSection';
 import { AllCategoriesModal } from '../components/home/AllCategoriesModal';
@@ -202,7 +202,7 @@ export function CustomerDashboard({
         onBookService={(serv) => onBookService?.(serv)}
       />
 
-      {/* High-Visibility Promotional Hero Banner (Placed before all other category banners) */}
+      {/* Section 1: Top Hero Section - Flat ₹99 Promotional Banner */}
       <PromotionalHeroBanner
         onBookNow={() => {
           const featured = (services && services.length > 0) ? services[0] : {
@@ -217,21 +217,21 @@ export function CustomerDashboard({
         onExploreServices={() => onOpenSearch?.()}
       />
 
-      {/* 3. Promotional Category Banner / Carousel */}
-      <BannerCarousel
-        banners={banners}
-        services={services}
-        onSelectService={(serv) => onSelectService?.(serv)}
-      />
-
-      {/* 4. Service Category */}
+      {/* Section 2: Service Categories Grid / Icons */}
       <CategoryRow
         categories={categories}
         onSelectCategory={(cat) => onSelectCategory?.(cat)}
         onOpenAll={() => setIsAllCategoriesOpen(true)}
       />
 
-      {/* 5. Popular Service */}
+      {/* Section 3 (Middle Banner): AC Service Banner with Plumbing color theme & untouched worker photo */}
+      <AcServiceBanner
+        services={services}
+        onSelectService={(serv) => onSelectService?.(serv)}
+        onBookService={(serv) => onBookService?.(serv)}
+      />
+
+      {/* Section 4: Popular Services / Top Rated Technicians list */}
       <PopularServiceSection
         services={services}
         onSelectService={(serv) => onSelectService?.(serv)}
