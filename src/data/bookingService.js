@@ -701,6 +701,7 @@ export const initialPendingWorkers = [
     gender: 'Male',
     dob: '1992-06-15',
     avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+    selfieUrl: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80',
     address: 'Near Old Bus Stand, Market Road, Melattur',
     city: 'Melattur, Kerala',
     pincode: '679326',
@@ -734,6 +735,7 @@ export const initialPendingWorkers = [
     gender: 'Female',
     dob: '1995-11-20',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    selfieUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
     address: 'Opposite Community Health Center, Perinthalmanna',
     city: 'Perinthalmanna, Kerala',
     pincode: '679322',
@@ -767,6 +769,7 @@ export const initialPendingWorkers = [
     gender: 'Male',
     dob: '1994-03-12',
     avatar: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80',
+    selfieUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
     address: 'Near Town Mosque, Main Road, Melattur',
     city: 'Melattur, Kerala',
     pincode: '679326',
@@ -810,7 +813,10 @@ export function getPendingWorkers() {
         localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(list));
       }
     }
-    return list;
+    return list.map(item => ({
+      ...item,
+      selfieUrl: item.selfieUrl || item.avatar || item.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80'
+    }));
   } catch {
     return initialPendingWorkers;
   }

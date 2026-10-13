@@ -11,6 +11,7 @@ import {
   CheckCircle2, 
   X, 
   Users, 
+  User,
   Briefcase, 
   Clock, 
   MapPin, 
@@ -33,7 +34,11 @@ import {
   Bell,
   TrendingUp,
   DollarSign,
-  Activity
+  Activity,
+  Camera,
+  ZoomIn,
+  ZoomOut,
+  Maximize2
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -86,6 +91,8 @@ export function AdminScreen({ onBack, onLogout }) {
   const [rejectModalApp, setRejectModalApp] = useState(null);
   const [rejectReason, setRejectReason] = useState('Govt ID copy requires clear photo of address and seal');
   const [approvalSuccessMsg, setApprovalSuccessMsg] = useState('');
+  const [zoomedDoc, setZoomedDoc] = useState(null); // { url, title, number, type }
+  const [zoomScale, setZoomScale] = useState(1);
 
   // Users & Workers Sub-tab
   const [userWorkerSubTab, setUserWorkerSubTab] = useState('workers'); // 'workers' | 'customers'
@@ -2186,208 +2193,339 @@ export function AdminScreen({ onBack, onLogout }) {
       )}
 
       {/* ========================================================= */}
-      {/* 13. MODAL: DETAILED KYC APPLICATION INSPECTION            */}
+      {/* 13. COMPREHENSIVE ADMIN KYC & DETAILS VIEW MODAL          */}
       {/* ========================================================= */}
       {selectedPendingWorker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in select-none">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in select-none">
+          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[94vh]">
             
-            {/* Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <img 
-                  src={selectedPendingWorker.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
-                  alt={selectedPendingWorker.name}
-                  className="w-10 h-10 rounded-xl object-cover border-2 border-amber-400"
-                />
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
                 <div>
-                  <h4 className="text-sm font-black">{selectedPendingWorker.name}</h4>
-                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">
-                    KYC Application ID: {selectedPendingWorker.id}
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black tracking-wide">
+                      Partner KYC Verification Dossier
+                    </h4>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 uppercase">
+                      Pending Review
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    Application ID: <strong className="text-slate-200">{selectedPendingWorker.id}</strong> • Applied: {new Date(selectedPendingWorker.appliedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
               </div>
+
               <button
+                type="button"
                 onClick={() => setSelectedPendingWorker(null)}
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+                title="Close dossier"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Application Data Body */}
-            <div className="p-4 overflow-y-auto no-scrollbar space-y-4 text-xs">
+            <div className="p-4 sm:p-5 overflow-y-auto no-scrollbar space-y-4 text-xs">
               
-              {/* Step 1: Personal Details */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
-                  <User className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                  <span>Personal Details</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-slate-600">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Primary Mobile:</span>
-                    <span className="font-black text-slate-900">{selectedPendingWorker.phone}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Alternate Contact:</span>
-                    <span className="font-bold text-slate-800">{selectedPendingWorker.altPhone || 'None'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Email Address:</span>
-                    <span className="font-bold text-slate-800">{selectedPendingWorker.email}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Gender & DOB:</span>
-                    <span className="font-bold text-slate-800">
-                      {selectedPendingWorker.gender} • {selectedPendingWorker.dob || '1995-01-01'}
+              {/* 1. Worker Live Captured Selfie & Core Identity Header */}
+              <div className="p-4 rounded-3xl bg-slate-50/90 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                
+                {/* Live Captured Selfie Card */}
+                <div className="relative shrink-0 flex flex-col items-center">
+                  <div className="relative">
+                    <img 
+                      src={selectedPendingWorker.selfieUrl || selectedPendingWorker.avatar || selectedPendingWorker.photo || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80"}
+                      alt={`${selectedPendingWorker.name} Live Selfie`}
+                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-3 border-amber-400 shadow-md bg-slate-200"
+                    />
+                    <span className="absolute -bottom-2 inset-x-0 mx-auto w-fit px-2 py-0.5 bg-slate-900 text-white text-[9px] font-black rounded-full shadow-xs flex items-center gap-1 border border-amber-400">
+                      <Camera className="w-2.5 h-2.5 text-amber-400" />
+                      <span>Live Selfie</span>
                     </span>
                   </div>
+                  <span className="text-[10px] text-slate-400 font-semibold mt-2.5">
+                    Profile Verification Photo
+                  </span>
+                </div>
+
+                {/* Worker Identity Details */}
+                <div className="flex-1 min-w-0 text-center sm:text-left space-y-2">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900">
+                      {selectedPendingWorker.name}
+                    </h3>
+                    <span className="px-2.5 py-0.5 bg-sky-50 text-[#0EA5E0] border border-sky-200/80 font-black text-xs rounded-full inline-flex items-center gap-1">
+                      <Briefcase className="w-3 h-3 text-[#0EA5E0]" />
+                      <span>{selectedPendingWorker.name} - {selectedPendingWorker.categoryName || selectedPendingWorker.skill || 'AC Service'}</span>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1 text-slate-700">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
+                      <span className="text-slate-500 font-semibold">Primary:</span>
+                      <strong className="text-slate-900 font-bold">{selectedPendingWorker.phone}</strong>
+                    </div>
+
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="text-slate-500 font-semibold">Alternate:</span>
+                      <strong className="text-slate-800">{selectedPendingWorker.altPhone || 'None'}</strong>
+                    </div>
+
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:col-span-2">
+                      <span className="text-slate-500 font-semibold">Email:</span>
+                      <strong className="text-slate-800 font-semibold truncate">{selectedPendingWorker.email || 'Not provided'}</strong>
+                    </div>
+
+                    <div className="flex items-center justify-center sm:justify-start gap-2 sm:col-span-2 text-[11px] text-slate-500 font-semibold pt-0.5">
+                      <span>Gender: <strong className="text-slate-800">{selectedPendingWorker.gender || 'Male'}</strong></span>
+                      <span>•</span>
+                      <span>DOB: <strong className="text-slate-800">{selectedPendingWorker.dob || '1995-01-01'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* 2. Complete Address & Service Coverage Area */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Complete Address & Coverage Territory</span>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    {selectedPendingWorker.serviceRadius || '20'} km Service Radius
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-slate-700">
+                  <p className="font-bold text-slate-900 text-xs">
+                    {selectedPendingWorker.address || 'Market Road, Near Mosque'}
+                  </p>
+                  <div className="flex items-center gap-3 pt-1 border-t border-slate-200/60 text-slate-600 font-semibold flex-wrap">
+                    <span>Panchayat / City: <strong className="text-slate-900">{selectedPendingWorker.city || 'Melattur, Kerala'}</strong></span>
+                    <span>•</span>
+                    <span>Postal PIN Code: <strong className="text-slate-900">{selectedPendingWorker.pincode || '679326'}</strong></span>
+                  </div>
                 </div>
               </div>
 
-              {/* Step 2: Coverage & Location */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
-                  <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                  <span>Coverage & Location</span>
+              {/* 3. Trade Skills & Task Pricing */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                <div className="flex items-center justify-between text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                    <span>Trade Specialization & Rate Card</span>
+                  </div>
+                  <span className="font-black text-emerald-700 text-xs">
+                    Base: ₹{selectedPendingWorker.baseRate || 350}/job
+                  </span>
                 </div>
-                <p className="text-slate-800 font-semibold">{selectedPendingWorker.address}</p>
-                <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 text-slate-600">
-                  <span className="font-black text-slate-900">{selectedPendingWorker.city}</span>
-                  <span>• PIN: <strong>{selectedPendingWorker.pincode}</strong></span>
-                  <span>• Radius: <strong className="text-emerald-600">{selectedPendingWorker.serviceRadius || '15'} km</strong></span>
-                </div>
-              </div>
 
-              {/* Step 3: Trade & Skills */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
-                  <Briefcase className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                  <span>Trade Skills & Pricing</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 bg-sky-100 text-[#0EA5E0] font-black rounded-full">
-                    {selectedPendingWorker.categoryName}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-1 bg-sky-100 text-[#0EA5E0] font-black rounded-lg">
+                    {selectedPendingWorker.categoryName || selectedPendingWorker.skill || 'Technician'}
                   </span>
-                  <span className="font-bold text-slate-700">
-                    {selectedPendingWorker.experience} Years Experience
-                  </span>
-                  <span className="ml-auto font-black text-emerald-700">
-                    ₹{selectedPendingWorker.baseRate}/job
+                  <span className="text-slate-600 font-bold">
+                    {selectedPendingWorker.experience || '5'} Years Field Experience
                   </span>
                 </div>
+
                 {selectedPendingWorker.subSkills && selectedPendingWorker.subSkills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-200/60">
-                    {selectedPendingWorker.subSkills.map((sk, idx) => (
-                      <span key={idx} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-800 rounded-md text-[10px] font-bold">
-                        {sk}
-                      </span>
-                    ))}
+                  <div className="pt-1.5 border-t border-slate-200/60 space-y-1">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                      Specific Sub-Skills & Services Offered:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedPendingWorker.subSkills.map((sk, idx) => (
+                        <span key={idx} className="px-2.5 py-1 bg-white border border-slate-200/90 text-slate-800 rounded-lg text-[10px] font-black shadow-2xs">
+                          ✓ {sk}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Step 4: Verification & Bank Details */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
-                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Govt ID & Payout Account</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-slate-600">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Aadhaar Card No:</span>
-                    <span className="font-black text-slate-900">{selectedPendingWorker.aadhaarNumber || 'Attached'}</span>
+              {/* 4. Official Verification Documents: Clear, Zoomable Previews for Aadhaar & Driving License */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Official KYC Documents (Aadhaar & License)</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Driving License No:</span>
-                    <span className="font-black text-slate-900">{selectedPendingWorker.drivingLicenseNumber || 'Not provided'}</span>
-                  </div>
-                </div>
-
-                {/* Document Thumbnails & Verification Preview */}
-                <div className="space-y-2 pt-1">
-                  <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
-                    Uploaded Verification Documents:
+                  <span className="text-[10px] font-bold text-slate-500">
+                    Click any document to zoom & inspect
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {/* Aadhaar Card Document Preview */}
-                    <div className="border border-slate-200 rounded-xl p-2 bg-white space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-slate-800 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Aadhaar Card
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-50 text-[#0EA5E0] font-bold">Govt ID</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  
+                  {/* Aadhaar Card Preview Box */}
+                  <div className="border border-slate-200 rounded-2xl p-2.5 bg-white space-y-2 shadow-2xs hover:border-[#0EA5E0] transition">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-xs font-black text-slate-900">Aadhaar Card</span>
                       </div>
-                      <div className="relative rounded-lg overflow-hidden border border-slate-100 bg-slate-100 h-28">
-                        <img 
-                          src={selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl || 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80'} 
-                          alt="Aadhaar Card" 
-                          className="w-full h-full object-cover"
-                        />
+                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-sky-50 text-[#0EA5E0] font-black border border-sky-100">
+                        Govt Identity
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 font-mono font-bold">
+                      No: <span className="text-slate-900">{selectedPendingWorker.aadhaarNumber || 'Attached'}</span>
+                    </p>
+
+                    <div className="relative rounded-xl overflow-hidden border border-slate-100 bg-slate-100 h-36 group">
+                      <img 
+                        src={selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl || 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80'} 
+                        alt="Aadhaar Card Front & Back" 
+                        className="w-full h-full object-cover group-hover:scale-102 transition duration-200 cursor-pointer"
+                        onClick={() => {
+                          setZoomScale(1);
+                          setZoomedDoc({
+                            url: selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl || 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+                            title: 'Aadhaar Card Front & Back Verification',
+                            number: selectedPendingWorker.aadhaarNumber || 'Attached',
+                            type: 'Govt Identity ID'
+                          });
+                        }}
+                      />
+                      
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setZoomScale(1);
+                            setZoomedDoc({
+                              url: selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl || 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+                              title: 'Aadhaar Card Front & Back Verification',
+                              number: selectedPendingWorker.aadhaarNumber || 'Attached',
+                              type: 'Govt Identity ID'
+                            });
+                          }}
+                          className="px-2.5 py-1 bg-white/90 hover:bg-white text-slate-900 text-[10px] font-black rounded-lg shadow-sm flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <ZoomIn className="w-3 h-3 text-[#0EA5E0]" />
+                          <span>Zoom & Inspect</span>
+                        </button>
+
                         <a 
                           href={selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-black/75 hover:bg-black text-white text-[9px] font-bold rounded flex items-center gap-1"
+                          className="px-2 py-1 bg-black/60 hover:bg-black text-white text-[10px] font-bold rounded-lg flex items-center gap-1 transition"
                         >
                           <ExternalLink className="w-2.5 h-2.5" />
-                          <span>View Full</span>
+                          <span>New Tab</span>
                         </a>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Driving License Document Preview */}
-                    <div className="border border-slate-200 rounded-xl p-2 bg-white space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-slate-800 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Driving License
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-bold">Trade/DL</span>
+                  {/* Driving License Preview Box */}
+                  <div className="border border-slate-200 rounded-2xl p-2.5 bg-white space-y-2 shadow-2xs hover:border-purple-400 transition">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-xs font-black text-slate-900">Driving License</span>
                       </div>
-                      <div className="relative rounded-lg overflow-hidden border border-slate-100 bg-slate-100 h-28">
-                        <img 
-                          src={selectedPendingWorker.drivingLicenseDocUrl || 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80'} 
-                          alt="Driving License" 
-                          className="w-full h-full object-cover"
-                        />
+                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-black border border-purple-100">
+                        Trade / DL Permit
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 font-mono font-bold truncate">
+                      DL: <span className="text-slate-900">{selectedPendingWorker.drivingLicenseNumber || 'KL-10-2019-0098712'}</span>
+                    </p>
+
+                    <div className="relative rounded-xl overflow-hidden border border-slate-100 bg-slate-100 h-36 group">
+                      <img 
+                        src={selectedPendingWorker.drivingLicenseDocUrl || 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80'} 
+                        alt="Driving License Document" 
+                        className="w-full h-full object-cover group-hover:scale-102 transition duration-200 cursor-pointer"
+                        onClick={() => {
+                          setZoomScale(1);
+                          setZoomedDoc({
+                            url: selectedPendingWorker.drivingLicenseDocUrl || 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
+                            title: 'Driving License / Trade Permit Inspection',
+                            number: selectedPendingWorker.drivingLicenseNumber || 'KL-10-2019-0098712',
+                            type: 'Driving License'
+                          });
+                        }}
+                      />
+
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setZoomScale(1);
+                            setZoomedDoc({
+                              url: selectedPendingWorker.drivingLicenseDocUrl || 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
+                              title: 'Driving License / Trade Permit Inspection',
+                              number: selectedPendingWorker.drivingLicenseNumber || 'KL-10-2019-0098712',
+                              type: 'Driving License'
+                            });
+                          }}
+                          className="px-2.5 py-1 bg-white/90 hover:bg-white text-slate-900 text-[10px] font-black rounded-lg shadow-sm flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <ZoomIn className="w-3 h-3 text-purple-600" />
+                          <span>Zoom & Inspect</span>
+                        </button>
+
                         <a 
                           href={selectedPendingWorker.drivingLicenseDocUrl || selectedPendingWorker.idProofUrl} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-black/75 hover:bg-black text-white text-[9px] font-bold rounded flex items-center gap-1"
+                          className="px-2 py-1 bg-black/60 hover:bg-black text-white text-[10px] font-bold rounded-lg flex items-center gap-1 transition"
                         >
                           <ExternalLink className="w-2.5 h-2.5" />
-                          <span>View Full</span>
+                          <span>New Tab</span>
                         </a>
                       </div>
                     </div>
                   </div>
+
+                </div>
+              </div>
+
+              {/* 5. Bank Account & Settlement Credentials */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Direct Bank Payout Account</span>
                 </div>
 
-                {/* Bank Account */}
-                <div className="p-2.5 bg-white rounded-xl border border-slate-200/80 grid grid-cols-2 gap-2">
+                <div className="p-3 bg-white rounded-xl border border-slate-200/80 grid grid-cols-2 gap-2 text-slate-600">
                   <div>
                     <span className="text-[10px] text-slate-400 block font-bold">Bank Name:</span>
-                    <span className="font-black text-slate-900">{selectedPendingWorker.bankName}</span>
+                    <strong className="text-slate-900 font-black">{selectedPendingWorker.bankName || 'State Bank of India'}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block font-bold">IFSC Code:</span>
-                    <span className="font-black text-slate-900">{selectedPendingWorker.ifscCode}</span>
+                    <strong className="text-slate-900 font-mono font-black">{selectedPendingWorker.ifscCode || 'SBIN0008421'}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block font-bold">Account Holder:</span>
-                    <span className="font-bold text-slate-900">{selectedPendingWorker.accountHolderName}</span>
+                    <strong className="text-slate-900 font-bold">{selectedPendingWorker.accountHolderName || selectedPendingWorker.name}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block font-bold">Account Number:</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedPendingWorker.accountNumber}</span>
+                    <strong className="text-slate-900 font-mono font-black">{selectedPendingWorker.accountNumber || '••••••••3829'}</strong>
                   </div>
                   {selectedPendingWorker.upiId && (
-                    <div className="col-span-2 pt-1 border-t border-slate-100">
-                      <span className="text-[10px] text-slate-400 block font-bold">UPI ID:</span>
-                      <span className="font-bold text-purple-700">{selectedPendingWorker.upiId}</span>
+                    <div className="col-span-2 pt-1 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400 font-bold">UPI ID:</span>
+                      <strong className="text-purple-700 font-bold">{selectedPendingWorker.upiId}</strong>
                     </div>
                   )}
                 </div>
@@ -2395,15 +2533,15 @@ export function AdminScreen({ onBack, onLogout }) {
 
             </div>
 
-            {/* Actions Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-2.5">
+            {/* Direct Action Buttons Right Inside Detailed View */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setRejectModalApp(selectedPendingWorker);
                   setRejectReason('Govt ID copy requires clear photo of address and seal');
                 }}
-                className="py-2.5 px-4 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black transition flex items-center gap-1.5 cursor-pointer"
+                className="py-3 px-5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer border border-rose-200/80"
               >
                 <UserX className="w-4 h-4" />
                 <span>Reject Application</span>
@@ -2412,13 +2550,92 @@ export function AdminScreen({ onBack, onLogout }) {
               <button
                 type="button"
                 onClick={() => handleApproveWorker(selectedPendingWorker)}
-                className="py-2.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                className="py-3 px-7 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <UserCheck className="w-4 h-4" />
-                <span>Approve & Verify Technician</span>
+                <span>Approve Pro</span>
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 13.1 INTERACTIVE DOCUMENT ZOOM LIGHTBOX OVERLAY          */}
+      {/* ========================================================= */}
+      {zoomedDoc && (
+        <div 
+          className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-5 animate-fade-in select-none"
+          onClick={() => { setZoomedDoc(null); setZoomScale(1); }}
+        >
+          <div 
+            className="max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Zoom Bar Header */}
+            <div className="p-3.5 px-5 bg-slate-950 flex items-center justify-between text-white border-b border-slate-800">
+              <div>
+                <h4 className="text-sm font-black flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>{zoomedDoc.title}</span>
+                </h4>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  ID Number: <strong className="text-white">{zoomedDoc.number || 'Verified'}</strong>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Zoom Controls */}
+                <div className="flex items-center bg-slate-800 rounded-xl p-1 gap-1 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setZoomScale(prev => Math.max(0.75, Number((prev - 0.25).toFixed(2))))}
+                    className="p-1.5 hover:bg-slate-700 text-slate-200 rounded-lg transition cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-mono font-bold px-1.5 text-slate-200">
+                    {Math.round(zoomScale * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomScale(prev => Math.min(2.5, Number((prev + 0.25).toFixed(2))))}
+                    className="p-1.5 hover:bg-slate-700 text-slate-200 rounded-lg transition cursor-pointer"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomScale(1)}
+                    className="px-2 py-1 text-[10px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => { setZoomedDoc(null); setZoomScale(1); }}
+                  className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+                  title="Close zoom preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Zoomable Image Viewport */}
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/60 min-h-[320px]">
+              <img
+                src={zoomedDoc.url}
+                alt={zoomedDoc.title}
+                style={{ transform: `scale(${zoomScale})`, transition: 'transform 0.15s ease-out' }}
+                className="max-h-[72vh] max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            </div>
           </div>
         </div>
       )}
