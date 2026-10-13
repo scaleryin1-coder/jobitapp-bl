@@ -40,6 +40,16 @@ const CATEGORY_MAP = {
     color: '#E0F2FE', // soft pastel sky cyan
     label: 'AC Service'
   },
+  coconut: {
+    emoji: '🌴',
+    color: '#DCFCE7', // soft pastel natural green
+    label: 'Coconut Tree Climbing'
+  },
+  'തെങ്ങ്': {
+    emoji: '🌴',
+    color: '#DCFCE7',
+    label: 'Coconut Tree Climbing'
+  },
   plumber: {
     emoji: '🔧',
     color: '#E0F2FE', // soft pastel sky blue

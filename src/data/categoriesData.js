@@ -34,6 +34,22 @@ export const ALL_MAIN_CATEGORIES = [
     ]
   },
   {
+    id: 'cat_coconut_tree',
+    name: 'Coconut Tree Climbing',
+    malayalamName: 'തെങ്ങ് കയറ്റം',
+    displayName: 'Coconut Tree Climbing (തെങ്ങ് കയറ്റം)',
+    icon: '🌴',
+    color: '#DCFCE7', // natural lush green
+    basePrice: 99,
+    subCategories: [
+      'Machine Coconut Tree Climbing & Harvesting',
+      'Coconut Crown Cleaning & Leaf Trimming',
+      'Pest Inspection & Rhinoceros Beetle Treatment',
+      'Emergency Dry Frond Clearing',
+      'Areca Nut & Palm Tree Maintenance'
+    ]
+  },
+  {
     id: 'cat_plumber',
     name: 'Plumber',
     icon: '🔧',
@@ -316,6 +332,7 @@ export function getSubCategoriesForCategory(categoryName = '') {
       norm.includes(cNorm) ||
       cNorm.includes(norm) ||
       (norm.includes('ac') && cNorm.includes('ac')) ||
+      ((norm.includes('coconut') || norm.includes('തെങ്ങ്') || norm.includes('tree') || norm.includes('palm')) && cNorm.includes('coconut')) ||
       (norm.includes('plumb') && cNorm.includes('plumb')) ||
       (norm.includes('elect') && cNorm.includes('elect')) ||
       (norm.includes('clean') && (cNorm.includes('clean') || cNorm.includes('home support'))) ||

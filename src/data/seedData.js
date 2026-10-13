@@ -18,6 +18,13 @@ export const initialCategories = [
     order: 2
   },
   {
+    id: "cat_coconut_tree",
+    name: "Coconut Tree Climbing",
+    icon: "🌴",
+    color: "#DCFCE7",
+    order: 3
+  },
+  {
     id: "cat_plumbing",
     name: "Plumber",
     icon: "🔧",
@@ -159,6 +166,48 @@ export const initialWorkers = [
 ];
 
 export const initialServices = [
+  {
+    id: "serv_coconut_tree_climbing",
+    workerId: "worker_suresh",
+    categoryId: "cat_coconut_tree",
+    categoryName: "Coconut Tree Climbing",
+    workerName: "Suresh Madhavan",
+    title: "Coconut Tree Climbing & Cleaning",
+    badge: "Verified Machine Climber",
+    about: "Expert mechanical coconut tree climbing, plucking, and palm crown cleaning. Specializes in safe machine climbing, rhinoceros beetle treatment, frond trimming, and coconut harvesting.",
+    price: 650,
+    advancePaid: 99,
+    remainingDue: 551,
+    rating: 4.9,
+    reviewCount: 380,
+    ordersCompleted: 620,
+    city: "Melattur, Kerala",
+    available: true,
+    approved: true,
+    heroImage: "/assets/images/coconut_climber.jpg",
+    imageUrl: "/assets/images/coconut_climber.jpg",
+    image: "/assets/images/coconut_climber.jpg",
+    gallery: [
+      "/assets/images/coconut_climber.jpg",
+      "https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=500&q=80"
+    ],
+    details: [
+      "Modern machine climber safety equipment",
+      "Coconut harvesting and crown dry fronds removal",
+      "Pest and rhinoceros beetle inspection & treatment",
+      "Flat ₹99 inspection & booking advance fee"
+    ],
+    subCategories: [
+      "Machine Coconut Tree Climbing & Harvesting",
+      "Coconut Crown Cleaning & Leaf Trimming",
+      "Pest Inspection & Beetle Treatment",
+      "Emergency Dry Frond Clearing"
+    ],
+    faqs: [
+      { q: "Is machine climbing safe for the tree?", a: "Yes, modern rubber-grip machine equipment protects tree bark from damage while ensuring climber safety." },
+      { q: "Can I get crown cleaning and harvesting done in one visit?", a: "Yes, our technicians clean the entire crown, remove dry leaves, and harvest coconuts in a single visit." }
+    ]
+  },
   {
     id: "serv_plumbing_1",
     workerId: "worker_rajesh",

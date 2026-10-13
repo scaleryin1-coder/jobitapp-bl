@@ -57,6 +57,7 @@ export function ServiceListScreen({
   // Filter Pills ordered exactly as in reference image (image_6.png)
   const filterPills = [
     'All',
+    'Coconut Tree',
     'Cleaning',
     'Plumber',
     'Repairing',
@@ -88,6 +89,7 @@ export function ServiceListScreen({
     const serviceTitle = (service.title || '').toLowerCase().trim();
     const serviceId = (service.categoryId || '').toLowerCase().trim();
 
+    if ((catLower.includes('coconut') || catLower.includes('തെങ്ങ്') || catLower.includes('tree')) && (serviceCat.includes('coconut') || serviceCat.includes('തെങ്ങ്') || serviceTitle.includes('coconut') || serviceTitle.includes('തെങ്ങ്'))) return true;
     if (catLower.includes('clean') && (serviceCat.includes('clean') || serviceTitle.includes('clean'))) return true;
     if (catLower.includes('plumb') && (serviceCat.includes('plumb') || serviceTitle.includes('plumb'))) return true;
     if ((catLower.includes('repair') || catLower.includes('ac')) && (serviceCat.includes('ac') || serviceCat.includes('repair') || serviceTitle.includes('ac') || serviceTitle.includes('repair'))) return true;
@@ -153,6 +155,10 @@ export function ServiceListScreen({
     const title = service.title || '';
     const combined = (cat + ' ' + title).toLowerCase();
 
+    // Coconut Tree Climbing: natural light green badge with emerald text
+    if (combined.includes('coconut') || combined.includes('തെങ്ങ്') || combined.includes('palm')) {
+      return { tag: 'Coconut Tree', className: 'bg-[#DCFCE7] text-[#059669]' };
+    }
     // Plumber: light cyan badge with blue text
     if (combined.includes('plumb')) {
       return { tag: 'Plumber', className: 'bg-[#E0F7FA] text-[#00A3E0]' };
@@ -244,6 +250,7 @@ export function ServiceListScreen({
     if (text.includes('tank') || text.includes('waste') || text.includes('sump')) return TECHNICIAN_UNIFORM_THUMBNAILS.watertank;
     if (text.includes('beaut') || text.includes('salon') || text.includes('spa')) return TECHNICIAN_UNIFORM_THUMBNAILS.beauty;
     if (text.includes('mehndi') || text.includes('henna')) return TECHNICIAN_UNIFORM_THUMBNAILS.mehndi;
+    if (text.includes('coconut') || text.includes('തെങ്ങ്') || text.includes('tree') || text.includes('palm')) return '/assets/images/coconut_climber.jpg';
 
     return TECHNICIAN_UNIFORM_THUMBNAILS.plumber;
   };

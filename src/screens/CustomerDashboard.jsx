@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchSection } from '../components/home/HomeSearchSection';
 import { PromotionalHeroBanner } from '../components/home/PromotionalHeroBanner';
-import { AcServiceBanner } from '../components/home/AcServiceBanner';
+import { MiddleBannerCarousel } from '../components/home/MiddleBannerCarousel';
 import { CategoryRow } from '../components/home/CategoryRow';
 import { PopularServiceSection } from '../components/home/PopularServiceSection';
 import { AllCategoriesModal } from '../components/home/AllCategoriesModal';
@@ -151,7 +151,8 @@ export function CustomerDashboard({
         (catLower.includes('support') && (sCat.includes('support') || sCat.includes('clean') || sTitle.includes('domestic') || sTitle.includes('elderly'))) ||
         (catLower.includes('beauty') && (sCat.includes('beauty') || sTitle.includes('salon') || sTitle.includes('spa'))) ||
         (catLower.includes('mehndi') && (sCat.includes('mehndi') || sTitle.includes('henna') || sTitle.includes('mehndi'))) ||
-        (catLower.includes('tank') && (sCat.includes('tank') || sTitle.includes('tank') || sTitle.includes('water')))
+        (catLower.includes('tank') && (sCat.includes('tank') || sTitle.includes('tank') || sTitle.includes('water'))) ||
+        ((catLower.includes('coconut') || catLower.includes('തെങ്ങ്') || catLower.includes('tree')) && (sCat.includes('coconut') || sCat.includes('തെങ്ങ്') || sTitle.includes('coconut') || sTitle.includes('തെങ്ങ്')))
       );
 
       if (!matchedCat) return false;
@@ -224,8 +225,8 @@ export function CustomerDashboard({
         onOpenAll={() => setIsAllCategoriesOpen(true)}
       />
 
-      {/* Section 3 (Middle Banner): AC Service Banner with Plumbing color theme & untouched worker photo */}
-      <AcServiceBanner
+      {/* Section 3 (Middle Banner): Auto-scroll carousel (Slide 1: AC Service, Slide 2: Coconut Tree Climbing) */}
+      <MiddleBannerCarousel
         services={services}
         onSelectService={(serv) => onSelectService?.(serv)}
         onBookService={(serv) => onBookService?.(serv)}
