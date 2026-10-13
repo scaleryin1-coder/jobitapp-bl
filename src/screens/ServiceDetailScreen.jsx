@@ -76,12 +76,15 @@ export function ServiceDetailScreen({ service, onBack, onBookNow, onOpenChat }) 
         {/* Pricing & Rating Info Row */}
         <div className="flex items-center justify-between pt-1">
           <div>
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1">
-              Start From
-            </span>
-            <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#0EA5E0] text-white text-xs sm:text-sm font-extrabold shadow-sm">
-              ₹{service.price}/hour
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-xs sm:text-sm font-black shadow-xs">
+              <span>Flat ₹99</span>
             </div>
+            <span className="text-[11px] font-bold text-slate-500 block mt-1 leading-tight">
+              Inspection & Service Booking
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-600 block mt-0.5">
+              (Fully adjustable from final bill)
+            </span>
           </div>
 
           <div className="text-right">

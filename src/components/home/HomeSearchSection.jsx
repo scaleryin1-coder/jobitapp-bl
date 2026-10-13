@@ -189,10 +189,13 @@ export function HomeSearchSection({
                         </span>
                       </div>
 
-                      {/* Hourly pricing: e.g. ₹300/hour */}
-                      <div className="mt-1">
-                        <span className="text-xs sm:text-sm font-extrabold text-[#111827]">
-                          ₹{service.price || 300}/hour
+                      {/* Uniform promotional price tag: Flat ₹99 and Inspection & Service Booking */}
+                      <div className="mt-1.5 flex flex-col">
+                        <span className="text-sm font-black text-[#00A3E0] tracking-tight">
+                          Flat ₹99
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500 leading-tight">
+                          Inspection & Service Booking
                         </span>
                       </div>
                     </div>

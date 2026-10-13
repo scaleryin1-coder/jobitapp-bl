@@ -136,6 +136,7 @@ function ServiceCardImage({ service, alt }) {
 export function PopularServiceSection({
   services = [],
   onSelectService,
+  onBookService,
   onOpenAll,
   title = "Popular Services"
 }) {
@@ -182,6 +183,14 @@ export function PopularServiceSection({
     };
   });
 
+  const handleCardClick = (service) => {
+    if (onBookService) {
+      onBookService(service);
+    } else {
+      onSelectService?.(service);
+    }
+  };
+
   return (
     <section aria-label={title} className="w-full max-w-full px-4 sm:px-5 pt-3 pb-8 overflow-hidden">
       {/* Section Header */}
@@ -208,15 +217,15 @@ export function PopularServiceSection({
             key={service.id}
             role="button"
             tabIndex={0}
-            onClick={() => onSelectService?.(service)}
+            onClick={() => handleCardClick(service)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onSelectService?.(service);
+                handleCardClick(service);
               }
             }}
             data-image-url={service.imageUrl}
-            aria-label={`${service.title} starting from ₹${service.price}`}
+            aria-label={`${service.title} • Flat ₹99 Inspection & Service Booking`}
             className="group relative w-full min-w-0 aspect-[4/5] rounded-[16px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_28px_rgba(14,165,224,0.18)] cursor-pointer transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 border border-slate-100 hover:border-[#0EA5E0]/40 bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0EA5E0] focus:ring-offset-2"
             style={{
               borderRadius: '16px',
@@ -233,6 +242,12 @@ export function PopularServiceSection({
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent pointer-events-none transition-opacity duration-300 group-hover:from-black/70" />
             </div>
 
+            {/* Top Promotional Price Badge */}
+            <div className="absolute top-2 left-2 z-10 bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+              <Zap className="w-3 h-3 fill-slate-950 text-slate-950" />
+              <span>Flat ₹99</span>
+            </div>
+
             {/* Bottom Info Bar: Service Name, Starting Price & Action Button */}
             <div 
               className="absolute inset-x-2 bottom-2 z-10 bg-white/95 backdrop-blur-md p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-1.5 transition-all duration-200 group-hover:bg-white"
@@ -240,10 +255,12 @@ export function PopularServiceSection({
             >
               {/* Price & Service Name */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800 leading-none">
-                  <Zap className="w-3 h-3 text-[#0EA5E0] fill-[#0EA5E0] shrink-0" aria-hidden="true" />
-                  <span className="truncate">From ₹{service.price}</span>
+                <div className="flex items-center gap-1 text-[11px] font-black text-[#0EA5E0] leading-none">
+                  <span className="truncate tracking-tight">Flat ₹99</span>
                 </div>
+                <p className="text-[9px] font-bold text-slate-500 truncate leading-tight mt-0.5">
+                  Inspection & Service Booking
+                </p>
                 <h3 className="text-xs font-black text-[#111827] truncate mt-1 leading-tight group-hover:text-[#0EA5E0] transition-colors" title={service.title}>
                   {service.title}
                 </h3>
@@ -254,11 +271,11 @@ export function PopularServiceSection({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelectService?.(service);
+                  handleCardClick(service);
                 }}
                 className="w-8 h-8 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 group-hover:rotate-45 transition-all duration-200 cursor-pointer"
-                title={`Book ${service.title}`}
-                aria-label={`Book ${service.title}`}
+                title={`Book ${service.title} at Flat ₹99`}
+                aria-label={`Book ${service.title} at Flat ₹99`}
               >
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
               </button>

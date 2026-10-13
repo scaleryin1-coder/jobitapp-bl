@@ -59,7 +59,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
       serviceTitle: `${service.title} (${selectedSubCategory})`,
       subCategory: selectedSubCategory,
       categoryName: service.categoryName || service.title,
-      price: service.price || 350,
+      price: service.price || 650,
+      advancePaid: 99,
+      remainingDue: Math.max(0, (service.price || 650) - 99),
       address,
       dateTime: `${date} at ${timeSlot}`,
       note: note.trim() 
@@ -95,8 +97,8 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             <h3 className="text-lg font-black text-[#111827] tracking-tight">
               Book {service.title}
             </h3>
-            <p className="text-xs text-slate-400 font-semibold mt-0.5">
-              Instant appointment • ₹{service.price || 350} starting rate
+            <p className="text-xs text-[#0EA5E0] font-bold mt-0.5">
+              Flat ₹99 Inspection & Service Booking • Adjustable in bill
             </p>
           </div>
           <button
@@ -114,7 +116,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             </div>
             <h4 className="text-xl font-black text-slate-900">Booking Confirmed!</h4>
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto">
-              Your request for <strong className="text-slate-800">{selectedSubCategory}</strong> has been placed. A JOBit Verified Technician has been notified.
+              Your request for <strong className="text-slate-800">{selectedSubCategory}</strong> has been placed at Flat ₹99 advance inspection rate. A JOBit Verified Technician has been notified.
             </p>
           </div>
         ) : (
@@ -217,7 +219,6 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             </div>
 
             {/* Additional Note */}
-            {/* Additional Note */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-[#4B6EF5]" />
@@ -233,18 +234,25 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             </div>
 
             {/* Transparent Customer Pricing Summary */}
-            <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-600 font-medium">
-                <span>Total Service Charge:</span>
+            <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-center bg-amber-50 border border-amber-200/70 rounded-xl p-2.5">
+                <div>
+                  <span className="text-xs font-black text-slate-900 block">Advance Inspection Fee:</span>
+                  <span className="text-[10px] text-slate-600 font-bold">Payable to confirm booking</span>
+                </div>
+                <span className="text-sm font-black text-[#0EA5E0]">Flat ₹99</span>
+              </div>
+              <div className="flex justify-between text-slate-600 font-medium pt-0.5">
+                <span>Estimated Total Service Charge:</span>
                 <span className="font-extrabold text-slate-900">₹{service.price || 650}</span>
               </div>
               <div className="flex justify-between text-emerald-600 font-medium">
-                <span>Advance Paid (Inspection Fee):</span>
-                <span className="font-bold">-₹{(service.price || 650) >= 250 ? 99 : 49}</span>
+                <span>Advance Deducted from Final Bill:</span>
+                <span className="font-bold">-₹99</span>
               </div>
               <div className="pt-1.5 border-t border-slate-200 flex justify-between font-black text-slate-900">
-                <span>Remaining Amount Due:</span>
-                <span className="text-sm font-black text-[#4B6EF5]">₹{(service.price || 650) - ((service.price || 650) >= 250 ? 99 : 49)}</span>
+                <span>Remaining Balance Due After Work:</span>
+                <span className="text-sm font-black text-[#0EA5E0]">₹{Math.max(0, (service.price || 650) - 99)}</span>
               </div>
             </div>
 
@@ -252,7 +260,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3 flex items-center gap-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <div className="text-[11px] text-emerald-800 font-semibold leading-tight">
-                JOBit Staff Guarantee: Pay remaining balance after service completion to your JOBit Verified Technician. Zero hidden commission.
+                JOBit Staff Guarantee: Flat ₹99 advance is 100% adjustable from final invoice. Pay balance directly to your JOBit Verified Technician upon complete satisfaction.
               </div>
             </div>
 
@@ -260,9 +268,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-full bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-extrabold text-sm shadow-[0_12px_28px_-6px_rgba(75,110,245,0.45)] active:scale-[0.99] transition cursor-pointer"
+              className="w-full py-4 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-extrabold text-sm shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] transition cursor-pointer"
             >
-              {loading ? 'Confirming...' : `Confirm Booking • ${selectedSubCategory}`}
+              {loading ? 'Confirming...' : `Confirm Booking • Pay Flat ₹99 Advance`}
             </button>
           </form>
         )}

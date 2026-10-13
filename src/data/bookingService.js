@@ -56,8 +56,8 @@ export const safeDbPromise = (promise, timeoutMs = 2500) => {
 export function calculateBillingDetails(rawPrice) {
   const num = typeof rawPrice === 'number' ? rawPrice : Number(String(rawPrice || '').replace(/[^0-9.]/g, ''));
   const total = Number.isFinite(num) && num > 0 ? num : 650;
-  // Standard advance inspection fee
-  const advancePaid = total >= 250 ? 99 : 49;
+  // Uniform Flat ₹99 advance inspection & service booking fee
+  const advancePaid = 99;
   const remainingDue = Math.max(0, total - advancePaid);
 
   // Internal split calculation:
