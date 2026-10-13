@@ -1,9 +1,55 @@
 import React, { useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-// Remote CDN URLs for banner images (with fallback support for 100% instant reliability)
-const AC_TECHNICIAN_REMOTE = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80';
-const AC_UNIT_REMOTE = 'https://images.unsplash.com/photo-1585338107529-13afc5f02586?auto=format&fit=crop&w=400&q=80';
-const PLUMBER_REMOTE = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80';
+
+/**
+ * Hero Banner Image Configuration
+ * Strictly uses direct HTTPS remote URLs without any local asset imports.
+ * 1. Plumber Image: "https://kommodo.ai/i/XN7OWOsw0pYT1qhA9r6o"
+ * 2. AC Technician Image: "https://kommodo.ai/i/6x5oOPsxxTObOhMuPqNT"
+ */
+const PLUMBER_HERO_IMAGE = 'https://kommodo.ai/i/XN7OWOsw0pYT1qhA9r6o';
+const PLUMBER_HERO_DIRECT = 'https://plain-apac-prod-public.komododecks.com/202610/13/XN7OWOsw0pYT1qhA9r6o/image.png';
+const PLUMBER_HERO_FALLBACK = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80';
+
+const AC_TECHNICIAN_HERO_IMAGE = 'https://kommodo.ai/i/6x5oOPsxxTObOhMuPqNT';
+const AC_TECHNICIAN_HERO_DIRECT = 'https://plain-apac-prod-public.komododecks.com/202610/13/6x5oOPsxxTObOhMuPqNT/image.png';
+const AC_TECHNICIAN_HERO_FALLBACK = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80';
+
+/**
+ * Resilient Image renderer that loads the primary HTTPS link,
+ * gracefully falling back to direct asset CDN or curated unplash fallback
+ * if the share page returns text/html.
+ */
+function BannerHeroImage({
+  primarySrc,
+  directSrc,
+  fallbackSrc,
+  alt,
+  className = '',
+  style = {}
+}) {
+  const [currentSrc, setCurrentSrc] = useState(primarySrc);
+
+  const handleError = () => {
+    if (currentSrc === primarySrc && directSrc) {
+      setCurrentSrc(directSrc);
+    } else if (currentSrc !== fallbackSrc && fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+    }
+  };
+
+  return (
+    <img
+      src={currentSrc}
+      onError={handleError}
+      alt={alt}
+      className={className}
+      loading="eager"
+      decoding="async"
+      style={style}
+    />
+  );
+}
 
 export function BannerCarousel({
   banners = [],
@@ -55,6 +101,10 @@ export function BannerCarousel({
       keyword: 'ac',
       gradient: 'from-[#BFF5E3] via-[#D3F8EE] to-[#E6FCF5]',
       isAcBanner: true,
+      imagePrimary: AC_TECHNICIAN_HERO_IMAGE,
+      imageDirect: AC_TECHNICIAN_HERO_DIRECT,
+      imageFallback: AC_TECHNICIAN_HERO_FALLBACK,
+      alt: 'AC Technician'
     },
     {
       id: 'banner_plumb',
@@ -63,6 +113,10 @@ export function BannerCarousel({
       keyword: 'plumb',
       gradient: 'from-[#C9D6FF] via-[#D8E2FF] to-[#EBF0FF]',
       isAcBanner: false,
+      imagePrimary: PLUMBER_HERO_IMAGE,
+      imageDirect: PLUMBER_HERO_DIRECT,
+      imageFallback: PLUMBER_HERO_FALLBACK,
+      alt: 'Plumber'
     }
   ];
 
@@ -91,72 +145,34 @@ export function BannerCarousel({
                 className={`w-full rounded-[22px] bg-gradient-to-r ${banner.gradient} p-4 relative min-h-[145px] sm:min-h-[150px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.03)] border border-white/70 overflow-hidden`}
               >
                 {/* 
-                  BANNER 1: Professional European HVAC Technician Photo 
-                  + Clean AC Unit PNG element on right side (Zero text / no typos)
+                  Hero Banner Graphic seamlessly blended on right side:
+                  - Smooth gradient fade mask into background
+                  - Full object-cover presentation
+                  - Zero local file imports
                 */}
-                {banner.isAcBanner ? (
-                  <>
-                    {/* Background / Main Photo: European Technician working on AC unit */}
-                    <div 
-                      className="absolute right-0 top-0 bottom-0 w-[52%] sm:w-[48%] h-full pointer-events-none overflow-hidden"
-                      style={{
-                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 35%, black 100%)',
-                        maskImage: 'linear-gradient(to right, transparent 0%, black 35%, black 100%)'
-                      }}
-                    >
-                      <img
-                        src={AC_TECHNICIAN_REMOTE}
-                        onError={(e) => { e.currentTarget.src = '/assets/images/ac_technician_pro_1791796415312.jpg'; }}
-                        alt="Professional AC Technician in Blue Uniform"
-                        className="w-full h-full object-cover object-top"
-                        loading="eager"
-                        decoding="async"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    </div>
-
-                    {/* Clean AC Unit Graphic with Cool Air Stream on Right Side */}
-                    <div className="absolute right-2 bottom-1 w-20 h-20 sm:w-22 sm:h-22 pointer-events-none z-10 drop-shadow-sm">
-                      <img
-                        src={AC_UNIT_REMOTE}
-                        onError={(e) => { e.currentTarget.src = '/assets/images/ac_unit_clean_1791797286325.jpg'; }}
-                        alt="Modern AC Service Unit"
-                        className="w-full h-full object-contain rounded-xl"
-                        loading="eager"
-                        decoding="async"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  /* 
-                    BANNER 2: Clean, High-Quality Professional Photograph 
-                    of European Plumber working with tools (Zero text / zero typos)
-                  */
-                  <div 
-                    className="absolute right-0 top-0 bottom-0 w-[50%] sm:w-[48%] h-full pointer-events-none overflow-hidden"
-                    style={{
-                      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 35%, black 100%)',
-                      maskImage: 'linear-gradient(to right, transparent 0%, black 35%, black 100%)'
-                    }}
-                  >
-                    <img
-                      src={PLUMBER_REMOTE}
-                      onError={(e) => { e.currentTarget.src = '/assets/images/european_plumber_pro_1791797259590.jpg'; }}
-                      alt="Professional Plumber in Blue Uniform"
-                      className="w-full h-full object-cover object-top"
-                      loading="eager"
-                      decoding="async"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                )}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 w-[52%] sm:w-[50%] h-full pointer-events-none overflow-hidden"
+                  style={{
+                    WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 30%, black 100%)',
+                    maskImage: 'linear-gradient(to right, transparent 0%, black 30%, black 100%)'
+                  }}
+                >
+                  <BannerHeroImage
+                    primarySrc={banner.imagePrimary}
+                    directSrc={banner.imageDirect}
+                    fallbackSrc={banner.imageFallback}
+                    alt={banner.alt}
+                    className="w-full h-full object-cover object-center"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
 
                 {/* 
                   Clean Text Layout:
-                  - Headline and Subtitle only (no redundant extra pills, labels or typos)
-                  - Proportioned & centered vertically without unwanted empty spaces
+                  - Headline and Subtitle preserved exactly
+                  - Responsive proportions and clear hierarchy
                 */}
-                <div className="relative z-20 max-w-[58%] sm:max-w-[56%] flex flex-col items-start justify-center">
+                <div className="relative z-20 max-w-[56%] sm:max-w-[54%] flex flex-col items-start justify-center">
                   {/* Clean Headline */}
                   <h3 className="text-xl sm:text-[22px] font-black text-[#111827] tracking-tight leading-tight">
                     {banner.title}
@@ -200,3 +216,5 @@ export function BannerCarousel({
     </div>
   );
 }
+
+export default BannerCarousel;
