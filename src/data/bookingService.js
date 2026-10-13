@@ -757,6 +757,39 @@ export const initialPendingWorkers = [
     status: 'pending',
     workerStatus: 'pending',
     appliedAt: new Date(Date.now() - 14400000).toISOString()
+  },
+  {
+    id: 'app_worker_zaf',
+    name: 'Zaf',
+    phone: '98473 11223',
+    altPhone: '98473 44556',
+    email: 'zaf.acservice@gmail.com',
+    gender: 'Male',
+    dob: '1994-03-12',
+    avatar: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80',
+    address: 'Near Town Mosque, Main Road, Melattur',
+    city: 'Melattur, Kerala',
+    pincode: '679326',
+    serviceRadius: '20',
+    categoryName: 'AC Service',
+    categoryId: 'cat_ac_repair',
+    subSkills: ['AC Jet Wash', 'Gas Charging', 'Compressor Diagnosis', 'Split AC Installation'],
+    experience: '6',
+    baseRate: 450,
+    aadhaarNumber: '6543 9812 3456',
+    aadhaarDocUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+    drivingLicenseNumber: 'KL-10-2019-0098712',
+    drivingLicenseDocUrl: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
+    idProofUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+    idProofType: 'Aadhaar Card Front & Back',
+    bankName: 'Canara Bank',
+    accountHolderName: 'Zafiq Rahman',
+    accountNumber: '0834101038291',
+    ifscCode: 'CNRB0000834',
+    upiId: 'zaf@okcanara',
+    status: 'pending',
+    workerStatus: 'pending',
+    appliedAt: new Date(Date.now() - 3600000).toISOString()
   }
 ];
 
@@ -768,7 +801,16 @@ export function getPendingWorkers() {
       return initialPendingWorkers;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : initialPendingWorkers;
+    let list = Array.isArray(parsed) ? parsed : initialPendingWorkers;
+    // If Zaf isn't in the list and hasn't been approved/rejected, ensure our 3 default candidates are available
+    if (!list.some(p => p.id === 'app_worker_zaf' || p.name === 'Zaf')) {
+      const zaf = initialPendingWorkers.find(p => p.id === 'app_worker_zaf');
+      if (zaf) {
+        list = [...list, zaf];
+        localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(list));
+      }
+    }
+    return list;
   } catch {
     return initialPendingWorkers;
   }

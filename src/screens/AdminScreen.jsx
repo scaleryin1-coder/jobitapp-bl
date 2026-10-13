@@ -29,7 +29,11 @@ import {
   UserCheck,
   UserX,
   FileText,
-  CreditCard
+  CreditCard,
+  Bell,
+  TrendingUp,
+  DollarSign,
+  Activity
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -68,7 +72,7 @@ const TECHNICIAN_PRESETS = [
 ];
 
 export function AdminScreen({ onBack, onLogout }) {
-  const [tab, setTab] = useState('approvals'); // 'approvals' | 'users_workers' | 'dispatch' | 'services' | 'categories' | 'banners'
+  const [tab, setTab] = useState('dispatch'); // 'dispatch' (default Bookings & Active Operations) | 'approvals' | 'users_workers' | 'services' | 'categories' | 'banners'
   const [bookings, setBookings] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [pendingWorkers, setPendingWorkers] = useState([]);
@@ -173,14 +177,27 @@ export function AdminScreen({ onBack, onLogout }) {
     return () => unsubBan();
   }, []);
 
-  // Metrics
+  // Metrics & Active Operations Progress Breakdown
   const totalBookingsCount = bookings.length;
-  const pendingJobs = bookings.filter(b => b.status === 'pending');
-  const ongoingJobs = bookings.filter(b => ['accepted', 'on_the_way', 'in_progress'].includes(b.status));
+  const unassignedJobs = bookings.filter(b => b.status === 'pending' || !b.workerId);
+  const assignedJobs = bookings.filter(b => b.status === 'accepted');
+  const inProgressJobs = bookings.filter(b => b.status === 'in_progress' || b.status === 'on_the_way');
   const completedJobs = bookings.filter(b => b.status === 'completed');
+  const pendingPaymentJobs = bookings.filter(b => 
+    b.status === 'pending_payment' || 
+    (b.status === 'completed' && Number(b.remainingDue) > 0) ||
+    b.paymentStatus === 'pending'
+  );
+  const ongoingJobs = bookings.filter(b => ['accepted', 'on_the_way', 'in_progress'].includes(b.status));
+  const pendingJobs = bookings.filter(b => b.status === 'pending');
   const approvedWorkers = workers.filter(w => w.status === 'approved' || w.workerStatus === 'approved');
   const onlineWorkers = approvedWorkers.filter(w => w.isOnline);
   const pendingRegistrations = pendingWorkers.filter(p => p.status === 'pending' || p.status === 'pending_verification' || !p.status);
+
+  const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.totalServiceCharge || b.price) || 650), 0);
+  const platformRevenue = bookings.reduce((sum, b) => sum + (Number(b.platformFee) || 150), 0);
+  const workerRevenue = bookings.reduce((sum, b) => sum + (Number(b.workerCharge) || 500), 0);
+  const totalPendingPaymentAmount = pendingPaymentJobs.reduce((sum, b) => sum + (Number(b.remainingDue) || 0), 0);
 
   // ==========================================
   // PENDING ONBOARDING APPROVALS OPERATIONS
@@ -215,6 +232,13 @@ export function AdminScreen({ onBack, onLogout }) {
     if (nextStatus) {
       await updateBookingStatus(bookingId, nextStatus);
     }
+  };
+
+  const handleMarkPaymentSettled = async (bookingId) => {
+    await updateBookingStatus(bookingId, 'completed', {
+      remainingDue: 0,
+      paymentStatus: 'paid'
+    });
   };
 
   // ==========================================
@@ -371,11 +395,28 @@ export function AdminScreen({ onBack, onLogout }) {
     return matchSearch && matchCat;
   });
 
-  // Filtered Bookings in Dispatch
+  // Filtered Bookings in Dispatch / Bookings Tracker
   const filteredBookings = bookings.filter(b => {
-    if (dispatchFilter === 'pending') return b.status === 'pending';
-    if (dispatchFilter === 'ongoing') return ['accepted', 'on_the_way', 'in_progress'].includes(b.status);
-    if (dispatchFilter === 'completed') return b.status === 'completed';
+    if (dispatchFilter === 'needs_dispatch' || dispatchFilter === 'pending') {
+      return b.status === 'pending' || !b.workerId;
+    }
+    if (dispatchFilter === 'assigned') {
+      return b.status === 'accepted';
+    }
+    if (dispatchFilter === 'in_progress') {
+      return ['on_the_way', 'in_progress'].includes(b.status);
+    }
+    if (dispatchFilter === 'work_done' || dispatchFilter === 'completed') {
+      return b.status === 'completed';
+    }
+    if (dispatchFilter === 'pending_payment') {
+      return b.status === 'pending_payment' || 
+        (b.status === 'completed' && Number(b.remainingDue) > 0) || 
+        b.paymentStatus === 'pending';
+    }
+    if (dispatchFilter === 'ongoing') {
+      return ['accepted', 'on_the_way', 'in_progress'].includes(b.status);
+    }
     return true;
   });
 
@@ -401,9 +442,28 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[11px] font-extrabold">
+          {/* Secondary Top-Corner Worker Approvals Navigation Item with Red Notification Badge */}
+          <button
+            onClick={() => setTab('approvals')}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer border ${
+              tab === 'approvals'
+                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90 shadow-2xs'
+            }`}
+            title="Worker Onboarding Approvals"
+          >
+            <Bell className={`w-3.5 h-3.5 ${pendingRegistrations.length > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
+            <span>Approvals</span>
+            {pendingRegistrations.length > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse shadow-xs">
+                {pendingRegistrations.length}
+              </span>
+            )}
+          </button>
+
+          <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Super Admin</span>
+            <span className="hidden sm:inline">Super Admin</span>
           </div>
           <button
             onClick={onLogout || onBack}
@@ -423,99 +483,228 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
       )}
 
-      {/* 2. Operational Metrics Bar */}
-      <div className="px-5 py-3">
-        <div className="grid grid-cols-4 gap-2">
+      {/* 2. Operational Metrics & Active Jobs Progress Top Highlights */}
+      <div className="px-5 py-3 space-y-2.5">
+        
+        {/* Real-Time Activity Status Bar */}
+        <div className="flex items-center justify-between px-3.5 py-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs text-xs">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="font-extrabold text-slate-800">Real-Time Operations</span>
+            <span className="text-slate-400 font-semibold hidden sm:inline">• Hyperlocal Dispatch Active</span>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-600">
+            <span>
+              <strong className="text-emerald-600 font-black">{onlineWorkers.length}</strong>/{approvedWorkers.length} Pros Online
+            </span>
+            <span>•</span>
+            <span>
+              <strong className="text-[#0EA5E0] font-black">{ongoingJobs.length}</strong> Live Jobs
+            </span>
+            <span>•</span>
+            <span>
+              <strong className="text-slate-900 font-black">{totalBookingsCount}</strong> Bookings
+            </span>
+          </div>
+        </div>
+
+        {/* Highlighted Job Progress Statuses & Total Revenue Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          
+          {/* Total Revenue */}
           <div 
-            onClick={() => setTab('approvals')}
-            className={`p-2.5 rounded-2xl border shadow-xs text-center cursor-pointer transition ${
-              pendingRegistrations.length > 0 ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-300/40' : 'bg-white border-slate-200/70'
+            onClick={() => { setTab('dispatch'); setDispatchFilter('all'); }}
+            className={`p-3 rounded-2xl cursor-pointer transition shadow-xs ${
+              tab === 'dispatch' && dispatchFilter === 'all'
+                ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white ring-2 ring-slate-900'
+                : 'bg-gradient-to-br from-slate-900 to-slate-800 text-white hover:shadow-md'
             }`}
           >
-            <p className="text-[9px] text-amber-700 font-bold uppercase">Approvals</p>
-            <p className="text-base font-black text-amber-700 mt-0.5">{pendingRegistrations.length}</p>
-          </div>
-          <div 
-            onClick={() => setTab('users_workers')}
-            className="bg-white p-2.5 rounded-2xl border border-emerald-200 shadow-xs text-center bg-emerald-50/30 cursor-pointer"
-          >
-            <p className="text-[9px] text-emerald-600 font-bold uppercase">Pros Active</p>
-            <p className="text-base font-black text-emerald-600 mt-0.5">
-              {onlineWorkers.length}/{approvedWorkers.length}
+            <div className="flex items-center justify-between text-[10px] text-slate-300 font-bold uppercase tracking-wider">
+              <span>Total Revenue</span>
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-lg font-black text-white mt-1">₹{totalRevenue.toLocaleString()}</p>
+            <p className="text-[10px] text-emerald-400 font-bold mt-0.5 truncate">
+              ₹{platformRevenue.toLocaleString()} fee • ₹{workerRevenue.toLocaleString()} pros
             </p>
           </div>
+
+          {/* Assigned */}
           <div 
-            onClick={() => setTab('dispatch')}
-            className="bg-white p-2.5 rounded-2xl border border-sky-200 shadow-xs text-center bg-sky-50/30 cursor-pointer"
+            onClick={() => { setTab('dispatch'); setDispatchFilter('assigned'); }}
+            className={`p-3 rounded-2xl bg-white border cursor-pointer transition shadow-2xs hover:border-sky-400 ${
+              tab === 'dispatch' && dispatchFilter === 'assigned'
+                ? 'border-sky-500 ring-2 ring-sky-100 bg-sky-50/40'
+                : 'border-slate-200/80 hover:bg-sky-50/20'
+            }`}
           >
-            <p className="text-[9px] text-[#0EA5E0] font-bold uppercase">Bookings</p>
-            <p className="text-base font-black text-[#0EA5E0] mt-0.5">{totalBookingsCount}</p>
+            <div className="flex items-center justify-between text-[10px] text-sky-700 font-black uppercase tracking-wider">
+              <span>Assigned</span>
+              <UserCheck className="w-3.5 h-3.5 text-[#0EA5E0]" />
+            </div>
+            <p className="text-lg font-black text-[#0EA5E0] mt-1">{assignedJobs.length}</p>
+            <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
+              Technicians Allocated
+            </p>
           </div>
+
+          {/* In Progress */}
           <div 
-            onClick={() => { setTab('users_workers'); setUserWorkerSubTab('customers'); }}
-            className="bg-white p-2.5 rounded-2xl border border-purple-200 shadow-xs text-center bg-purple-50/30 cursor-pointer"
+            onClick={() => { setTab('dispatch'); setDispatchFilter('in_progress'); }}
+            className={`p-3 rounded-2xl bg-white border cursor-pointer transition shadow-2xs hover:border-indigo-400 ${
+              tab === 'dispatch' && dispatchFilter === 'in_progress'
+                ? 'border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/40'
+                : 'border-slate-200/80 hover:bg-indigo-50/20'
+            }`}
           >
-            <p className="text-[9px] text-purple-700 font-bold uppercase">Customers</p>
-            <p className="text-base font-black text-purple-700 mt-0.5">{customers.length}</p>
+            <div className="flex items-center justify-between text-[10px] text-indigo-700 font-black uppercase tracking-wider">
+              <span>In Progress</span>
+              <Activity className="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <p className="text-lg font-black text-indigo-600 mt-1">{inProgressJobs.length}</p>
+            <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
+              En Route & Executing
+            </p>
           </div>
+
+          {/* Work Done */}
+          <div 
+            onClick={() => { setTab('dispatch'); setDispatchFilter('work_done'); }}
+            className={`p-3 rounded-2xl bg-white border cursor-pointer transition shadow-2xs hover:border-emerald-400 ${
+              tab === 'dispatch' && (dispatchFilter === 'work_done' || dispatchFilter === 'completed')
+                ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/40'
+                : 'border-slate-200/80 hover:bg-emerald-50/20'
+            }`}
+          >
+            <div className="flex items-center justify-between text-[10px] text-emerald-700 font-black uppercase tracking-wider">
+              <span>Work Done</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+            </div>
+            <p className="text-lg font-black text-emerald-600 mt-1">{completedJobs.length}</p>
+            <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
+              Tasks Completed
+            </p>
+          </div>
+
+          {/* Pending Payment */}
+          <div 
+            onClick={() => { setTab('dispatch'); setDispatchFilter('pending_payment'); }}
+            className={`p-3 rounded-2xl bg-white border cursor-pointer transition shadow-2xs hover:border-amber-400 ${
+              tab === 'dispatch' && dispatchFilter === 'pending_payment'
+                ? 'border-amber-500 ring-2 ring-amber-100 bg-amber-50/40'
+                : 'border-slate-200/80 hover:bg-amber-50/20'
+            }`}
+          >
+            <div className="flex items-center justify-between text-[10px] text-amber-700 font-black uppercase tracking-wider">
+              <span>Pending Payment</span>
+              <CreditCard className="w-3.5 h-3.5 text-amber-500" />
+            </div>
+            <p className="text-lg font-black text-amber-600 mt-1">{pendingPaymentJobs.length}</p>
+            <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
+              ₹{totalPendingPaymentAmount.toLocaleString()} Due
+            </p>
+          </div>
+
+          {/* Needs Dispatch / Unallocated */}
+          <div 
+            onClick={() => { setTab('dispatch'); setDispatchFilter('needs_dispatch'); }}
+            className={`p-3 rounded-2xl bg-white border cursor-pointer transition shadow-2xs hover:border-rose-400 ${
+              tab === 'dispatch' && (dispatchFilter === 'needs_dispatch' || dispatchFilter === 'pending')
+                ? 'border-rose-500 ring-2 ring-rose-100 bg-rose-50/40'
+                : 'border-slate-200/80 hover:bg-rose-50/20'
+            }`}
+          >
+            <div className="flex items-center justify-between text-[10px] text-rose-700 font-black uppercase tracking-wider">
+              <span>Needs Dispatch</span>
+              <Clock className="w-3.5 h-3.5 text-rose-500" />
+            </div>
+            <p className="text-lg font-black text-rose-600 mt-1">{unassignedJobs.length}</p>
+            <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">
+              Pending Allocation
+            </p>
+          </div>
+
         </div>
       </div>
 
-      {/* 3. Navigation Tabs */}
+      {/* 3. Navigation Tabs: Bookings Tracker FIRST and Primary; Approvals in Corner Tab */}
       <div className="px-5 mb-3">
-        <div className="flex bg-[#E9ECEF] rounded-full p-1 text-xs font-bold overflow-x-auto no-scrollbar gap-1">
+        <div className="flex items-center justify-between gap-2">
+          
+          {/* Main Dashboard Navigation Tabs */}
+          <div className="flex bg-[#E9ECEF] rounded-full p-1 text-xs font-bold overflow-x-auto no-scrollbar gap-1 flex-1">
+            <button
+              onClick={() => setTab('dispatch')}
+              className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'dispatch' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Bookings Tracker ({bookings.length})</span>
+            </button>
+
+            <button
+              onClick={() => setTab('users_workers')}
+              className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'users_workers' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Users & Pros ({approvedWorkers.length + customers.length})</span>
+            </button>
+
+            <button
+              onClick={() => setTab('services')}
+              className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'services' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Services ({services.length})</span>
+            </button>
+
+            <button
+              onClick={() => setTab('categories')}
+              className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'categories' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Categories ({categories.length})</span>
+            </button>
+
+            <button
+              onClick={() => setTab('banners')}
+              className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'banners' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Banners ({banners.length})</span>
+            </button>
+          </div>
+
+          {/* Clean Side-Tab / Corner Navigation Item for Worker Approvals with Red Notification Badge */}
           <button
             onClick={() => setTab('approvals')}
-            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
-              tab === 'approvals' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black transition cursor-pointer shrink-0 border ${
+              tab === 'approvals'
+                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90 shadow-2xs'
             }`}
+            title="Worker Onboarding Approvals"
           >
+            <UserCheck className={`w-3.5 h-3.5 ${tab === 'approvals' ? 'text-white' : 'text-amber-500'}`} />
             <span>Approvals</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-              tab === 'approvals' ? 'bg-white text-amber-700' : 'bg-amber-100 text-amber-800'
-            }`}>
-              {pendingRegistrations.length}
-            </span>
-          </button>
-          <button
-            onClick={() => setTab('users_workers')}
-            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'users_workers' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Users & Pros ({approvedWorkers.length + customers.length})
-          </button>
-          <button
-            onClick={() => setTab('dispatch')}
-            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'dispatch' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Bookings Tracker ({bookings.length})
-          </button>
-          <button
-            onClick={() => setTab('categories')}
-            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'categories' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Categories ({categories.length})
-          </button>
-          <button
-            onClick={() => setTab('services')}
-            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'services' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Services ({services.length})
-          </button>
-          <button
-            onClick={() => setTab('banners')}
-            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'banners' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Banners ({banners.length})
+            {pendingRegistrations.length > 0 && (
+              <span className="w-4 h-4 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xs">
+                {pendingRegistrations.length}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -550,102 +739,98 @@ export function AdminScreen({ onBack, onLogout }) {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {pendingRegistrations.map((app) => (
-                <div 
-                  key={app.id}
-                  className="bg-white rounded-3xl p-4 border border-amber-200/80 shadow-xs space-y-3 relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-2xl">
-                    Pending Verification
-                  </div>
-
-                  {/* Header: Photo + Name + Trade */}
-                  <div className="flex items-start gap-3 pr-20">
-                    <img 
-                      src={app.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
-                      alt={app.name}
-                      className="w-13 h-13 rounded-2xl object-cover border-2 border-amber-400 shrink-0 shadow-xs"
-                    />
-                    <div>
-                      <h5 className="text-sm font-black text-slate-900">{app.name}</h5>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] font-black px-2 py-0.5 bg-sky-100 text-[#0EA5E0] rounded-full">
-                          {app.categoryName || app.skill}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-500">
-                          {app.experience ? `${app.experience} yrs exp` : 'Experienced'}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-500">
-                          • {app.gender || 'Partner'}
-                        </span>
+            <div className="space-y-2.5">
+              {pendingRegistrations.map((app) => {
+                const professionTitle = app.categoryName || app.skill || 'AC Service';
+                const formattedLocation = `${app.city || 'Melattur, Kerala'}${app.pincode ? ` - ${app.pincode}` : ' - 679326'}`;
+                
+                return (
+                  <div 
+                    key={app.id}
+                    className="bg-white rounded-2xl p-3 border border-slate-200/90 hover:border-amber-400 shadow-2xs space-y-2.5 transition"
+                  >
+                    {/* Compact Single Row: Small Avatar (60x60px) + Neatly Organized Details */}
+                    <div className="flex items-center gap-3">
+                      
+                      {/* Small Profile Photo (60x60px circular avatar) */}
+                      <div className="relative shrink-0">
+                        <img 
+                          src={app.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
+                          alt={app.name}
+                          className="w-[60px] h-[60px] rounded-full object-cover border-2 border-amber-400 shadow-xs shrink-0"
+                        />
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-500 border-2 border-white" title="Pending Verification" />
                       </div>
-                      <p className="text-[11px] font-semibold text-slate-500 mt-1 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{app.city} ({app.pincode}) • {app.serviceRadius || '15'} km radius</span>
-                      </p>
+
+                      {/* Worker Details - readable at a glance without vertical scrolling */}
+                      <div className="flex-1 min-w-0">
+                        
+                        {/* Worker Name & Profession Badge (e.g., Zaf - AC Service) */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h5 className="text-sm font-black text-slate-900 leading-tight">
+                            {app.name}
+                          </h5>
+                          <span className="text-[11px] font-black px-2.5 py-0.5 bg-sky-50 text-[#0EA5E0] border border-sky-200/80 rounded-full inline-flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-[#0EA5E0]" />
+                            <span>{app.name} - {professionTitle}</span>
+                          </span>
+                          <span className="text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                            Pending KYC
+                          </span>
+                        </div>
+
+                        {/* Phone Number & Area Address */}
+                        <div className="mt-1 flex items-center gap-x-3 gap-y-1 text-xs text-slate-600 font-semibold flex-wrap">
+                          <span className="flex items-center gap-1 text-slate-800">
+                            <Phone className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
+                            <span className="font-bold">{app.phone || 'No phone'}</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-slate-500 truncate">
+                            <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span className="truncate">{formattedLocation}</span>
+                          </span>
+                        </div>
+
+                      </div>
                     </div>
+
+                    {/* Quick Action Buttons: "Inspect KYC", "Approve", "Reject" arranged side-by-side cleanly */}
+                    <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPendingWorker(app)}
+                        className="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+                        title="Inspect Govt ID, Aadhaar and Driving License"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Inspect KYC</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApproveWorker(app)}
+                        className="py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Approve</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRejectModalApp(app);
+                          setRejectReason('Govt ID document requires clearer upload');
+                        }}
+                        className="py-1.5 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                        <span>Reject</span>
+                      </button>
+                    </div>
+
                   </div>
-
-                  {/* Sub-skills chips */}
-                  {app.subSkills && app.subSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-100">
-                      {app.subSkills.map((s, idx) => (
-                        <span key={idx} className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Quick Verification & Bank Snapshot */}
-                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl text-[11px] font-semibold text-slate-600">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block font-bold">Govt ID / Aadhaar:</span>
-                      <span className="font-black text-slate-800">{app.aadhaarNumber || 'Attached ID'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 block font-bold">Payout Bank:</span>
-                      <span className="font-black text-slate-800 truncate block">
-                        {app.bankName || 'Bank'} ({app.ifscCode || 'IFSC'})
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPendingWorker(app)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Inspect KYC</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRejectModalApp(app);
-                        setRejectReason('Govt ID document requires clearer upload');
-                      }}
-                      className="py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <UserX className="w-3.5 h-3.5" />
-                      <span>Reject</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleApproveWorker(app)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>Approve Pro</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1132,154 +1317,268 @@ export function AdminScreen({ onBack, onLogout }) {
       {tab === 'dispatch' && (
         <div className="px-5 space-y-3.5 animate-fade-in">
           
-          {/* Admin Financial Split Overview */}
-          <div className="grid grid-cols-3 gap-2 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs text-center text-xs">
-            <div className="p-2 bg-slate-50 rounded-xl">
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Customer Volume</span>
-              <span className="text-sm font-black text-slate-900 mt-0.5 block">
-                ₹{bookings.reduce((sum, b) => sum + (Number(b.totalServiceCharge || b.price) || 650), 0)}
+          {/* Active Jobs Progress Pipeline & Filter Bar */}
+          <div className="bg-white p-3.5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                  <span>Active Jobs Progress & Dispatch Tracker</span>
+                </h4>
+                <p className="text-[11px] text-slate-400 font-semibold">
+                  Live workflow pipeline from technician allocation to payment settlement
+                </p>
+              </div>
+              <span className="text-[11px] font-black px-2.5 py-1 bg-sky-50 text-[#0EA5E0] rounded-full border border-sky-100">
+                {ongoingJobs.length} Active Jobs
               </span>
             </div>
-            <div className="p-2 bg-sky-50 rounded-xl">
-              <span className="text-[10px] text-[#0EA5E0] font-bold uppercase block">JOBit Commission</span>
-              <span className="text-sm font-black text-[#0EA5E0] mt-0.5 block">
-                ₹{bookings.reduce((sum, b) => sum + (Number(b.platformFee) || 150), 0)}
-              </span>
-            </div>
-            <div className="p-2 bg-emerald-50 rounded-xl">
-              <span className="text-[10px] text-emerald-700 font-bold uppercase block">Worker Payouts</span>
-              <span className="text-sm font-black text-emerald-600 mt-0.5 block">
-                ₹{bookings.reduce((sum, b) => sum + (Number(b.workerCharge) || 500), 0)}
-              </span>
-            </div>
-          </div>
 
-          {/* Sub-filter pills */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            {[
-              { id: 'all', label: 'All Jobs' },
-              { id: 'pending', label: `Pending (${pendingJobs.length})` },
-              { id: 'ongoing', label: `Ongoing (${ongoingJobs.length})` },
-              { id: 'completed', label: `Completed (${completedJobs.length})` }
-            ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setDispatchFilter(f.id)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
-                  dispatchFilter === f.id
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+            {/* Filter Pills with Job Progress Counts */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {[
+                { id: 'all', label: `All Jobs (${bookings.length})` },
+                { id: 'assigned', label: `Assigned (${assignedJobs.length})`, count: assignedJobs.length, color: 'text-sky-700' },
+                { id: 'in_progress', label: `In Progress (${inProgressJobs.length})`, count: inProgressJobs.length, color: 'text-indigo-700' },
+                { id: 'work_done', label: `Work Done (${completedJobs.length})`, count: completedJobs.length, color: 'text-emerald-700' },
+                { id: 'pending_payment', label: `Pending Payment (${pendingPaymentJobs.length})`, count: pendingPaymentJobs.length, color: 'text-amber-700' },
+                { id: 'needs_dispatch', label: `Needs Dispatch (${unassignedJobs.length})`, count: unassignedJobs.length, color: 'text-rose-700' }
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setDispatchFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-black transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                    dispatchFilter === f.id
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{f.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Bookings cards */}
           <div className="space-y-3">
-            {filteredBookings.map((b) => {
-              const isPending = b.status === 'pending';
-              const isOngoing = ['accepted', 'on_the_way', 'in_progress'].includes(b.status);
-              const isCompleted = b.status === 'completed';
-
-              return (
-                <div 
-                  key={b.id} 
-                  className={`p-4 rounded-3xl bg-white border transition shadow-xs space-y-2.5 ${
-                    isPending ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-200/70'
-                  }`}
+            {filteredBookings.length === 0 ? (
+              <div className="py-12 px-4 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 text-[#0EA5E0] flex items-center justify-center mx-auto">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <h5 className="text-sm font-black text-slate-800">No Bookings In This Stage</h5>
+                <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto">
+                  No service jobs matching the filter "{dispatchFilter.replace('_', ' ')}". Select another stage to view bookings.
+                </p>
+                <button
+                  onClick={() => setDispatchFilter('all')}
+                  className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-xs font-black cursor-pointer"
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-extrabold text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full">
-                          {b.categoryName || 'Service'}
+                  View All Jobs
+                </button>
+              </div>
+            ) : (
+              filteredBookings.map((b) => {
+                const isPending = b.status === 'pending' || !b.workerId;
+                const isAssigned = b.status === 'accepted';
+                const isInProgress = ['on_the_way', 'in_progress'].includes(b.status);
+                const isWorkDone = b.status === 'completed';
+                const isPaymentPending = b.status === 'pending_payment' || (b.status === 'completed' && Number(b.remainingDue) > 0) || b.paymentStatus === 'pending';
+
+                return (
+                  <div 
+                    key={b.id} 
+                    className={`p-4 rounded-3xl bg-white border transition shadow-xs space-y-3 ${
+                      isPending ? 'border-amber-300 ring-2 ring-amber-100' :
+                      isInProgress ? 'border-indigo-300 ring-2 ring-indigo-50' :
+                      isPaymentPending ? 'border-amber-200' : 'border-slate-200/80'
+                    }`}
+                  >
+                    {/* Header: Service Category & Progress Status Badge */}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-extrabold text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                            {b.categoryName || 'Service'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono font-bold">
+                            #{b.id.slice(-6)}
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-extrabold text-slate-900 mt-1">{b.serviceTitle}</h4>
+                      </div>
+
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide flex items-center gap-1 ${
+                        isPending ? 'bg-amber-100 text-amber-800' :
+                        isAssigned ? 'bg-sky-100 text-[#0EA5E0]' :
+                        isInProgress ? 'bg-indigo-100 text-indigo-700 animate-pulse' :
+                        isPaymentPending ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                        isWorkDone ? 'bg-emerald-100 text-emerald-800' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>
+                        {isPending && <Clock className="w-3 h-3" />}
+                        {isAssigned && <UserCheck className="w-3 h-3" />}
+                        {isInProgress && <Activity className="w-3 h-3" />}
+                        {isWorkDone && !isPaymentPending && <CheckCircle2 className="w-3 h-3" />}
+                        {isPaymentPending && <CreditCard className="w-3 h-3" />}
+                        <span>
+                          {isPaymentPending && isWorkDone ? 'Work Done • Due ₹' + (b.remainingDue || 551) : b.status.replace(/_/g, ' ')}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-semibold">
-                          ID: {b.id.slice(-6)}
+                      </span>
+                    </div>
+
+                    {/* Active Jobs Progress Visual Stepper */}
+                    <div className="p-2.5 bg-slate-50/80 rounded-2xl border border-slate-100">
+                      <div className="flex items-center justify-between text-[10px] font-extrabold">
+                        {/* Step 1: Assigned */}
+                        <div className={`flex items-center gap-1 ${!isPending ? 'text-[#0EA5E0]' : 'text-slate-400'}`}>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
+                            !isPending ? 'bg-[#0EA5E0] text-white' : 'bg-slate-200 text-slate-500'
+                          }`}>1</span>
+                          <span>Assigned</span>
+                        </div>
+                        <div className={`h-0.5 flex-1 mx-2 ${isInProgress || isWorkDone ? 'bg-[#0EA5E0]' : 'bg-slate-200'}`} />
+
+                        {/* Step 2: In Progress */}
+                        <div className={`flex items-center gap-1 ${isInProgress || isWorkDone ? 'text-indigo-600' : 'text-slate-400'}`}>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
+                            isInProgress || isWorkDone ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
+                          }`}>2</span>
+                          <span>In Progress</span>
+                        </div>
+                        <div className={`h-0.5 flex-1 mx-2 ${isWorkDone ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+
+                        {/* Step 3: Work Done */}
+                        <div className={`flex items-center gap-1 ${isWorkDone ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
+                            isWorkDone ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'
+                          }`}>3</span>
+                          <span>Work Done</span>
+                        </div>
+                        <div className={`h-0.5 flex-1 mx-2 ${isWorkDone && !isPaymentPending ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+
+                        {/* Step 4: Settled */}
+                        <div className={`flex items-center gap-1 ${isWorkDone && !isPaymentPending ? 'text-emerald-700' : 'text-slate-400'}`}>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
+                            isWorkDone && !isPaymentPending ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-500'
+                          }`}>4</span>
+                          <span>Settled</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Complete Admin Financial Split Display */}
+                    <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/80 text-xs space-y-1">
+                      <div className="flex justify-between text-slate-600 font-semibold">
+                        <span>Total Customer Volume:</span>
+                        <span className="font-extrabold text-slate-900">₹{b.totalServiceCharge || b.price || 650}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500 font-medium">
+                        <span>Advance Paid (Inspection):</span>
+                        <span className="font-semibold text-emerald-700">-₹{b.advancePaid || 99}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-700 font-bold">
+                        <span>Balance Due on Site:</span>
+                        <span className={`font-black ${Number(b.remainingDue) > 0 ? 'text-amber-700' : 'text-slate-900'}`}>
+                          ₹{b.remainingDue !== undefined ? b.remainingDue : 551}
                         </span>
                       </div>
-                      <h4 className="text-sm font-extrabold text-slate-900 mt-1">{b.serviceTitle}</h4>
+                      <div className="pt-1.5 border-t border-slate-200 flex justify-between font-bold text-[11px]">
+                        <span className="text-emerald-700">Worker Payout: ₹{b.workerCharge || 500}</span>
+                        <span className="text-[#0EA5E0]">Platform Fee (JOBit): ₹{b.platformFee || 150}</span>
+                      </div>
                     </div>
 
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
-                      isPending ? 'bg-amber-100 text-amber-800' :
-                      isOngoing ? 'bg-sky-100 text-[#0EA5E0]' :
-                      isCompleted ? 'bg-emerald-100 text-emerald-800' :
-                      'bg-slate-100 text-slate-600'
-                    }`}>
-                      {b.status.replace(/_/g, ' ')}
-                    </span>
-                  </div>
+                    {/* Customer & Location Details */}
+                    <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50/60 p-2.5 rounded-2xl">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="font-medium">{b.dateTime || 'Immediate Dispatch'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{b.address}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>Customer: <strong className="text-slate-800">{b.customerName}</strong> ({b.customerPhone})</span>
+                      </div>
+                    </div>
 
-                  {/* Complete Admin Financial Split Display */}
-                  <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/80 text-xs space-y-1">
-                    <div className="flex justify-between text-slate-600 font-semibold">
-                      <span>Total Collected from Customer:</span>
-                      <span className="font-extrabold text-slate-900">₹{b.totalServiceCharge || b.price || 650}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-500 font-medium">
-                      <span>Advance Deduction (Inspection):</span>
-                      <span className="font-semibold text-amber-700">-₹{b.advancePaid || 99}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-700 font-bold">
-                      <span>Balance Payable by Customer:</span>
-                      <span className="font-black text-slate-900">₹{b.remainingDue || 551}</span>
-                    </div>
-                    <div className="pt-1.5 border-t border-slate-200 flex justify-between font-bold">
-                      <span className="text-emerald-700">Worker Share: ₹{b.workerCharge || 500}</span>
-                      <span className="text-[#0EA5E0]">Platform Fee (JOBit Share): ₹{b.platformFee || 150}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50/60 p-2.5 rounded-2xl">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{b.dateTime || 'Immediate Dispatch'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{b.address}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>Customer: {b.customerName} ({b.customerPhone})</span>
-                    </div>
-                  </div>
-
-                  {/* Assigned Worker / Action */}
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                    <div className="flex items-center gap-2">
-                      {b.workerName ? (
-                        <>
-                          <img 
-                            src={b.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
-                            alt={b.workerName}
-                            className="w-6 h-6 rounded-full object-cover"
-                          />
-                          <span className="text-xs font-bold text-slate-800">
-                            JOBit Expert: {b.workerName}
+                    {/* Assigned Worker Info & Action Controls */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        {b.workerName ? (
+                          <>
+                            <img 
+                              src={b.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                              alt={b.workerName}
+                              className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                            />
+                            <div>
+                              <span className="text-xs font-black text-slate-900 block leading-tight">
+                                {b.workerName}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-semibold">
+                                {b.workerPhone || 'Assigned Pro'}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>Unallocated (Needs Dispatch)</span>
                           </span>
-                        </>
-                      ) : (
-                        <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          Unallocated (Needs Dispatch)
-                        </span>
-                      )}
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Quick Status Advancement Button */}
+                        {b.status === 'accepted' && (
+                          <button
+                            type="button"
+                            onClick={() => handleAdvanceBookingStatus(b.id, 'accepted')}
+                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-full text-xs font-black transition cursor-pointer"
+                          >
+                            Start Work
+                          </button>
+                        )}
+
+                        {['on_the_way', 'in_progress'].includes(b.status) && (
+                          <button
+                            type="button"
+                            onClick={() => handleAdvanceBookingStatus(b.id, 'in_progress')}
+                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full text-xs font-black transition cursor-pointer"
+                          >
+                            Mark Work Done
+                          </button>
+                        )}
+
+                        {isWorkDone && Number(b.remainingDue) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkPaymentSettled(b.id)}
+                            className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-full text-xs font-black transition cursor-pointer border border-amber-200"
+                          >
+                            Settle Due ₹{b.remainingDue}
+                          </button>
+                        )}
+
+                        {/* Dispatch / Reassign Pro Modal Trigger */}
+                        <button
+                          type="button"
+                          onClick={() => setAssignModalBooking(b)}
+                          className="px-3 py-1.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-full text-xs font-black shadow-xs transition cursor-pointer"
+                        >
+                          {b.workerName ? 'Reassign Pro' : 'Dispatch Pro'}
+                        </button>
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => setAssignModalBooking(b)}
-                      className="px-3 py-1.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-full text-xs font-bold shadow-xs transition cursor-pointer"
-                    >
-                      {b.workerName ? 'Reassign' : 'Dispatch Pro'}
-                    </button>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       )}
