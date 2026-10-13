@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { Zap, ArrowUpRight } from 'lucide-react';
-import acTechnicianImg from '../../assets/images/ac_technician_new.png';
-import lawnGardenImg from '../../assets/images/lawn_and_garden_new.png';
-import electricianImg from '../../assets/images/electrician_new.png';
-import driverImg from '../../assets/images/driver_new.png';
 
 /**
  * Structured Data Specification for "Popular Services"
- * Strictly preserves the requested image URLs and titles:
+ * Strictly uses remote image URLs directly without any local file imports.
  * 1. Title: AC Technician  | Image URL: https://kommodo.ai/i/410CrPRmc9hsuyX0Eb4d
  * 2. Title: Lawn & Garden  | Image URL: https://kommodo.ai/i/Wh1T3p3vwgl9o8sLMgZE
  * 3. Title: Electrician    | Image URL: https://kommodo.ai/i/21VGnAa5VQ7rZ5Vr4l5H
@@ -20,7 +16,7 @@ export const POPULAR_SERVICES_DATA = [
     imageUrl: 'https://kommodo.ai/i/410CrPRmc9hsuyX0Eb4d',
     image: 'https://kommodo.ai/i/410CrPRmc9hsuyX0Eb4d',
     directImageUrl: 'https://plain-apac-prod-public.komododecks.com/202610/13/410CrPRmc9hsuyX0Eb4d/image.png',
-    localAsset: acTechnicianImg,
+    fallbackUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
     categoryName: 'AC Service',
     categoryId: 'cat_ac',
     price: 450,
@@ -30,7 +26,7 @@ export const POPULAR_SERVICES_DATA = [
     badge: 'Certified HVAC Specialist',
     about: 'Professional AC maintenance, deep chemical jet service, cooling diagnosis, and gas leak repair by verified technicians.',
     match: (s) => {
-      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      const text = `${s?.categoryName || ''} ${s?.title || ''} ${s?.categoryId || ''}`.toLowerCase();
       return text.includes('ac') || text.includes('air condition') || text.includes('technician');
     }
   },
@@ -40,7 +36,7 @@ export const POPULAR_SERVICES_DATA = [
     imageUrl: 'https://kommodo.ai/i/Wh1T3p3vwgl9o8sLMgZE',
     image: 'https://kommodo.ai/i/Wh1T3p3vwgl9o8sLMgZE',
     directImageUrl: 'https://plain-apac-prod-public.komododecks.com/202610/13/Wh1T3p3vwgl9o8sLMgZE/image.png',
-    localAsset: lawnGardenImg,
+    fallbackUrl: 'https://images.unsplash.com/photo-1592417817098-8f3d69109853?auto=format&fit=crop&w=800&q=80',
     categoryName: 'Garden & Outdoor Work',
     categoryId: 'cat_garden',
     price: 399,
@@ -50,7 +46,7 @@ export const POPULAR_SERVICES_DATA = [
     badge: 'Horticulture Specialist',
     about: 'Lawn mowing, hedge trimming, weed removal, organic soil fertilization, and drip irrigation setup.',
     match: (s) => {
-      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      const text = `${s?.categoryName || ''} ${s?.title || ''} ${s?.categoryId || ''}`.toLowerCase();
       return text.includes('garden') || text.includes('lawn');
     }
   },
@@ -60,7 +56,7 @@ export const POPULAR_SERVICES_DATA = [
     imageUrl: 'https://kommodo.ai/i/21VGnAa5VQ7rZ5Vr4l5H',
     image: 'https://kommodo.ai/i/21VGnAa5VQ7rZ5Vr4l5H',
     directImageUrl: 'https://plain-apac-prod-public.komododecks.com/202610/13/21VGnAa5VQ7rZ5Vr4l5H/image.png',
-    localAsset: electricianImg,
+    fallbackUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=800&q=80',
     categoryName: 'Electrician',
     categoryId: 'cat_electrician',
     price: 320,
@@ -70,7 +66,7 @@ export const POPULAR_SERVICES_DATA = [
     badge: 'Licensed Electrician',
     about: 'Specialist in short-circuit detection, appliance installation, MCB trip troubleshooting, and modern home automation switches.',
     match: (s) => {
-      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      const text = `${s?.categoryName || ''} ${s?.title || ''} ${s?.categoryId || ''}`.toLowerCase();
       return text.includes('elect');
     }
   },
@@ -80,7 +76,7 @@ export const POPULAR_SERVICES_DATA = [
     imageUrl: 'https://kommodo.ai/i/uC1hWGiPT0QP7yVLWILJ',
     image: 'https://kommodo.ai/i/uC1hWGiPT0QP7yVLWILJ',
     directImageUrl: 'https://plain-apac-prod-public.komododecks.com/202610/13/uC1hWGiPT0QP7yVLWILJ/image.png',
-    localAsset: driverImg,
+    fallbackUrl: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=800&q=80',
     categoryName: 'Driver',
     categoryId: 'cat_car',
     price: 399,
@@ -90,7 +86,7 @@ export const POPULAR_SERVICES_DATA = [
     badge: 'Verified Chauffeur',
     about: 'Experienced on-demand personal driver for city trips, airport drops, and outstation travels with valid commercial license.',
     match: (s) => {
-      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      const text = `${s?.categoryName || ''} ${s?.title || ''} ${s?.categoryId || ''}`.toLowerCase();
       return text.includes('driver') || text.includes('chauffeur');
     }
   }
@@ -98,22 +94,19 @@ export const POPULAR_SERVICES_DATA = [
 
 /**
  * Resilient Image Component with Cache Mitigation & Multi-tier Fallback
+ * Directly uses remote image URLs without any local asset imports.
  */
 function ServiceCardImage({ service, alt }) {
-  // Use direct bundled asset or direct CDN asset for initial source to guarantee instant load,
-  // while preserving and providing the exact prompt image URL in dataset attributes and fallback
-  const initialSource = service.localAsset || service.directImageUrl || service.imageUrl;
-  const [imgSrc, setImgSrc] = useState(initialSource);
-  const [hasError, setHasError] = useState(false);
+  const [imgSrc, setImgSrc] = useState(service.imageUrl || service.image);
+  const [failedAttempts, setFailedAttempts] = useState(0);
 
   const handleError = () => {
-    if (!hasError) {
-      setHasError(true);
-      if (service.directImageUrl && imgSrc !== service.directImageUrl) {
-        setImgSrc(service.directImageUrl);
-      } else if (service.localAsset && imgSrc !== service.localAsset) {
-        setImgSrc(service.localAsset);
-      }
+    if (failedAttempts === 0 && service.directImageUrl && imgSrc !== service.directImageUrl) {
+      setFailedAttempts(1);
+      setImgSrc(service.directImageUrl);
+    } else if (failedAttempts <= 1 && service.fallbackUrl && imgSrc !== service.fallbackUrl) {
+      setFailedAttempts(2);
+      setImgSrc(service.fallbackUrl);
     }
   };
 
@@ -138,6 +131,7 @@ function ServiceCardImage({ service, alt }) {
  * - Strict Data Alignment: Exactly the 4 specified titles and image URLs
  * - Cache Mitigation: Proper src resolution, asynchronous decoding, and lazy loading
  * - Clean UI Layout: High-contrast typography, interactive hover lift, card shadows
+ * - Zero Local Asset Imports: Directly utilizes remote image URLs for 100% Vercel & Vite portability
  */
 export function PopularServiceSection({
   services = [],
@@ -155,7 +149,7 @@ export function PopularServiceSection({
       title: item.title,
       imageUrl: item.imageUrl,
       image: item.imageUrl,
-      heroImage: item.localAsset || item.directImageUrl || item.imageUrl,
+      heroImage: item.imageUrl,
       categoryName: existing?.categoryName || item.categoryName,
       categoryId: existing?.categoryId || item.categoryId,
       price: activePrice,
@@ -165,7 +159,7 @@ export function PopularServiceSection({
       badge: existing?.badge || item.badge,
       about: existing?.about || item.about,
       directImageUrl: item.directImageUrl,
-      localAsset: item.localAsset,
+      fallbackUrl: item.fallbackUrl,
       available: true,
       approved: true,
       workerId: existing?.workerId || 'worker_verified_pro',
