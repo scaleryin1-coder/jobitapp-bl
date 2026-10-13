@@ -51,6 +51,43 @@ function BannerHeroImage({
   );
 }
 
+const DEFAULT_BANNERS = [
+  {
+    id: 'banner_ac',
+    title: 'AC Service',
+    subtitle: 'Expert coil cleaning & cooling repairs',
+    keyword: 'ac',
+    bgStyle: 'bg-[#1E3A8A]',
+    bgColor: '#1E3A8A',
+    isAcBanner: true,
+    titleColor: 'text-white',
+    subtitleColor: 'text-amber-100',
+    buttonClass: 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black',
+    buttonArrowColor: 'text-slate-950',
+    imagePrimary: AC_TECHNICIAN_HERO_IMAGE,
+    imageDirect: AC_TECHNICIAN_HERO_DIRECT,
+    imageFallback: AC_TECHNICIAN_HERO_FALLBACK,
+    alt: 'AC Technician'
+  },
+  {
+    id: 'banner_plumb',
+    title: 'Plumbing Service',
+    subtitle: 'Leak repairs, pipe fitting & maintenance',
+    keyword: 'plumb',
+    bgStyle: 'bg-gradient-to-r from-[#C9D6FF] via-[#D8E2FF] to-[#EBF0FF]',
+    bgColor: '#C9D6FF',
+    isAcBanner: false,
+    titleColor: 'text-[#111827]',
+    subtitleColor: 'text-slate-600',
+    buttonClass: 'bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-bold',
+    buttonArrowColor: 'text-white',
+    imagePrimary: PLUMBER_HERO_IMAGE,
+    imageDirect: PLUMBER_HERO_DIRECT,
+    imageFallback: PLUMBER_HERO_FALLBACK,
+    alt: 'Plumber'
+  }
+];
+
 export function BannerCarousel({
   banners = [],
   services = [],
@@ -58,6 +95,8 @@ export function BannerCarousel({
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const scrollRef = useRef(null);
+
+  const bannerList = DEFAULT_BANNERS;
 
   // Sync scroll position with activeIdx
   const handleScroll = () => {
@@ -81,7 +120,7 @@ export function BannerCarousel({
   };
 
   const handleBookService = (keyword = 'ac') => {
-    const term = keyword.toLowerCase();
+    const term = (keyword || 'ac').toLowerCase();
     const matched = (services || []).find(s => 
       (s?.title && s.title.toLowerCase().includes(term)) ||
       (s?.categoryName && s.categoryName.toLowerCase().includes(term)) ||
@@ -92,41 +131,6 @@ export function BannerCarousel({
       onSelectService?.(matched);
     }
   };
-
-  const bannerList = [
-    {
-      id: 'banner_ac',
-      title: 'AC Service',
-      subtitle: 'Expert coil cleaning & cooling repairs',
-      keyword: 'ac',
-      bgStyle: 'bg-[#1E3A8A]',
-      isAcBanner: true,
-      titleColor: 'text-white',
-      subtitleColor: 'text-amber-100',
-      buttonClass: 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black',
-      buttonArrowColor: 'text-slate-950',
-      imagePrimary: AC_TECHNICIAN_HERO_IMAGE,
-      imageDirect: AC_TECHNICIAN_HERO_DIRECT,
-      imageFallback: AC_TECHNICIAN_HERO_FALLBACK,
-      alt: 'AC Technician'
-    },
-    {
-      id: 'banner_plumb',
-      title: 'Plumbing Service',
-      subtitle: 'Leak repairs, pipe fitting & maintenance',
-      keyword: 'plumb',
-      bgStyle: 'bg-gradient-to-r from-[#C9D6FF] via-[#D8E2FF] to-[#EBF0FF]',
-      isAcBanner: false,
-      titleColor: 'text-[#111827]',
-      subtitleColor: 'text-slate-600',
-      buttonClass: 'bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-bold',
-      buttonArrowColor: 'text-white',
-      imagePrimary: PLUMBER_HERO_IMAGE,
-      imageDirect: PLUMBER_HERO_DIRECT,
-      imageFallback: PLUMBER_HERO_FALLBACK,
-      alt: 'Plumber'
-    }
-  ];
 
   return (
     <div className="w-full px-5 pt-2 pb-1">
@@ -150,7 +154,8 @@ export function BannerCarousel({
               className="w-full min-w-full shrink-0 snap-center"
             >
               <div
-                className={`w-full rounded-[22px] ${banner.bgStyle} p-4 relative min-h-[145px] sm:min-h-[150px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.06)] border ${banner.isAcBanner ? 'border-blue-900/60' : 'border-white/70'} overflow-hidden`}
+                style={{ backgroundColor: banner.bgColor || (banner.isAcBanner ? '#1E3A8A' : undefined) }}
+                className={`w-full rounded-[22px] ${banner.bgStyle} p-4 relative min-h-[145px] sm:min-h-[150px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.06)] border ${banner.isAcBanner ? 'border-blue-950/60' : 'border-white/70'} overflow-hidden`}
               >
                 {/* 
                   Hero Banner Graphic seamlessly blended on right side:

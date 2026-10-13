@@ -69,7 +69,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
         const regStatus = await checkPhoneRegistered?.(cleanTen);
         if (regStatus?.isRegistered && regStatus?.user) {
           setExistingUserFound(regStatus.user);
-          if (regStatus.user.role) {
+          if (regStatus.user?.role) {
             setSelectedRole(regStatus.user.role);
           }
         } else {

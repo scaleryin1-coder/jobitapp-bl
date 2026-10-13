@@ -30,7 +30,13 @@ import { BottomNav } from './components/BottomNav';
 
 function MainLayout() {
   const { currentUser, logout } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState('splash'); // 'splash' | 'main' | 'service-list' | 'detail' | 'chat'
+  const [currentScreen, setCurrentScreen] = useState(() => {
+    try {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#splash' || hash === '#welcome') return 'splash';
+    } catch {}
+    return 'main';
+  }); // 'main' | 'splash' | 'service-list' | 'detail' | 'chat'
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'chat' | 'bookings' | 'profile'
   const [selectedCategoryName, setSelectedCategoryName] = useState('All');
   const [selectedService, setSelectedService] = useState(null);
@@ -55,6 +61,8 @@ function MainLayout() {
         setIsPartnerLoginOpen(true);
       } else if (hash === '#register-pro' || hash === '#onboard' || hash === '#onboarding' || hash === '#pro') {
         setIsWorkerOnboardingOpen(true);
+      } else if (hash === '#splash' || hash === '#welcome') {
+        setCurrentScreen('splash');
       }
     };
 
@@ -191,7 +199,6 @@ function MainLayout() {
                     setCurrentScreen('service-list');
                   }}
                   onOpenProfileDrawer={() => setIsProfileDrawerOpen(true)}
-                  onOpenNotifications={() => alert("All bookings and offers are up-to-date!")}
                   onSelectCategory={(cat) => {
                     const catName = cat?.name || 'Home Service';
                     const serviceObj = {

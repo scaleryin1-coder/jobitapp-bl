@@ -54,10 +54,11 @@ export const safeDbPromise = (promise, timeoutMs = 2500) => {
  *    - Balance Payable by Customer: ₹551
  */
 export function calculateBillingDetails(rawPrice) {
-  const total = Number(rawPrice) > 0 ? Number(rawPrice) : 650;
+  const num = typeof rawPrice === 'number' ? rawPrice : Number(String(rawPrice || '').replace(/[^0-9.]/g, ''));
+  const total = Number.isFinite(num) && num > 0 ? num : 650;
   // Standard advance inspection fee
   const advancePaid = total >= 250 ? 99 : 49;
-  const remainingDue = total - advancePaid;
+  const remainingDue = Math.max(0, total - advancePaid);
 
   // Internal split calculation:
   // For total === 650: Worker share is exactly 500, Platform fee is exactly 150
@@ -65,7 +66,7 @@ export function calculateBillingDetails(rawPrice) {
   if (total === 650) {
     platformFee = 150;
   }
-  const workerCharge = total - platformFee;
+  const workerCharge = Math.max(0, total - platformFee);
 
   return {
     totalServiceCharge: total,
@@ -141,7 +142,7 @@ export function getLocalBookings() {
     const parsed = JSON.parse(raw);
     list = Array.isArray(parsed) ? parsed : [];
     // Ensure all stored bookings have computed billing attributes
-    return list.map(b => {
+    return list.filter(b => b && typeof b === 'object').map(b => {
       const billing = calculateBillingDetails(b.totalServiceCharge || b.price || 650);
       return {
         ...b,
@@ -155,7 +156,8 @@ export function getLocalBookings() {
         workerTitle: b.workerTitle || 'JOBit Verified Technician'
       };
     });
-  } catch {
+  } catch (err) {
+    console.warn('Fallback reading local bookings:', err);
     return [];
   }
 }

@@ -425,7 +425,6 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
               <div className="pt-2 flex gap-2">
                 <button
                   onClick={() => {
-                    alert('Receipt saved. You can screenshot or present this reference to the technician.');
                     setReceiptModalBooking(null);
                   }}
                   className="flex-1 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold transition cursor-pointer shadow-sm text-center"

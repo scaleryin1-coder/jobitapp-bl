@@ -21,6 +21,15 @@ export class ErrorBoundary extends React.Component {
     window.location.reload();
   };
 
+  handleResetStorage = () => {
+    try {
+      localStorage.removeItem('jobit_bookings');
+      localStorage.removeItem('jobit_workers');
+    } catch {}
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    window.location.reload();
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -43,13 +52,21 @@ export class ErrorBoundary extends React.Component {
                 </pre>
               )}
             </div>
-            <button
-              onClick={this.handleReset}
-              className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-glow hover:opacity-95 transition"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reload Application
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={this.handleReset}
+                className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-glow hover:opacity-95 transition cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reload Application
+              </button>
+              <button
+                onClick={this.handleResetStorage}
+                className="w-full py-2.5 px-4 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer"
+              >
+                Clear Cache & Restart
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -57,3 +74,5 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;
