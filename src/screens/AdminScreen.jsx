@@ -1130,8 +1130,30 @@ export function AdminScreen({ onBack, onLogout }) {
       {/* 6. TAB: LIVE DISPATCH */}
       {/* ========================================================= */}
       {tab === 'dispatch' && (
-        <div className="px-5 space-y-3 animate-fade-in">
+        <div className="px-5 space-y-3.5 animate-fade-in">
           
+          {/* Admin Financial Split Overview */}
+          <div className="grid grid-cols-3 gap-2 p-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs text-center text-xs">
+            <div className="p-2 bg-slate-50 rounded-xl">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Customer Volume</span>
+              <span className="text-sm font-black text-slate-900 mt-0.5 block">
+                ₹{bookings.reduce((sum, b) => sum + (Number(b.totalServiceCharge || b.price) || 650), 0)}
+              </span>
+            </div>
+            <div className="p-2 bg-sky-50 rounded-xl">
+              <span className="text-[10px] text-[#0EA5E0] font-bold uppercase block">JOBit Commission</span>
+              <span className="text-sm font-black text-[#0EA5E0] mt-0.5 block">
+                ₹{bookings.reduce((sum, b) => sum + (Number(b.platformFee) || 150), 0)}
+              </span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-xl">
+              <span className="text-[10px] text-emerald-700 font-bold uppercase block">Worker Payouts</span>
+              <span className="text-sm font-black text-emerald-600 mt-0.5 block">
+                ₹{bookings.reduce((sum, b) => sum + (Number(b.workerCharge) || 500), 0)}
+              </span>
+            </div>
+          </div>
+
           {/* Sub-filter pills */}
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
             {[
@@ -1179,7 +1201,6 @@ export function AdminScreen({ onBack, onLogout }) {
                         </span>
                       </div>
                       <h4 className="text-sm font-extrabold text-slate-900 mt-1">{b.serviceTitle}</h4>
-                      <p className="text-xs font-bold text-slate-700">₹{b.price}</p>
                     </div>
 
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
@@ -1192,7 +1213,27 @@ export function AdminScreen({ onBack, onLogout }) {
                     </span>
                   </div>
 
-                  <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50 p-2.5 rounded-2xl">
+                  {/* Complete Admin Financial Split Display */}
+                  <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/80 text-xs space-y-1">
+                    <div className="flex justify-between text-slate-600 font-semibold">
+                      <span>Total Collected from Customer:</span>
+                      <span className="font-extrabold text-slate-900">₹{b.totalServiceCharge || b.price || 650}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500 font-medium">
+                      <span>Advance Deduction (Inspection):</span>
+                      <span className="font-semibold text-amber-700">-₹{b.advancePaid || 99}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700 font-bold">
+                      <span>Balance Payable by Customer:</span>
+                      <span className="font-black text-slate-900">₹{b.remainingDue || 551}</span>
+                    </div>
+                    <div className="pt-1.5 border-t border-slate-200 flex justify-between font-bold">
+                      <span className="text-emerald-700">Worker Share: ₹{b.workerCharge || 500}</span>
+                      <span className="text-[#0EA5E0]">Platform Fee (JOBit Share): ₹{b.platformFee || 150}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50/60 p-2.5 rounded-2xl">
                     <div className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span>{b.dateTime || 'Immediate Dispatch'}</span>
@@ -1218,7 +1259,7 @@ export function AdminScreen({ onBack, onLogout }) {
                             className="w-6 h-6 rounded-full object-cover"
                           />
                           <span className="text-xs font-bold text-slate-800">
-                            Pro: {b.workerName}
+                            JOBit Expert: {b.workerName}
                           </span>
                         </>
                       ) : (

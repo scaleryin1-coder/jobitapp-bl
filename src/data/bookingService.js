@@ -36,18 +36,60 @@ export const safeDbPromise = (promise, timeoutMs = 2500) => {
   });
 };
 
+/**
+ * Standard Billing & Pricing Calculation Utility
+ * 
+ * 1. Customer View:
+ *    - Total Service Charge (or Total Work Fee): Merged transparent charge
+ *    - Advance Paid (Inspection Fee): -₹99
+ *    - Remaining Amount Due: ₹551
+ *    - ZERO mention of Platform Fee or commissions.
+ * 
+ * 2. Backend / Worker / Admin View:
+ *    - Worker Charge (Worker's Share): ₹500
+ *    - Platform Fee (JOBit Share): ₹150
+ *    - Total Collected from Customer: ₹650
+ *    - Advance Deduction: -₹99
+ *    - Balance Payable by Customer: ₹551
+ */
+export function calculateBillingDetails(rawPrice) {
+  const total = Number(rawPrice) > 0 ? Number(rawPrice) : 650;
+  // Standard advance inspection fee
+  const advancePaid = total >= 250 ? 99 : 49;
+  const remainingDue = total - advancePaid;
+
+  // Internal split calculation:
+  // For total === 650: Worker share is exactly 500, Platform fee is exactly 150
+  let platformFee = Math.round(total * 0.2308);
+  if (total === 650) {
+    platformFee = 150;
+  }
+  const workerCharge = total - platformFee;
+
+  return {
+    totalServiceCharge: total,
+    totalWorkFee: total,
+    workerCharge, // Worker's share (Net earning)
+    platformFee,  // JOBit platform commission share
+    advancePaid,  // Inspection Fee advance paid
+    remainingDue  // Balance payable by customer on completion
+  };
+}
+
 // Get local stored items safely
 export function getLocalBookings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_BOOKINGS);
+    let list = [];
     if (!raw) {
-      const defaultList = [
+      list = [
         {
           id: 'bk_sample_1',
           serviceTitle: 'Plumbing Inspection & Repair',
           categoryName: 'Plumbing',
           workerId: 'worker_rajesh',
           workerName: 'Rajesh Sharma',
+          workerTitle: 'JOBit Verified Technician',
           workerPhone: '98765 43210',
           workerAvatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
           customerId: 'guest_user',
@@ -55,9 +97,15 @@ export function getLocalBookings() {
           customerPhone: '98765 00001',
           dateTime: 'Today, 02:00 PM - 04:00 PM',
           address: 'Flat 402, Sunshine Heights, Andheri West, Mumbai',
-          price: 300,
+          price: 650,
+          totalServiceCharge: 650,
+          totalWorkFee: 650,
+          workerCharge: 500,
+          platformFee: 150,
+          advancePaid: 99,
+          remainingDue: 551,
           status: 'accepted',
-          note: 'Kitchen tap dripping continuously',
+          note: 'Kitchen tap dripping continuously and pipe fitting',
           createdAt: new Date(Date.now() - 3600000).toISOString()
         },
         {
@@ -66,6 +114,7 @@ export function getLocalBookings() {
           categoryName: 'AC Repair',
           workerId: null,
           workerName: null,
+          workerTitle: 'JOBit Verified Technician',
           workerPhone: null,
           workerAvatar: null,
           customerId: 'cust_priya',
@@ -73,16 +122,38 @@ export function getLocalBookings() {
           customerPhone: '98765 00002',
           dateTime: 'Today, 04:30 PM - 06:30 PM',
           address: 'Villa 18, Palm Meadows, Bandra West, Mumbai',
-          price: 450,
+          price: 650,
+          totalServiceCharge: 650,
+          totalWorkFee: 650,
+          workerCharge: 500,
+          platformFee: 150,
+          advancePaid: 99,
+          remainingDue: 551,
           status: 'pending',
           note: 'Cooling coil jet wash needed',
           createdAt: new Date().toISOString()
         }
       ];
-      localStorage.setItem(STORAGE_KEY_BOOKINGS, JSON.stringify(defaultList));
-      return defaultList;
+      localStorage.setItem(STORAGE_KEY_BOOKINGS, JSON.stringify(list));
+      return list;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    list = Array.isArray(parsed) ? parsed : [];
+    // Ensure all stored bookings have computed billing attributes
+    return list.map(b => {
+      const billing = calculateBillingDetails(b.totalServiceCharge || b.price || 650);
+      return {
+        ...b,
+        price: b.price || billing.totalServiceCharge,
+        totalServiceCharge: b.totalServiceCharge || billing.totalServiceCharge,
+        totalWorkFee: b.totalWorkFee || billing.totalServiceCharge,
+        workerCharge: b.workerCharge || billing.workerCharge,
+        platformFee: b.platformFee || billing.platformFee,
+        advancePaid: b.advancePaid !== undefined ? b.advancePaid : billing.advancePaid,
+        remainingDue: b.remainingDue !== undefined ? b.remainingDue : billing.remainingDue,
+        workerTitle: b.workerTitle || 'JOBit Verified Technician'
+      };
+    });
   } catch {
     return [];
   }
@@ -207,6 +278,8 @@ export function subscribeWorkers(callback) {
 
 // Customer initiates booking -> broadcasts as 'pending'
 export async function createBooking(payload) {
+  const billing = calculateBillingDetails(payload.price || payload.totalServiceCharge || 650);
+
   const newBooking = {
     id: 'bk_' + Date.now(),
     status: 'pending', // Pending Assignment
@@ -216,7 +289,15 @@ export async function createBooking(payload) {
     workerName: null,
     workerPhone: null,
     workerAvatar: null,
-    ...payload
+    workerTitle: 'JOBit Verified Technician',
+    ...payload,
+    price: billing.totalServiceCharge,
+    totalServiceCharge: billing.totalServiceCharge,
+    totalWorkFee: billing.totalServiceCharge,
+    workerCharge: billing.workerCharge,
+    platformFee: billing.platformFee,
+    advancePaid: billing.advancePaid,
+    remainingDue: billing.remainingDue
   };
 
   // 1. Immediately update local state & dispatch custom event for instant cross-component sync

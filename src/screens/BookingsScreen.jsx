@@ -13,7 +13,12 @@ import {
   Phone,
   User,
   Radio,
-  Navigation
+  Navigation,
+  Receipt,
+  FileText,
+  X,
+  Sparkles,
+  Download
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -28,6 +33,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   const [filter, setFilter] = useState('upcoming'); // 'upcoming' | 'completed' | 'cancelled'
   const [bookings, setBookings] = useState([]);
   const [ratingModalBooking, setRatingModalBooking] = useState(null);
+  const [receiptModalBooking, setReceiptModalBooking] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
 
@@ -141,7 +147,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
               key={booking.id}
               className="p-4 rounded-[26px] bg-white border border-slate-200/80 shadow-xs space-y-3 relative overflow-hidden"
             >
-              {/* Top Service & Price Header */}
+              {/* Top Service Header */}
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full">
@@ -152,9 +158,30 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                   </h3>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-black text-slate-900">₹{booking.price}</span>
-                  <p className="text-[10px] text-slate-400 font-bold">Fixed Task</p>
+                  <span className="text-sm font-black text-slate-900">₹{booking.totalServiceCharge || booking.price || 650}</span>
+                  <p className="text-[10px] text-slate-400 font-bold">Total Work Fee</p>
                 </div>
+              </div>
+
+              {/* Transparent Customer Billing Breakdown - NEVER shows platform fee */}
+              <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/70 text-xs space-y-1.5">
+                <div className="flex items-center justify-between text-slate-600 font-medium">
+                  <span>Total Service Charge:</span>
+                  <span className="font-extrabold text-slate-900">₹{booking.totalServiceCharge || booking.price || 650}</span>
+                </div>
+                <div className="flex items-center justify-between text-emerald-600 font-medium">
+                  <span>Advance Paid (Inspection Fee):</span>
+                  <span className="font-bold">-₹{booking.advancePaid || 99}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-900 font-black pt-1.5 border-t border-slate-200">
+                  <span>Remaining Amount Due:</span>
+                  <span className="text-sm font-black text-[#0EA5E0]">₹{booking.remainingDue || 551}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 pt-0.5 font-semibold">
+                  {booking.status === 'completed' 
+                    ? '✓ Service completed & balance settled' 
+                    : '• Balance payable directly to JOBit Technician upon completion'}
+                </p>
               </div>
 
               {/* 5-Step Real-time Status Stepper */}
@@ -195,12 +222,12 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
 
                 {booking.status === 'pending' && (
                   <p className="text-[11px] text-amber-700 font-semibold bg-amber-50/80 p-2 rounded-xl border border-amber-200/60 leading-tight">
-                    🚨 Request broadcasted! Nearby verified pros are alerted. Will automatically advance when accepted.
+                    🚨 Request broadcasted! Nearby JOBit Verified Technicians are alerted. Will automatically advance when accepted.
                   </p>
                 )}
               </div>
 
-              {/* Technician Info Card (if assigned) */}
+              {/* Technician Info Card - Strictly branded as JOBit Verified Technicians / Experts */}
               {booking.workerName ? (
                 <div className="p-3 rounded-2xl bg-sky-50/60 border border-sky-100 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -210,9 +237,12 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                       className="w-10 h-10 rounded-xl object-cover ring-2 ring-white"
                     />
                     <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Technician</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">JOBit Verified Technician</p>
                       <p className="text-xs font-black text-slate-900">{booking.workerName}</p>
-                      <p className="text-[10px] text-sky-600 font-semibold">Verified Pro</p>
+                      <p className="text-[10px] text-sky-600 font-bold flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-[#0EA5E0]" />
+                        <span>JOBit Expert</span>
+                      </p>
                     </div>
                   </div>
 
@@ -220,14 +250,14 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                     <a
                       href={`tel:${booking.workerPhone || '9876543210'}`}
                       className="w-8 h-8 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow-xs hover:bg-emerald-50 transition"
-                      title="Call Pro"
+                      title="Call JOBit Expert"
                     >
                       <Phone className="w-3.5 h-3.5" />
                     </a>
                     <button
                       onClick={() => onOpenChat(booking)}
                       className="w-8 h-8 rounded-full bg-white text-[#0EA5E0] flex items-center justify-center shadow-xs hover:bg-sky-50 transition cursor-pointer"
-                      title="Chat with Pro"
+                      title="Chat with JOBit Expert"
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
                     </button>
@@ -237,7 +267,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
                   <div className="flex items-center gap-2">
                     <Radio className="w-4 h-4 text-[#0EA5E0] animate-pulse" />
-                    <span className="font-semibold text-slate-700">Awaiting technician pickup...</span>
+                    <span className="font-semibold text-slate-700">Awaiting JOBit Verified Technician pickup...</span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">Hyperlocal Radius</span>
                 </div>
@@ -257,8 +287,17 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
 
               {/* Actions Footer */}
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <div className="text-[11px] text-slate-400">
-                  ID: #{booking.id.slice(-6)}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">
+                    #{booking.id.slice(-6)}
+                  </span>
+                  <button
+                    onClick={() => setReceiptModalBooking(booking)}
+                    className="px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Receipt className="w-3 h-3" />
+                    <span>View Receipt</span>
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -276,7 +315,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                       onClick={() => setRatingModalBooking(booking)}
                       className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-bold shadow-xs hover:opacity-95 transition cursor-pointer"
                     >
-                      Rate Pro ★
+                      Rate JOBit Expert ★
                     </button>
                   )}
                 </div>
@@ -298,12 +337,113 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
         )}
       </div>
 
+      {/* Customer Receipt Modal - Official Transparent Customer Billing */}
+      {receiptModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative border border-slate-100 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-50 text-[#0EA5E0] flex items-center justify-center">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                    Official Service Receipt
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    JOBit Verified Staff Billing
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setReceiptModalBooking(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Receipt Summary Card */}
+            <div className="mt-4 space-y-3.5">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+                <div className="flex justify-between text-slate-500">
+                  <span>Booking Reference:</span>
+                  <span className="font-mono font-bold text-slate-800">#{receiptModalBooking.id.slice(-8)}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Service:</span>
+                  <span className="font-bold text-slate-800">{receiptModalBooking.serviceTitle}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Appointment:</span>
+                  <span className="font-medium text-slate-700">{receiptModalBooking.dateTime}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Assigned Pro:</span>
+                  <span className="font-black text-[#0EA5E0]">
+                    {receiptModalBooking.workerName ? `${receiptModalBooking.workerName} (JOBit Expert)` : 'JOBit Verified Technician'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Service Address:</span>
+                  <span className="font-medium text-slate-700 text-right truncate max-w-[200px]">{receiptModalBooking.address}</span>
+                </div>
+              </div>
+
+              {/* Transparent Customer Line Items */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  Billing Breakdown
+                </h4>
+                
+                <div className="flex justify-between text-xs text-slate-700 font-semibold">
+                  <span>Total Service Charge</span>
+                  <span className="font-black text-slate-900">₹{receiptModalBooking.totalServiceCharge || receiptModalBooking.price || 650}</span>
+                </div>
+
+                <div className="flex justify-between text-xs text-emerald-600 font-semibold">
+                  <span>Advance Paid (Inspection Fee)</span>
+                  <span className="font-black">-₹{receiptModalBooking.advancePaid || 99}</span>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
+                  <span>Remaining Amount Due</span>
+                  <span className="text-base text-[#0EA5E0]">₹{receiptModalBooking.remainingDue || 551}</span>
+                </div>
+              </div>
+
+              {/* Assurance Seal */}
+              <div className="p-3 rounded-2xl bg-sky-50/70 border border-sky-100 flex items-start gap-2.5 text-[11px] text-sky-900">
+                <ShieldCheck className="w-4 h-4 text-[#0EA5E0] shrink-0 mt-0.5" />
+                <p className="leading-tight font-medium">
+                  <strong>JOBit Staff Guarantee:</strong> All work is completed by official JOBit Verified Technicians. Pay remaining due upon job satisfaction. Zero hidden platform commissions.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    alert('Receipt saved. You can screenshot or present this reference to the technician.');
+                    setReceiptModalBooking(null);
+                  }}
+                  className="flex-1 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold transition cursor-pointer shadow-sm text-center"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Review Modal */}
       {ratingModalBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl relative border border-slate-100">
             <h3 className="text-base font-extrabold text-slate-900 mb-1">
-              Rate {ratingModalBooking.workerName || 'Worker'}
+              Rate {ratingModalBooking.workerName || 'JOBit Expert'}
             </h3>
             <p className="text-xs text-slate-400 mb-4">{ratingModalBooking.serviceTitle}</p>
 

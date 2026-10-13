@@ -101,16 +101,16 @@ export function ServiceDetailScreen({ service, onBack, onBookNow, onOpenChat }) 
         {/* Green Badge Tagline */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100/60">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-          <span>{service.badge || "Skilled & Reliable Expert"}</span>
+          <span>{service.badge || "JOBit Verified Expert"}</span>
         </div>
 
         {/* Tab 1: Overview */}
         {activeTab === 'Overview' && (
           <div className="space-y-4 pt-1">
-            {/* About Me */}
+            {/* About Service & JOBit Staff */}
             <div>
               <h3 className="text-base font-extrabold text-slate-900 mb-1.5">
-                About Me
+                About Service & JOBit Staff
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
                 {isExpandedAbout

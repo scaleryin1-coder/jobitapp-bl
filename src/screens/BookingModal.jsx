@@ -114,7 +114,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             </div>
             <h4 className="text-xl font-black text-slate-900">Booking Confirmed!</h4>
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto">
-              Your request for <strong className="text-slate-800">{selectedSubCategory}</strong> has been placed. A verified technician has been notified.
+              Your request for <strong className="text-slate-800">{selectedSubCategory}</strong> has been placed. A JOBit Verified Technician has been notified.
             </p>
           </div>
         ) : (
@@ -217,10 +217,11 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             </div>
 
             {/* Additional Note */}
+            {/* Additional Note */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                <span>Notes for Worker (Optional)</span>
+                <span>Notes for JOBit Expert (Optional)</span>
               </label>
               <input
                 type="text"
@@ -231,11 +232,27 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
               />
             </div>
 
+            {/* Transparent Customer Pricing Summary */}
+            <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-1.5 text-xs">
+              <div className="flex justify-between text-slate-600 font-medium">
+                <span>Total Service Charge:</span>
+                <span className="font-extrabold text-slate-900">₹{service.price || 650}</span>
+              </div>
+              <div className="flex justify-between text-emerald-600 font-medium">
+                <span>Advance Paid (Inspection Fee):</span>
+                <span className="font-bold">-₹{(service.price || 650) >= 250 ? 99 : 49}</span>
+              </div>
+              <div className="pt-1.5 border-t border-slate-200 flex justify-between font-black text-slate-900">
+                <span>Remaining Amount Due:</span>
+                <span className="text-sm font-black text-[#4B6EF5]">₹{(service.price || 650) - ((service.price || 650) >= 250 ? 99 : 49)}</span>
+              </div>
+            </div>
+
             {/* Trust Guarantee Box */}
             <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3 flex items-center gap-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <div className="text-[11px] text-emerald-800 font-semibold leading-tight">
-                JOBit Guarantee: Pay after service completion. Zero unsolicited calls.
+                JOBit Staff Guarantee: Pay remaining balance after service completion to your JOBit Verified Technician. Zero hidden commission.
               </div>
             </div>
 

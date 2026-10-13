@@ -96,8 +96,11 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     b.workerId === activeWorker.id && b.status === 'completed'
   );
 
-  // Total earnings calculation
-  const totalEarnings = myCompletedJobs.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
+  // Total earnings calculation (Worker's Net Share)
+  const totalEarnings = myCompletedJobs.reduce((sum, b) => {
+    const workerShare = Number(b.workerCharge) || (Number(b.price) ? Math.max(0, Number(b.price) - (Number(b.platformFee) || 150)) : 500);
+    return sum + workerShare;
+  }, 0);
 
   const handleAcceptJob = async (booking) => {
     await acceptJobAsWorker(booking.id, activeWorker);
@@ -356,9 +359,29 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-amber-300 leading-none">
-                      ₹{job.price}
+                      ₹{job.workerCharge || 500}
                     </p>
-                    <p className="text-[10px] text-white/80 font-semibold mt-0.5">Fixed Task</p>
+                    <p className="text-[10px] text-white/90 font-bold mt-0.5">Your Net Earning</p>
+                  </div>
+                </div>
+
+                {/* Worker Financial Split Details */}
+                <div className="bg-white/15 rounded-xl p-2.5 text-[11px] text-white space-y-1">
+                  <div className="flex justify-between font-medium">
+                    <span className="text-sky-100">Customer Total Bill:</span>
+                    <span className="font-bold text-white">₹{job.totalServiceCharge || job.price || 650}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span className="text-sky-100">Platform Fee (JOBit Share):</span>
+                    <span className="text-amber-200 font-semibold">-₹{job.platformFee || 150}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span className="text-sky-100">Advance Inspection Deduction:</span>
+                    <span className="text-amber-200 font-semibold">-₹{job.advancePaid || 99}</span>
+                  </div>
+                  <div className="pt-1 border-t border-white/20 flex justify-between font-bold text-amber-300">
+                    <span>Balance to Collect from Customer:</span>
+                    <span>₹{job.remainingDue || 551}</span>
                   </div>
                 </div>
 
@@ -489,9 +512,33 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     <h3 className="text-base font-extrabold text-slate-900 leading-tight">
                       {job.serviceTitle}
                     </h3>
-                    <p className="text-xs text-[#0EA5E0] font-black mt-0.5">
-                      Fixed Payout: ₹{job.price}
-                    </p>
+                  </div>
+
+                  {/* Internal Financial Split Calculation for Worker */}
+                  <div className="p-3.5 bg-sky-50/70 rounded-2xl border border-sky-100/90 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-slate-600 font-semibold">
+                      <span>Total Collected from Customer:</span>
+                      <span className="font-extrabold text-slate-900">₹{job.totalServiceCharge || job.price || 650}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-500 font-medium">
+                      <span>Advance Deduction (Inspection Fee):</span>
+                      <span className="font-semibold text-amber-700">-₹{job.advancePaid || 99}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-800 font-bold">
+                      <span>Balance Payable by Customer:</span>
+                      <span className="font-black text-[#0EA5E0]">₹{job.remainingDue || 551}</span>
+                    </div>
+                    <div className="pt-1.5 border-t border-sky-200/80 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-emerald-800">Worker Charge (Your Share):</span>
+                        <span className="text-[10px] text-slate-500 font-bold">
+                          (Platform Fee: ₹{job.platformFee || 150})
+                        </span>
+                      </div>
+                      <span className="text-sm font-black text-emerald-600">
+                        ₹{job.workerCharge || 500}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Customer Card */}
@@ -604,12 +651,33 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                   <span className="text-[10px] font-bold text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full">
                     {job.categoryName}
                   </span>
-                  <span className="text-sm font-black text-slate-900">₹{job.price}</span>
+                  <div className="text-right">
+                    <span className="text-xs font-black text-emerald-600 block">Net: ₹{job.workerCharge || 500}</span>
+                    <span className="text-[10px] text-slate-400 font-semibold block">Bill: ₹{job.totalServiceCharge || job.price || 650}</span>
+                  </div>
                 </div>
+
                 <div>
                   <h4 className="text-sm font-extrabold text-slate-900">{job.serviceTitle}</h4>
                   <p className="text-xs text-slate-500 font-medium">{job.address}</p>
                 </div>
+
+                {/* Worker Financial Split Info */}
+                <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Platform Commission (JOBit):</span>
+                    <span className="font-semibold text-slate-700">₹{job.platformFee || 150}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Advance Inspection Paid:</span>
+                    <span className="font-semibold text-amber-700">-₹{job.advancePaid || 99}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-slate-900 pt-0.5 border-t border-slate-200">
+                    <span>Balance to Collect at Doorstep:</span>
+                    <span className="text-[#0EA5E0]">₹{job.remainingDue || 551}</span>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => handleDeclineJob(job.id)}
@@ -650,10 +718,13 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                   </span>
                   <h4 className="text-xs font-extrabold text-slate-900 mt-1">{job.serviceTitle}</h4>
                   <p className="text-[11px] text-slate-400">{job.customerName} • {job.address?.slice(0, 25)}...</p>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    Customer Bill: ₹{job.totalServiceCharge || job.price || 650} • Platform Fee: ₹{job.platformFee || 150}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-emerald-600">+₹{job.price}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">Credited</p>
+                  <p className="text-sm font-black text-emerald-600">+₹{job.workerCharge || 500}</p>
+                  <p className="text-[10px] text-slate-400 font-semibold">Net Credited</p>
                 </div>
               </div>
             ))}
