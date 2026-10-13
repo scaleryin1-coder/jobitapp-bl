@@ -370,6 +370,10 @@ function MainLayout() {
             setCurrentScreen('splash');
             setActiveTab('home');
           }}
+          onOpenWorkerOnboarding={() => {
+            setIsProfileDrawerOpen(false);
+            setIsWorkerOnboardingOpen(true);
+          }}
         />
 
         {/* City Location Picker Dialog */}

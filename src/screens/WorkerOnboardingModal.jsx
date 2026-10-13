@@ -24,27 +24,12 @@ import {
   Eye,
   RefreshCw,
   FileText,
-  ExternalLink
+  Search,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { registerWorkerOnboarding, getLocalCategories } from '../data/bookingService';
-
-// Professional avatar presets for instant photo selection
-const PHOTO_PRESETS = [
-  'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=400&q=80'
-];
-
-// Sample government ID proof documents for demo preview
-const ID_PROOF_SAMPLES = [
-  { label: 'Aadhaar Card (Front & Back)', url: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Voter Identity Card', url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Driving License / Trade Certificate', url: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80' }
-];
+import { registerWorkerOnboarding, getLocalCategories, subscribeCategories } from '../data/bookingService';
+import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 
 const POPULAR_LOCATIONS = [
   'Melattur, Kerala',
@@ -57,18 +42,24 @@ const POPULAR_LOCATIONS = [
 ];
 
 export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
-  const { loginWithPhone } = useAuth();
+  const { currentUser, loginWithPhone } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [categories, setCategories] = useState([]);
+  const [categorySearch, setCategorySearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Form State
-  // Step 1: Personal Details
-  const [fullName, setFullName] = useState('');
-  const [photoUrl, setPhotoUrl] = useState(PHOTO_PRESETS[0]);
+  // 1. Auto-detected Customer Account details
+  const [isAccountAutoDetected, setIsAccountAutoDetected] = useState(false);
   const [primaryPhone, setPrimaryPhone] = useState('');
+  const [fullName, setFullName] = useState('');
+  
+  // Mandatory Live Camera Selfie (No avatars allowed!)
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [selfieCapturedAt, setSelfieCapturedAt] = useState('');
+
+  // Additional Step 1 details
   const [altPhone, setAltPhone] = useState('');
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('Male');
@@ -80,32 +71,20 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const [pincode, setPincode] = useState('679326');
   const [serviceRadius, setServiceRadius] = useState('25'); // km
 
-  // Step 3: Skills & Professional Details
+  // Step 3: Skills & Professional Details (Dynamically synced)
   const [primaryCategory, setPrimaryCategory] = useState('');
   const [selectedSubSkills, setSelectedSubSkills] = useState([]);
   const [customSkillInput, setCustomSkillInput] = useState('');
   const [experienceYears, setExperienceYears] = useState('5');
   const [baseRate, setBaseRate] = useState('350');
 
-  // Step 4: Verification & Bank Details
+  // Step 4: Verification & Bank Details (Both Aadhaar & Driving License mandatory)
   const [aadhaarNumber, setAadhaarNumber] = useState('');
-  const [aadhaarDoc, setAadhaarDoc] = useState({
-    url: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    name: 'Aadhaar_Card_Front_Back.jpg',
-    size: '1.4 MB',
-    type: 'image/jpeg',
-    isCameraCaptured: false
-  });
+  const [aadhaarDoc, setAadhaarDoc] = useState(null);
   const [drivingLicenseNumber, setDrivingLicenseNumber] = useState('');
-  const [drivingLicenseDoc, setDrivingLicenseDoc] = useState({
-    url: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
-    name: 'Driving_License_Trade_ID.jpg',
-    size: '980 KB',
-    type: 'image/jpeg',
-    isCameraCaptured: false
-  });
-  const [idProofUrl, setIdProofUrl] = useState(ID_PROOF_SAMPLES[0].url);
-  const [idProofType, setIdProofType] = useState('Aadhaar Card (Front & Back)');
+  const [drivingLicenseDoc, setDrivingLicenseDoc] = useState(null);
+
+  // Bank Account details
   const [accountHolderName, setAccountHolderName] = useState('');
   const [bankName, setBankName] = useState('State Bank of India');
   const [accountNumber, setAccountNumber] = useState('');
@@ -114,156 +93,92 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const [upiId, setUpiId] = useState('');
 
   // Live Camera Viewfinder modal state
-  const [liveCameraTarget, setLiveCameraTarget] = useState(null); // 'aadhaar' | 'license' | null
+  // target can be 'selfie' | 'aadhaar' | 'license' | null
+  const [liveCameraTarget, setLiveCameraTarget] = useState(null);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState('');
 
-  // Enlarge Document Preview Lightbox
+  // Enlarge Document / Selfie Lightbox Preview
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
 
-  // Hidden File input & camera viewfinder refs
+  // File input refs for camera capture & gallery picking
+  const selfieCameraInputRef = useRef(null);
   const aadhaarCameraInputRef = useRef(null);
   const aadhaarGalleryInputRef = useRef(null);
   const licenseCameraInputRef = useRef(null);
   const licenseGalleryInputRef = useRef(null);
+
+  // Video and stream refs
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const cameraStreamRef = useRef(null);
 
-  // Start in-app live camera viewfinder stream
-  const startLiveCamera = async (target) => {
-    setLiveCameraTarget(target);
-    setCameraLoading(true);
-    setCameraError('');
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera streaming is not available. Please use the device photo capture option.');
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      cameraStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
-      setCameraLoading(false);
-    } catch (err) {
-      console.warn('Camera access fallback:', err);
-      setCameraLoading(false);
-      setCameraError('Camera access unavailable or permission not granted. You can still use the direct camera capture button below!');
-    }
-  };
-
-  const stopLiveCamera = () => {
-    if (cameraStreamRef.current) {
-      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
-      cameraStreamRef.current = null;
-    }
-    setLiveCameraTarget(null);
-    setCameraError('');
-    setCameraLoading(false);
-  };
-
-  const captureLivePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-    const docMeta = {
-      url: dataUrl,
-      name: `${liveCameraTarget === 'aadhaar' ? 'Aadhaar_Camera' : 'DrivingLicense_Camera'}_${Date.now()}.jpg`,
-      size: `${Math.round((dataUrl.length * 0.75) / 1024)} KB`,
-      type: 'image/jpeg',
-      isCameraCaptured: true
-    };
-    if (liveCameraTarget === 'aadhaar') {
-      setAadhaarDoc(docMeta);
-      setIdProofUrl(dataUrl);
-    } else {
-      setDrivingLicenseDoc(docMeta);
-    }
-    stopLiveCamera();
-  };
-
-  // Handle native file input (Camera capture or Gallery selection)
-  const handleFileInput = (e, target, isCamera = false) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 12 * 1024 * 1024) {
-      setErrorMsg('Selected file exceeds 12MB limit. Please choose a smaller photo.');
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target.result;
-      const docMeta = {
-        url: dataUrl,
-        name: file.name || `${target === 'aadhaar' ? 'Aadhaar_Card' : 'Driving_License'}_${Date.now()}.jpg`,
-        size: `${(file.size / 1024).toFixed(1)} KB`,
-        type: file.type || 'image/jpeg',
-        isCameraCaptured: isCamera
-      };
-      if (target === 'aadhaar') {
-        setAadhaarDoc(docMeta);
-        setIdProofUrl(dataUrl);
-      } else {
-        setDrivingLicenseDoc(docMeta);
-      }
-      setErrorMsg('');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const removeDoc = (target) => {
-    if (target === 'aadhaar') {
-      setAadhaarDoc(null);
-      setIdProofUrl('');
-    } else {
-      setDrivingLicenseDoc(null);
-    }
-  };
-
-  // Clean up camera stream on unmount
-  useEffect(() => {
-    return () => {
-      if (cameraStreamRef.current) {
-        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-
-  // Load available categories
+  // Auto-detect logged-in Customer Account on open
   useEffect(() => {
     if (isOpen) {
-      const cats = getLocalCategories();
-      setCategories(cats);
-      if (cats.length > 0 && !primaryCategory) {
-        setPrimaryCategory(cats[0].name);
-        setSelectedSubSkills(cats[0].subCategories?.slice(0, 3) || ['General Diagnostics & Service']);
-      }
       setErrorMsg('');
       setIsCompleted(false);
-    }
-  }, [isOpen]);
 
-  // When primary category changes, update suggested sub-skills
+      const customerPhone = (currentUser?.phone || '').replace(/\D/g, '').slice(-10);
+      if (customerPhone && customerPhone.length === 10) {
+        setPrimaryPhone(customerPhone);
+        setIsAccountAutoDetected(true);
+      } else {
+        setIsAccountAutoDetected(false);
+      }
+
+      if (currentUser?.name && !fullName) {
+        setFullName(currentUser.name);
+      }
+      if (currentUser?.city) {
+        setCity(currentUser.city);
+      }
+      if (currentUser?.email && !email) {
+        setEmail(currentUser.email);
+      }
+    }
+  }, [isOpen, currentUser]);
+
+  // Real-time Dynamic Category Synchronization from Customer Menu & Admin
+  useEffect(() => {
+    const unsub = subscribeCategories((cats) => {
+      let activeCats = Array.isArray(cats) && cats.length > 0 ? cats : getLocalCategories();
+      
+      // Merge with ALL_MAIN_CATEGORIES so all 20 certified categories are always accessible
+      const map = new Map();
+      ALL_MAIN_CATEGORIES.forEach(c => map.set(c.name.toLowerCase(), c));
+      activeCats.forEach(c => {
+        const key = (c.name || '').toLowerCase();
+        if (key) map.set(key, { ...map.get(key), ...c });
+      });
+
+      const fullList = Array.from(map.values()).sort((a, b) => (a.order || 0) - (b.order || 0));
+      setCategories(fullList);
+
+      if (!primaryCategory && fullList.length > 0) {
+        setPrimaryCategory(fullList[0].name);
+        if (fullList[0].subCategories && fullList[0].subCategories.length > 0) {
+          setSelectedSubSkills(fullList[0].subCategories.slice(0, 3));
+        }
+      }
+    });
+
+    return () => unsub();
+  }, [primaryCategory]);
+
+  // When primary category changes, sync sub-skills and base rate
   const handleCategoryChange = (catName) => {
     setPrimaryCategory(catName);
     const cat = categories.find(c => c.name === catName);
-    if (cat && cat.subCategories && cat.subCategories.length > 0) {
-      setSelectedSubSkills(cat.subCategories.slice(0, 3));
-    } else {
-      setSelectedSubSkills(['Standard Service & Repair']);
+    if (cat) {
+      if (cat.basePrice) {
+        setBaseRate(String(cat.basePrice));
+      }
+      if (cat.subCategories && cat.subCategories.length > 0) {
+        setSelectedSubSkills(cat.subCategories.slice(0, 3));
+      } else {
+        setSelectedSubSkills(['Standard Service & Repair']);
+      }
     }
   };
 
@@ -285,33 +200,184 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
+  // Live Camera Stream handler
+  const startLiveCamera = async (target) => {
+    setLiveCameraTarget(target);
+    setCameraLoading(true);
+    setCameraError('');
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('In-app camera streaming is not supported on this browser. Please use the device camera button.');
+      }
+
+      const isSelfie = target === 'selfie';
+      const constraints = {
+        video: {
+          facingMode: isSelfie ? { ideal: 'user' } : { ideal: 'environment' },
+          width: { ideal: isSelfie ? 720 : 1280 },
+          height: { ideal: isSelfie ? 720 : 720 }
+        },
+        audio: false
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      cameraStreamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+      setCameraLoading(false);
+    } catch (err) {
+      console.warn('Live camera stream notice:', err);
+      setCameraLoading(false);
+      setCameraError('Camera access not granted or unavailable. You can also use the direct device camera option below.');
+    }
+  };
+
+  const stopLiveCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    setLiveCameraTarget(null);
+    setCameraError('');
+    setCameraLoading(false);
+  };
+
+  // Capture frame from in-app live stream
+  const captureLivePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    canvas.width = video.videoWidth || 720;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+
+    // If selfie, flip horizontally for mirror selfie preview
+    if (liveCameraTarget === 'selfie') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+    if (liveCameraTarget === 'selfie') {
+      setPhotoUrl(dataUrl);
+      setSelfieCapturedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setErrorMsg('');
+    } else {
+      const isAadhaar = liveCameraTarget === 'aadhaar';
+      const docMeta = {
+        url: dataUrl,
+        name: `${isAadhaar ? 'Aadhaar_Card_Camera' : 'Driving_License_Camera'}_${Date.now()}.jpg`,
+        size: `${Math.round((dataUrl.length * 0.75) / 1024)} KB`,
+        type: 'image/jpeg',
+        isCameraCaptured: true
+      };
+
+      if (isAadhaar) {
+        setAadhaarDoc(docMeta);
+      } else {
+        setDrivingLicenseDoc(docMeta);
+      }
+      setErrorMsg('');
+    }
+
+    stopLiveCamera();
+  };
+
+  // Handle native file inputs (Device Camera capture or Gallery picker)
+  const handleFileInput = (e, target, isCamera = false) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      setErrorMsg('Selected file exceeds 15MB limit. Please choose a smaller photo.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      if (target === 'selfie') {
+        setPhotoUrl(dataUrl);
+        setSelfieCapturedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        setErrorMsg('');
+      } else {
+        const isAadhaar = target === 'aadhaar';
+        const docMeta = {
+          url: dataUrl,
+          name: file.name || `${isAadhaar ? 'Aadhaar_Card' : 'Driving_License'}_${Date.now()}.jpg`,
+          size: `${(file.size / 1024).toFixed(1)} KB`,
+          type: file.type || 'image/jpeg',
+          isCameraCaptured: isCamera
+        };
+        if (isAadhaar) {
+          setAadhaarDoc(docMeta);
+        } else {
+          setDrivingLicenseDoc(docMeta);
+        }
+        setErrorMsg('');
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const removeDoc = (target) => {
+    if (target === 'selfie') {
+      setPhotoUrl('');
+      setSelfieCapturedAt('');
+    } else if (target === 'aadhaar') {
+      setAadhaarDoc(null);
+    } else {
+      setDrivingLicenseDoc(null);
+    }
+  };
+
+  // Clean up camera on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
   if (!isOpen) return null;
 
-  // Validation functions per step
+  // Step Validations
   const validateStep1 = () => {
     if (!fullName.trim() || fullName.trim().length < 3) {
       return 'Please enter your full legal name (min 3 characters)';
     }
+    // Live Camera Selfie is MANDATORY!
     if (!photoUrl) {
-      return 'Please choose or upload a profile photo';
+      return 'Mandatory Live Camera Selfie required! Please take a live photo of your face.';
     }
     const cleanPrimary = primaryPhone.replace(/\D/g, '').slice(-10);
     if (cleanPrimary.length !== 10) {
-      return 'Please enter a valid 10-digit primary mobile number';
+      return 'Please provide a valid 10-digit primary phone number';
     }
-    const cleanAlt = altPhone.replace(/\D/g, '').slice(-10);
-    if (cleanAlt.length !== 10) {
-      return 'Please enter a valid 10-digit alternate contact number';
+    if (altPhone) {
+      const cleanAlt = altPhone.replace(/\D/g, '').slice(-10);
+      if (cleanAlt.length !== 10) {
+        return 'Please enter a valid 10-digit alternate contact number';
+      }
+      if (cleanPrimary === cleanAlt) {
+        return 'Alternate contact number must be different from primary phone';
+      }
     }
-    if (cleanPrimary === cleanAlt) {
-      return 'Alternate contact number must be different from primary phone';
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim() || !emailRegex.test(email.trim())) {
-      return 'Please enter a valid email address';
-    }
-    if (!gender) {
-      return 'Please select your gender';
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        return 'Please enter a valid email address';
+      }
     }
     if (!dob) {
       return 'Please enter your date of birth';
@@ -321,17 +387,17 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     const ageDate = new Date(ageDiffMs);
     const age = Math.abs(ageDate.getUTCFullYear() - 1970);
     if (age < 18) {
-      return 'Service partners must be at least 18 years of age to register';
+      return 'Professionals must be at least 18 years of age to register';
     }
     return '';
   };
 
   const validateStep2 = () => {
     if (!address.trim() || address.trim().length < 5) {
-      return 'Please enter your detailed street address & building name';
+      return 'Please enter your complete street address & workshop location';
     }
     if (!city.trim()) {
-      return 'Please enter or select your City or Panchayat';
+      return 'Please specify your coverage city or panchayat';
     }
     const cleanPin = pincode.replace(/\D/g, '');
     if (cleanPin.length !== 6) {
@@ -360,15 +426,26 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   };
 
   const validateStep4 = () => {
+    // 1. Mandatory Aadhaar Card
     const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
-    if (cleanAadhaar.length !== 12 && cleanAadhaar.length < 8) {
-      return 'Please enter valid 12-digit Aadhaar / Govt ID number';
+    if (cleanAadhaar.length !== 12) {
+      return 'Please enter your complete 12-digit Aadhaar Number';
     }
-    if (!aadhaarDoc?.url && !idProofUrl) {
-      return 'Please take photo or upload your Aadhaar Card document';
+    if (!aadhaarDoc?.url) {
+      return 'Mandatory Aadhaar Card document photo required! Please take a photo or upload from gallery.';
     }
+
+    // 2. Mandatory Driving License
+    if (!drivingLicenseNumber.trim() || drivingLicenseNumber.trim().length < 5) {
+      return 'Please enter your Driving License / Trade Badge number';
+    }
+    if (!drivingLicenseDoc?.url) {
+      return 'Mandatory Driving License document photo required! Please take a photo or upload from gallery.';
+    }
+
+    // 3. Bank Account
     if (!accountHolderName.trim() || accountHolderName.trim().length < 3) {
-      return 'Please enter Account Holder Name as printed in bank passbook';
+      return 'Please enter Account Holder Name as printed on bank passbook';
     }
     if (!bankName.trim()) {
       return 'Please enter your Bank Name';
@@ -425,9 +502,10 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       name: fullName.trim(),
       avatar: photoUrl,
       photo: photoUrl,
+      liveSelfieUrl: photoUrl,
       phone: primaryPhone.trim(),
       altPhone: altPhone.trim(),
-      email: email.trim().toLowerCase(),
+      email: (email || `${fullName.toLowerCase().replace(/[^a-z0-9]/g, '')}@jobit.com`).trim(),
       gender,
       dob,
       address: address.trim(),
@@ -442,37 +520,39 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       experience: experienceYears,
       baseRate: Number(baseRate) || 350,
       documents: {
+        liveSelfieUrl: photoUrl,
         aadhaarNumber: aadhaarNumber.trim(),
-        aadhaarDocUrl: aadhaarDoc?.url || idProofUrl,
-        aadhaarDocName: aadhaarDoc?.name || 'Aadhaar Card Front & Back',
+        aadhaarDocUrl: aadhaarDoc.url,
+        aadhaarDocName: aadhaarDoc.name,
         drivingLicenseNumber: drivingLicenseNumber.trim(),
-        drivingLicenseDocUrl: drivingLicenseDoc?.url || '',
-        drivingLicenseDocName: drivingLicenseDoc?.name || '',
-        idProofUrl: aadhaarDoc?.url || idProofUrl,
-        idProofType: 'Aadhaar & Driving License',
+        drivingLicenseDocUrl: drivingLicenseDoc.url,
+        drivingLicenseDocName: drivingLicenseDoc.name,
+        idProofUrl: aadhaarDoc.url,
+        idProofType: 'Aadhaar Card & Driving License',
         photoUrl
       },
       aadhaarNumber: aadhaarNumber.trim(),
-      aadhaarDocUrl: aadhaarDoc?.url || idProofUrl,
-      aadhaarDocName: aadhaarDoc?.name || 'Aadhaar Card Front & Back',
+      aadhaarDocUrl: aadhaarDoc.url,
+      aadhaarDocName: aadhaarDoc.name,
       drivingLicenseNumber: drivingLicenseNumber.trim(),
-      drivingLicenseDocUrl: drivingLicenseDoc?.url || '',
-      drivingLicenseDocName: drivingLicenseDoc?.name || '',
-      idProofUrl: aadhaarDoc?.url || idProofUrl,
-      idProofType: 'Aadhaar & Driving License',
+      drivingLicenseDocUrl: drivingLicenseDoc.url,
+      drivingLicenseDocName: drivingLicenseDoc.name,
+      idProofUrl: aadhaarDoc.url,
+      idProofType: 'Aadhaar Card & Driving License',
       accountHolderName: accountHolderName.trim(),
       bankName: bankName.trim(),
       accountNumber: accountNumber.trim(),
       ifscCode: ifscCode.trim().toUpperCase(),
       upiId: upiId.trim(),
       status: 'pending',
-      workerStatus: 'pending'
+      workerStatus: 'pending',
+      submittedAt: new Date().toISOString()
     };
 
     try {
       const savedApp = await registerWorkerOnboarding(onboardingPayload);
-      
-      // Also automatically log in as this worker with 'pending' status
+
+      // Auto login as worker in pending approval status
       try {
         await loginWithPhone(
           primaryPhone, 
@@ -487,39 +567,48 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
           }
         );
       } catch (loginErr) {
-        console.warn('Auto-login worker note:', loginErr);
+        console.warn('Auto login after onboarding note:', loginErr);
       }
 
       setSubmitting(false);
       setIsCompleted(true);
     } catch (err) {
       console.error('Submission failed:', err);
-      setErrorMsg(err.message || 'Submission failed. Please try again.');
-      setSubmitting(false);
-    } finally {
+      setErrorMsg(err.message || 'Submission failed. Please check your network and try again.');
       setSubmitting(false);
     }
   };
 
+  const filteredCategories = categories.filter(c => 
+    c.name.toLowerCase().includes(categorySearch.toLowerCase().trim()) ||
+    (c.subCategories && c.subCategories.some(sub => sub.toLowerCase().includes(categorySearch.toLowerCase().trim())))
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-fade-in select-none">
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-fade-in select-none">
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[94vh]">
         
         {/* Top Header */}
-        <div className="bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] p-5 text-white relative">
+        <div className="bg-gradient-to-r from-[#0EA5E0] via-[#0284C7] to-[#0369A1] p-5 text-white relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center shadow-xs">
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-black tracking-tight">Partner Pro Onboarding</h3>
-                <p className="text-[11px] text-sky-100 font-semibold">Join Urban Company / Joboy verified service team</p>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-black tracking-tight">Become a Verified Professional</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-white/25 text-[10px] font-black uppercase tracking-wider">PRO</span>
+                </div>
+                <p className="text-[11px] text-sky-100 font-semibold mt-0.5">
+                  Join JOBit certified service network • Earn daily payouts
+                </p>
               </div>
             </div>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition cursor-pointer"
+              title="Close"
             >
               <X className="w-4 h-4" />
             </button>
@@ -531,10 +620,10 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               <div className="flex items-center justify-between text-xs font-bold mb-2">
                 <span className="text-white">
                   Step {currentStep} of 4: {
-                    currentStep === 1 ? 'Personal Details' :
-                    currentStep === 2 ? 'Location & Coverage' :
-                    currentStep === 3 ? 'Skills & Pricing' :
-                    'Verification & Bank'
+                    currentStep === 1 ? 'Personal Details & Live Selfie' :
+                    currentStep === 2 ? 'Coverage Location' :
+                    currentStep === 3 ? 'Category & Trade Skills' :
+                    'Govt KYC & Bank Details'
                   }
                 </span>
                 <span className="text-sky-200">{currentStep * 25}%</span>
@@ -570,14 +659,24 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 </span>
                 <h3 className="text-xl font-black text-slate-900">Application Submitted! Pending Admin Approval.</h3>
                 <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto mt-1 leading-relaxed">
-                  Thank you, <strong className="text-slate-800">{fullName}</strong>. Your KYC profile and trade details have been submitted to the Master Admin control team for verification.
+                  Thank you, <strong className="text-slate-800">{fullName}</strong>. Your verified live selfie, Aadhaar, and Driving License documents have been received for review.
                 </p>
               </div>
 
               {/* Application Summary Card */}
-              <div className="bg-slate-50 rounded-2xl p-4 text-left border border-slate-200/80 text-xs space-y-2 max-w-sm mx-auto">
+              <div className="bg-slate-50 rounded-2xl p-4 text-left border border-slate-200/80 text-xs space-y-2.5 max-w-sm mx-auto">
+                <div className="flex items-center gap-3 pb-2 border-b border-slate-200/60">
+                  {photoUrl ? (
+                    <img src={photoUrl} alt="Selfie" className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-xs" />
+                  ) : null}
+                  <div>
+                    <p className="font-black text-slate-900 text-sm">{fullName}</p>
+                    <p className="text-[11px] text-slate-500 font-bold">+91 {primaryPhone} (Auto-Linked)</p>
+                  </div>
+                </div>
+
                 <div className="flex justify-between items-center text-slate-600">
-                  <span className="font-semibold">Trade Skill:</span>
+                  <span className="font-semibold">Trade Category:</span>
                   <span className="font-black text-slate-900">{primaryCategory}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600">
@@ -585,12 +684,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   <span className="font-black text-slate-900">{city} ({pincode})</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600">
-                  <span className="font-semibold">Registered Phone:</span>
-                  <span className="font-black text-slate-900">{primaryPhone}</span>
+                  <span className="font-semibold">Documents Attached:</span>
+                  <span className="font-bold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" /> Aadhaar + Driving License
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="font-semibold">Expected Approval:</span>
-                  <span className="font-bold text-emerald-600">Within 2 to 4 Hours</span>
+                  <span className="font-bold text-sky-600">Within 2 to 4 Hours</span>
                 </div>
               </div>
 
@@ -602,7 +703,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   }}
                   className="w-full py-3 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-2xl text-xs font-black shadow-md transition cursor-pointer"
                 >
-                  View My Partner Portal
+                  Go to Partner Portal
                 </button>
               </div>
             </div>
@@ -617,49 +718,195 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               )}
 
               {/* ========================================================= */}
-              {/* STEP 1: PERSONAL DETAILS */}
+              {/* STEP 1: PERSONAL DETAILS & MANDATORY LIVE SELFIE */}
               {/* ========================================================= */}
               {currentStep === 1 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                    <User className="w-4 h-4 text-[#0EA5E0]" />
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                      Step 1: Personal Information
-                    </h4>
-                  </div>
-
-                  {/* Profile Photo Selector */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Profile Photo <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={photoUrl} 
-                        alt="Preview" 
-                        className="w-14 h-14 rounded-2xl object-cover border-2 border-[#0EA5E0] shadow-xs" 
-                      />
-                      <div className="flex-1">
-                        <p className="text-[11px] font-semibold text-slate-500 mb-1.5">Select a verified professional avatar or enter URL:</p>
-                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                          {PHOTO_PRESETS.map((p, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setPhotoUrl(p)}
-                              className={`w-8 h-8 rounded-xl overflow-hidden shrink-0 border-2 transition cursor-pointer ${
-                                photoUrl === p ? 'border-[#0EA5E0] scale-105' : 'border-slate-200 opacity-60 hover:opacity-100'
-                              }`}
-                            >
-                              <img src={p} alt={`Preset ${idx}`} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
+                  
+                  {/* UNIFIED ACCOUNT DETECTED CARD */}
+                  {isAccountAutoDetected ? (
+                    <div className="p-3.5 bg-gradient-to-r from-sky-50 via-sky-50/60 to-blue-50 border border-sky-200/90 rounded-2xl shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-[#0EA5E0] text-white flex items-center justify-center font-black text-sm shadow-xs">
+                            {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-black text-slate-900">{fullName || 'Customer Account'}</p>
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-700">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Auto-Linked
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-bold text-sky-700 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-sky-600" />
+                              <span>+91 {primaryPhone}</span>
+                              <span className="text-slate-400 font-normal ml-1">• Main Customer Phone</span>
+                            </p>
+                          </div>
                         </div>
+                        <span className="text-[9px] font-black uppercase text-sky-700 bg-white/90 px-2 py-1 rounded-xl border border-sky-100">
+                          Single ID
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium mt-2 pt-2 border-t border-sky-100/80 leading-relaxed">
+                        ✓ Registered phone number automatically detected. No re-entry required. Please complete your professional credentials below.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Primary Account Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">+91</span>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={primaryPhone}
+                          onChange={(e) => setPrimaryPhone(e.target.value.replace(/\D/g, ''))}
+                          placeholder="e.g. 98568 51023"
+                          className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        />
                       </div>
                     </div>
+                  )}
+
+                  {/* MANDATORY LIVE CAMERA SELFIE SECTION (No Avatars Allowed!) */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border-2 border-dashed border-[#0EA5E0]/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-sky-100 text-[#0EA5E0] flex items-center justify-center">
+                          <Camera className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-black text-slate-800">
+                            Live Camera Selfie <span className="text-red-500">* (Mandatory)</span>
+                          </label>
+                          <p className="text-[10px] text-slate-500 font-medium">
+                            Mandatory facial photo for partner badge. Stock avatars strictly disallowed.
+                          </p>
+                        </div>
+                      </div>
+
+                      {photoUrl && (
+                        <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Live Selfie Verified
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Hidden Native Camera input */}
+                    <input
+                      ref={selfieCameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      className="hidden"
+                      onChange={(e) => handleFileInput(e, 'selfie', true)}
+                    />
+
+                    {photoUrl ? (
+                      /* Live Selfie Captured Card */
+                      <div className="p-3 bg-white rounded-2xl border border-emerald-200 shadow-xs flex items-center gap-3">
+                        <div 
+                          onClick={() => setPreviewModalDoc({ title: 'Live Verified Selfie', url: photoUrl, name: 'Live_Selfie.jpg', size: 'Captured Photo' })}
+                          className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border-2 border-emerald-500 cursor-pointer group shadow-2xs"
+                          title="Click to inspect selfie"
+                        >
+                          <img
+                            src={photoUrl}
+                            alt="Live Selfie"
+                            className="w-full h-full object-cover transition group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                            <Eye className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-xs font-black text-slate-900 truncate">
+                              Live Face Capture
+                            </span>
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md font-bold">
+                              PASS
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 font-medium">
+                            {selfieCapturedAt ? `Captured today at ${selfieCapturedAt}` : 'Live device verification photo'}
+                          </p>
+
+                          <div className="flex items-center gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => startLiveCamera('selfie')}
+                              className="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>Retake Live Selfie</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selfieCameraInputRef.current) {
+                                  selfieCameraInputRef.current.click();
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                            >
+                              <Camera className="w-3 h-3" />
+                              <span>Device Camera</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => removeDoc('selfie')}
+                              className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg ml-auto transition cursor-pointer"
+                              title="Delete photo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Dual Live Selfie Capture Options */
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startLiveCamera('selfie')}
+                          className="p-3.5 rounded-2xl bg-sky-500 hover:bg-[#0284C7] text-white transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer shadow-md group active:scale-98"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-black">Open Live Camera</span>
+                          <span className="text-[9px] text-sky-100 font-semibold">Take Selfie Now</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selfieCameraInputRef.current) {
+                              selfieCameraInputRef.current.click();
+                            }
+                          }}
+                          className="p-3.5 rounded-2xl bg-white border-2 border-dashed border-sky-300 hover:border-sky-400 hover:bg-sky-50/50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center group-hover:scale-110 transition">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-black text-slate-800">Phone Camera App</span>
+                          <span className="text-[9px] text-slate-400 font-semibold">Native Front Camera</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Full Name */}
+                  {/* Full Legal Name */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 block">
                       Full Legal Name <span className="text-red-500">*</span>
@@ -674,35 +921,16 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     />
                   </div>
 
-                  {/* Phones Row */}
+                  {/* Alternate Phone & Email Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700 block">
-                        Primary Mobile <span className="text-red-500">*</span>
+                        Alternate Mobile <span className="text-slate-400 text-[10px]">(Optional second line)</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">+91</span>
                         <input
                           type="tel"
-                          required
-                          maxLength={10}
-                          value={primaryPhone}
-                          onChange={(e) => setPrimaryPhone(e.target.value.replace(/\D/g, ''))}
-                          placeholder="98765 43210"
-                          className="w-full pl-12 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        Alternate Contact <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">+91</span>
-                        <input
-                          type="tel"
-                          required
                           maxLength={10}
                           value={altPhone}
                           onChange={(e) => setAltPhone(e.target.value.replace(/\D/g, ''))}
@@ -711,21 +939,19 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         />
                       </div>
                     </div>
-                  </div>
 
-                  {/* Email */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Email Address <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. partner.technician@gmail.com"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                    />
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Email Address <span className="text-slate-400 text-[10px]">(For monthly invoices)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g. partner.tech@gmail.com"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      />
+                    </div>
                   </div>
 
                   {/* Gender & DOB */}
@@ -755,10 +981,10 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={dob}
                         onChange={(e) => setDob(e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                      >
-                      </input>
+                      />
                     </div>
                   </div>
+
                 </div>
               )}
 
@@ -770,7 +996,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                     <MapPin className="w-4 h-4 text-[#0EA5E0]" />
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                      Step 2: Service Location & Coverage Radius
+                      Step 2: Service Coverage & Residential Address
                     </h4>
                   </div>
 
@@ -784,7 +1010,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       required
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="House/Shop No., Street, Landmark"
+                      placeholder="Building name, Street, Landmark, Village / Town"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
                     />
                   </div>
@@ -821,9 +1047,9 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     </div>
                   </div>
 
-                  {/* Popular Location Chips */}
+                  {/* Quick Locations */}
                   <div>
-                    <p className="text-[11px] font-bold text-slate-400 mb-1.5">Quick Location Suggestions:</p>
+                    <p className="text-[11px] font-bold text-slate-400 mb-1.5">Quick Coverage Suggestions:</p>
                     <div className="flex flex-wrap gap-1.5">
                       {POPULAR_LOCATIONS.map((loc) => (
                         <button
@@ -846,7 +1072,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   <div className="space-y-2 pt-2 border-t border-slate-100">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-700">
-                        Service Coverage Radius <span className="text-red-500">*</span>
+                        Maximum Service Radius <span className="text-red-500">*</span>
                       </label>
                       <span className="text-xs font-black text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-100">
                         {serviceRadius} km radius
@@ -874,46 +1100,83 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               )}
 
               {/* ========================================================= */}
-              {/* STEP 3: SKILLS & PROFESSIONAL DETAILS */}
+              {/* STEP 3: DYNAMIC CATEGORY & PROFESSIONAL SKILLS */}
               {/* ========================================================= */}
               {currentStep === 3 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                    <Briefcase className="w-4 h-4 text-[#0EA5E0]" />
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                      Step 3: Skills & Professional Rates
-                    </h4>
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-[#0EA5E0]" />
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                        Step 3: Profession & Trade Categories
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                      {categories.length} Categories Synced
+                    </span>
                   </div>
 
-                  {/* Primary Category */}
-                  <div className="space-y-1">
+                  {/* Search / Filter for all active categories */}
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">
-                      Primary Service Category / Trade <span className="text-red-500">*</span>
+                      Select Service Category <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      value={primaryCategory}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                    >
-                      {categories.map((c) => (
-                        <option key={c.id || c.name} value={c.name}>
-                          {c.icon || '🛠️'} {c.name}
-                        </option>
-                      ))}
-                    </select>
+
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        placeholder="Search all 20+ service categories (e.g. Electrician, AC, Painting)..."
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                      />
+                    </div>
+
+                    {/* Scrollable Category Picker Grid with live indicators */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200/80">
+                      {filteredCategories.map((c) => {
+                        const isSelected = primaryCategory === c.name;
+                        return (
+                          <button
+                            key={c.id || c.name}
+                            type="button"
+                            onClick={() => handleCategoryChange(c.name)}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-sky-500 text-white border-sky-500 shadow-xs'
+                                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <span className="text-lg">{c.icon || '🛠️'}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                            <div>
+                              <p className={`text-[11px] font-black leading-tight line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                                {c.name}
+                              </p>
+                              <p className={`text-[9px] font-semibold mt-0.5 ${isSelected ? 'text-sky-100' : 'text-slate-400'}`}>
+                                Starts ₹{c.basePrice || 350}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Sub-skills & Services Offered */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">
-                      Specific Sub-Skills Offered <span className="text-red-500">*</span> (Select all that apply)
+                      Specific Sub-Skills Offered for <strong className="text-[#0EA5E0]">{primaryCategory}</strong> <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200/80">
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200/80">
                       {selectedSubSkills.map((skill) => (
                         <span
                           key={skill}
                           onClick={() => toggleSubSkill(skill)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#0EA5E0] text-white shadow-xs cursor-pointer hover:bg-red-500 transition"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#0EA5E0] text-white shadow-xs cursor-pointer hover:bg-rose-500 transition"
                           title="Click to remove"
                         >
                           {skill}
@@ -928,7 +1191,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         type="text"
                         value={customSkillInput}
                         onChange={(e) => setCustomSkillInput(e.target.value)}
-                        placeholder="Add another specialized skill..."
+                        placeholder="Add another custom specialization..."
                         className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
                       />
                       <button
@@ -961,7 +1224,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
 
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700 block">
-                        Base Rate (₹/Service) <span className="text-red-500">*</span>
+                        Base Rate (₹/Job) <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
@@ -982,14 +1245,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               )}
 
               {/* ========================================================= */}
-              {/* STEP 4: VERIFICATION & BANK DETAILS */}
+              {/* STEP 4: MANDATORY GOVT KYC & BANK DETAILS */}
               {/* ========================================================= */}
               {currentStep === 4 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                     <CreditCard className="w-4 h-4 text-[#0EA5E0]" />
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                      Step 4: Govt Verification & Bank Details
+                      Step 4: Mandatory KYC & Bank Verification
                     </h4>
                   </div>
 
@@ -1025,13 +1288,13 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     onChange={(e) => handleFileInput(e, 'license', false)}
                   />
 
-                  {/* 1. AADHAAR CARD VERIFICATION */}
+                  {/* 1. MANDATORY AADHAAR CARD VERIFICATION */}
                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-sky-100 text-[#0EA5E0] text-[11px] font-black flex items-center justify-center">1</span>
                         <label className="text-xs font-black text-slate-800">
-                          Aadhaar Card <span className="text-red-500">*</span>
+                          Aadhaar Card <span className="text-red-500">* (Mandatory)</span>
                         </label>
                       </div>
                       <span className="text-[10px] font-bold text-slate-400">Government UID</span>
@@ -1063,12 +1326,11 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         <span>Aadhaar Document Photo (Front & Back) <span className="text-red-500">*</span></span>
                         {aadhaarDoc?.url && (
                           <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Ready
+                            <CheckCircle2 className="w-3 h-3" /> Attached
                           </span>
                         )}
                       </label>
 
-                      {/* If Aadhaar is uploaded -> display Thumbnail Preview Card */}
                       {aadhaarDoc?.url ? (
                         <div className="p-2.5 bg-white rounded-2xl border-2 border-emerald-200/80 shadow-xs flex items-center gap-3">
                           <div 
@@ -1104,11 +1366,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                             <div className="flex items-center gap-2 mt-2">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (aadhaarCameraInputRef.current) {
-                                    aadhaarCameraInputRef.current.click();
-                                  }
-                                }}
+                                onClick={() => startLiveCamera('aadhaar')}
                                 className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
                                 title="Retake with Camera"
                               >
@@ -1146,11 +1404,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (aadhaarCameraInputRef.current) {
-                                aadhaarCameraInputRef.current.click();
-                              }
-                            }}
+                            onClick={() => startLiveCamera('aadhaar')}
                             className="p-3 rounded-2xl bg-sky-50 border-2 border-dashed border-[#0EA5E0]/60 hover:border-[#0EA5E0] hover:bg-sky-100/60 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
                           >
                             <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-[#0EA5E0] group-hover:scale-110 transition">
@@ -1180,46 +1434,46 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     </div>
                   </div>
 
-                  {/* 2. DRIVING LICENSE / TRADE ID VERIFICATION */}
+                  {/* 2. MANDATORY DRIVING LICENSE VERIFICATION */}
                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 text-[11px] font-black flex items-center justify-center">2</span>
                         <label className="text-xs font-black text-slate-800">
-                          Driving License / Trade ID
+                          Driving License / Trade Badge <span className="text-red-500">* (Mandatory)</span>
                         </label>
                       </div>
                       <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
-                        Recommended for Pros
+                        Mandatory KYC
                       </span>
                     </div>
 
                     {/* Driving License Number */}
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-600 block">
-                        License / Badge Number (Optional)
+                        License / Badge Number <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         value={drivingLicenseNumber}
                         onChange={(e) => setDrivingLicenseNumber(e.target.value.toUpperCase())}
                         placeholder="e.g. KL-10-2020-0045129"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] uppercase"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] uppercase tracking-wider"
                       />
                     </div>
 
                     {/* Driving License Upload / Preview Box */}
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                        <span>Driving License Photo</span>
+                        <span>Driving License Photo Document <span className="text-red-500">*</span></span>
                         {drivingLicenseDoc?.url && (
                           <span className="text-[10px] text-purple-600 font-extrabold flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Ready
+                            <CheckCircle2 className="w-3 h-3" /> Attached
                           </span>
                         )}
                       </label>
 
-                      {/* If Driving License is uploaded -> display Thumbnail Preview Card */}
                       {drivingLicenseDoc?.url ? (
                         <div className="p-2.5 bg-white rounded-2xl border-2 border-purple-200/80 shadow-xs flex items-center gap-3">
                           <div 
@@ -1255,11 +1509,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                             <div className="flex items-center gap-2 mt-2">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (licenseCameraInputRef.current) {
-                                    licenseCameraInputRef.current.click();
-                                  }
-                                }}
+                                onClick={() => startLiveCamera('license')}
                                 className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-600 text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
                                 title="Retake with Camera"
                               >
@@ -1297,12 +1547,8 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (licenseCameraInputRef.current) {
-                                licenseCameraInputRef.current.click();
-                              }
-                            }}
-                            className="p-3 rounded-2xl bg-purple-50/60 border-2 border-dashed border-purple-300 hover:border-purple-400 hover:bg-purple-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                            onClick={() => startLiveCamera('license')}
+                            className="p-3 rounded-2xl bg-purple-50/70 border-2 border-dashed border-purple-300 hover:border-purple-400 hover:bg-purple-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
                           >
                             <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-purple-600 group-hover:scale-110 transition">
                               <Camera className="w-4 h-4" />
@@ -1331,45 +1577,6 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     </div>
                   </div>
 
-                  {/* Quick sample demo buttons for instant demo testing */}
-                  <div className="pt-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold mb-1.5">
-                      <span>Quick Demo Presets:</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Click to test instant preview</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {ID_PROOF_SAMPLES.map((s, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            if (idx === 0) {
-                              setAadhaarDoc({
-                                url: s.url,
-                                name: 'Aadhaar_Demo_Front_Back.jpg',
-                                size: '1.4 MB',
-                                type: 'image/jpeg',
-                                isCameraCaptured: false
-                              });
-                              setIdProofUrl(s.url);
-                            } else {
-                              setDrivingLicenseDoc({
-                                url: s.url,
-                                name: s.label.replace(/\s+/g, '_') + '.jpg',
-                                size: '920 KB',
-                                type: 'image/jpeg',
-                                isCameraCaptured: false
-                              });
-                            }
-                          }}
-                          className="px-2 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-600 truncate transition cursor-pointer text-center"
-                        >
-                          {idx === 0 ? 'Sample Aadhaar' : idx === 1 ? 'Sample License' : 'Sample Voter ID'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Bank Account Details */}
                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2.5">
                     <p className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
@@ -1385,7 +1592,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         required
                         value={accountHolderName}
                         onChange={(e) => setAccountHolderName(e.target.value)}
-                        placeholder="As written on bank passbook"
+                        placeholder="As printed on bank passbook"
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
                       />
                     </div>
@@ -1400,7 +1607,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           required
                           value={bankName}
                           onChange={(e) => setBankName(e.target.value)}
-                          placeholder="e.g. State Bank of India"
+                          placeholder="State Bank of India"
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
                         />
                       </div>
@@ -1415,7 +1622,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={ifscCode}
                           onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
                           placeholder="SBIN0008421"
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 uppercase focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] uppercase"
                         />
                       </div>
                     </div>
@@ -1430,14 +1637,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           required
                           value={accountNumber}
                           onChange={(e) => setAccountNumber(e.target.value)}
-                          placeholder="Enter Account No."
+                          placeholder="••••••••••••"
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
                         />
                       </div>
 
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-slate-700 block">
-                          Confirm Account <span className="text-red-500">*</span>
+                          Confirm Account Number <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -1452,50 +1659,44 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
 
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-700 block">
-                        UPI ID (Optional for 1-hour fast payout)
+                        UPI ID (Optional for Instant Payouts)
                       </label>
                       <input
                         type="text"
                         value={upiId}
                         onChange={(e) => setUpiId(e.target.value)}
-                        placeholder="e.g. mobile@upi / name@okhdfcbank"
+                        placeholder="e.g. 9856851023@okaxis"
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
                       />
                     </div>
                   </div>
+
                 </div>
               )}
             </>
           )}
+
         </div>
 
-        {/* Footer Actions */}
+        {/* Modal Navigation Footer */}
         {!isCompleted && (
           <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
             {currentStep > 1 ? (
               <button
                 type="button"
                 onClick={handlePrevStep}
-                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-2xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Back</span>
+                <span>Previous</span>
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-800 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-            )}
+            ) : <div />}
 
             {currentStep < 4 ? (
               <button
                 type="button"
                 onClick={handleNextStep}
-                className="px-6 py-2.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-2xl text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer ml-auto"
+                className="px-6 py-2.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-2xl text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer ml-auto"
               >
                 <span>Next Step</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1534,9 +1735,17 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   </div>
                   <div>
                     <h4 className="text-xs font-black">
-                      Capture {liveCameraTarget === 'aadhaar' ? 'Aadhaar Card' : 'Driving License'}
+                      {liveCameraTarget === 'selfie' 
+                        ? 'Take Live Facial Selfie' 
+                        : liveCameraTarget === 'aadhaar' 
+                          ? 'Capture Aadhaar Card' 
+                          : 'Capture Driving License'}
                     </h4>
-                    <p className="text-[10px] text-slate-400">Position document inside the frame</p>
+                    <p className="text-[10px] text-slate-400">
+                      {liveCameraTarget === 'selfie' 
+                        ? 'Look straight at camera with clear face lighting' 
+                        : 'Position document edges inside the guidelines'}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -1549,11 +1758,11 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               {/* Viewfinder stream area */}
-              <div className="relative aspect-4/3 bg-black flex items-center justify-center overflow-hidden">
+              <div className="relative aspect-square sm:aspect-4/3 bg-black flex items-center justify-center overflow-hidden">
                 {cameraLoading && (
                   <div className="text-center text-white space-y-2 p-4">
                     <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-xs font-bold text-slate-300">Requesting camera permissions...</p>
+                    <p className="text-xs font-bold text-slate-300">Opening camera stream...</p>
                   </div>
                 )}
 
@@ -1565,7 +1774,9 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       type="button"
                       onClick={() => {
                         stopLiveCamera();
-                        if (liveCameraTarget === 'aadhaar') {
+                        if (liveCameraTarget === 'selfie') {
+                          selfieCameraInputRef.current?.click();
+                        } else if (liveCameraTarget === 'aadhaar') {
                           aadhaarCameraInputRef.current?.click();
                         } else {
                           licenseCameraInputRef.current?.click();
@@ -1582,18 +1793,27 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       ref={videoRef}
                       playsInline
                       muted
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover ${liveCameraTarget === 'selfie' ? '-scale-x-100' : ''}`}
                     />
 
                     {/* Framing Guidelines */}
-                    <div className="absolute inset-4 border-2 border-dashed border-sky-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
-                      <div className="flex justify-between text-[9px] text-sky-300 font-bold tracking-wider uppercase bg-black/40 px-2 py-0.5 rounded-md self-start">
-                        {liveCameraTarget === 'aadhaar' ? 'Aadhaar Card' : 'Driving License'} Frame
+                    {liveCameraTarget === 'selfie' ? (
+                      <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
+                        <div className="w-52 h-52 rounded-full border-2 border-dashed border-sky-400/90 shadow-[0_0_30px_rgba(14,165,224,0.3)] flex items-center justify-center" />
+                        <div className="mt-3 text-center text-[10px] text-white/95 bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs font-bold">
+                          Fit your face inside the circle
+                        </div>
                       </div>
-                      <div className="text-center text-[10px] text-white/90 bg-black/50 px-2 py-1 rounded-lg backdrop-blur-xs font-medium">
-                        Hold steady & ensure text is clearly visible
+                    ) : (
+                      <div className="absolute inset-4 border-2 border-dashed border-sky-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
+                        <div className="flex justify-between text-[9px] text-sky-300 font-bold tracking-wider uppercase bg-black/50 px-2 py-0.5 rounded-md self-start">
+                          {liveCameraTarget === 'aadhaar' ? 'Aadhaar Card' : 'Driving License'} Frame
+                        </div>
+                        <div className="text-center text-[10px] text-white/90 bg-black/50 px-2 py-1 rounded-lg backdrop-blur-xs font-medium">
+                          Hold steady & ensure text is readable
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
 
@@ -1606,7 +1826,9 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   type="button"
                   onClick={() => {
                     stopLiveCamera();
-                    if (liveCameraTarget === 'aadhaar') {
+                    if (liveCameraTarget === 'selfie') {
+                      selfieCameraInputRef.current?.click();
+                    } else if (liveCameraTarget === 'aadhaar') {
                       aadhaarCameraInputRef.current?.click();
                     } else {
                       licenseCameraInputRef.current?.click();
@@ -1615,7 +1837,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   className="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Camera className="w-3.5 h-3.5" />
-                  <span>Native App</span>
+                  <span>Device App</span>
                 </button>
 
                 <button
@@ -1643,7 +1865,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
         )}
 
         {/* ========================================================= */}
-        {/* DOCUMENT ENLARGE LIGHTBOX PREVIEW MODAL */}
+        {/* DOCUMENT / SELFIE ENLARGE LIGHTBOX PREVIEW MODAL */}
         {/* ========================================================= */}
         {previewModalDoc && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
@@ -1652,7 +1874,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 <div>
                   <h4 className="text-xs font-black text-slate-900">{previewModalDoc.title}</h4>
                   <p className="text-[10px] text-slate-500 font-medium">
-                    {previewModalDoc.name} • {previewModalDoc.size}
+                    {previewModalDoc.name || 'Captured Document'} • {previewModalDoc.size || 'Inspection Ready'}
                   </p>
                 </div>
                 <button

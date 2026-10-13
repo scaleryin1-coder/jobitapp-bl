@@ -166,8 +166,8 @@ export function ProfileScreen({
               <Briefcase className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-extrabold text-slate-800">Become a Verified Pro</p>
-              <p className="text-[11px] text-slate-400">Complete 4-Step Registration to earn on JOBit</p>
+              <p className="text-xs font-extrabold text-slate-800">Become a Professional</p>
+              <p className="text-[11px] text-slate-400">Auto-link your customer phone & earn on JOBit</p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400" />

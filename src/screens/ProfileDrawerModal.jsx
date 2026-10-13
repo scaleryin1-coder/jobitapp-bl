@@ -10,11 +10,13 @@ import {
   CheckCircle2, 
   ShieldCheck, 
   Edit3,
-  Sparkles
+  Sparkles,
+  Briefcase,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export function ProfileDrawerModal({ isOpen, onClose, onLogoutComplete }) {
+export function ProfileDrawerModal({ isOpen, onClose, onLogoutComplete, onOpenWorkerOnboarding }) {
   const { currentUser, updateUserProfile, logout } = useAuth();
   
   const [name, setName] = useState('');
@@ -279,12 +281,35 @@ export function ProfileDrawerModal({ isOpen, onClose, onLogoutComplete }) {
           )}
         </div>
 
-        {/* Logout Action */}
-        <div className="mt-5 pt-3 border-t border-slate-100">
+        {/* Become a Professional Action */}
+        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+          {onOpenWorkerOnboarding && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenWorkerOnboarding();
+              }}
+              className="w-full p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/80 text-emerald-800 transition flex items-center justify-between text-left cursor-pointer active:scale-98 shadow-2xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-emerald-950">Become a Professional</p>
+                  <p className="text-[10px] text-emerald-700/80 font-bold">Auto-link account & start earning</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-emerald-600" />
+            </button>
+          )}
+
+          {/* Logout Action */}
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full py-3 px-4 rounded-2xl bg-red-50 hover:bg-red-100/80 text-red-600 font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 border border-red-100"
+            className="w-full py-2.5 px-4 rounded-2xl bg-red-50 hover:bg-red-100/80 text-red-600 font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 border border-red-100"
           >
             <LogOut className="w-4 h-4 stroke-[2.2]" />
             <span>Logout Session</span>

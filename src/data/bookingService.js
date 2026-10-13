@@ -10,6 +10,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { initialWorkers, initialServices, initialCategories } from './seedData';
+import { ALL_MAIN_CATEGORIES } from './categoriesData';
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
 const STORAGE_KEY_WORKERS = 'jobit_workers';
@@ -574,14 +575,28 @@ export async function adminDeleteService(serviceId) {
 export function getLocalCategories() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CATEGORIES);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(initialCategories || []));
-      return initialCategories || [];
+    let parsed = raw ? JSON.parse(raw) : [];
+    
+    // Ensure all 20 active service categories from Customer Menu are present
+    const map = new Map();
+    (ALL_MAIN_CATEGORIES || []).forEach((c, idx) => {
+      map.set(c.name.toLowerCase(), { ...c, order: c.order || idx + 1 });
+    });
+    
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      parsed.forEach(c => {
+        const key = (c.name || '').toLowerCase();
+        if (key) {
+          const existing = map.get(key);
+          map.set(key, { ...existing, ...c });
+        }
+      });
     }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : (initialCategories || []);
+
+    const merged = Array.from(map.values()).sort((a, b) => (a.order || 0) - (b.order || 0));
+    return merged;
   } catch {
-    return initialCategories || [];
+    return ALL_MAIN_CATEGORIES || initialCategories || [];
   }
 }
 

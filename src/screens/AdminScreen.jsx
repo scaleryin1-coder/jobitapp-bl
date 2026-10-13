@@ -2240,7 +2240,7 @@ export function AdminScreen({ onBack, onLogout }) {
                 <div className="relative shrink-0 flex flex-col items-center">
                   <div className="relative">
                     <img 
-                      src={selectedPendingWorker.selfieUrl || selectedPendingWorker.avatar || selectedPendingWorker.photo || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80"}
+                      src={selectedPendingWorker.liveSelfieUrl || selectedPendingWorker.selfieUrl || selectedPendingWorker.photo || selectedPendingWorker.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80"}
                       alt={`${selectedPendingWorker.name} Live Selfie`}
                       className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-3 border-amber-400 shadow-md bg-slate-200"
                     />
