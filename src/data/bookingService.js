@@ -313,7 +313,18 @@ export function getLocalServices() {
       return initialServices || [];
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : (initialServices || []);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Gracefully sync local services if updated asset imagery is provided in seedData
+      const synced = parsed.map(serv => {
+        const init = (initialServices || []).find(i => i.id === serv.id);
+        if (init && init.heroImage && init.heroImage.startsWith('/assets/images/')) {
+          return { ...serv, heroImage: init.heroImage, title: init.title || serv.title };
+        }
+        return serv;
+      });
+      return synced;
+    }
+    return initialServices || [];
   } catch {
     return initialServices || [];
   }

@@ -1,17 +1,53 @@
 import React from 'react';
 import { Zap, ArrowUpRight } from 'lucide-react';
+import lawnGardenImg from '../../assets/images/lawn_and_garden.jpg';
+import electricalDiagImg from '../../assets/images/electrical_diagnosis.jpg';
+import acRepairImg from '../../assets/images/ac_repair.jpg';
+import driverImg from '../../assets/images/driver_service.jpg';
 
-// Exact 4 Popular Services configured with European professionals in neat blue work uniforms
+// Exact 4 Popular Services in specified order with local high-resolution assets & remote fallbacks
 const POPULAR_SERVICES_CONFIG = [
   {
-    key: 'ac',
-    title: 'AC Service',
+    key: 'lawn_and_garden',
+    title: 'Lawn & Garden',
+    categoryName: 'Garden & Outdoor Work',
+    categoryId: 'cat_garden',
+    defaultPrice: 399,
+    image: lawnGardenImg,
+    staticPath: '/assets/images/lawn_and_garden.jpg',
+    remoteFallback: 'https://previews.jumpshare.com/thumb/4ea2c443a4623ad282087187a00fc4265c383b5dec85a7eaf398e1f6df37600956b79715cb707dd58c6733804f818fec0f822811500eb6cf8e79207c582ff40dc4eb4403886d623016f5d2eeab31c5b4',
+    match: (s) => {
+      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      return text.includes('garden') || text.includes('lawn');
+    }
+  },
+  {
+    key: 'electrical_diagnosis',
+    title: 'Electrical Diagnosis',
+    categoryName: 'Electrician',
+    categoryId: 'cat_electrician',
+    defaultPrice: 320,
+    image: electricalDiagImg,
+    staticPath: '/assets/images/electrical_diagnosis.jpg',
+    remoteFallback: 'https://previews.jumpshare.com/thumb/4ea2c443a4623ad282087187a00fc42690f52c1ea4c3d04f3bbe97ac43e058b632b0cc9f3179dccace61d16c4ca285c7a5ab87742274805a78c60493e6643c1ab8784ae51b4ebb17ce28db80bb226210',
+    match: (s) => {
+      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      return text.includes('elect') || text.includes('diagnos');
+    }
+  },
+  {
+    key: 'ac_repair',
+    title: 'AC Repair',
     categoryName: 'AC Service',
     categoryId: 'cat_ac',
     defaultPrice: 450,
-    // European technician wearing a blue uniform servicing a modern split AC unit
-    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
-    match: (s) => (s.categoryName + ' ' + s.title + ' ' + (s.categoryId || '')).toLowerCase().includes('ac')
+    image: acRepairImg,
+    staticPath: '/assets/images/ac_repair.jpg',
+    remoteFallback: 'https://plain-apac-prod-public.komododecks.com/202610/13/aHoRsSc2PvL7oqXS751j/image.jpg',
+    match: (s) => {
+      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      return text.includes('ac') || text.includes('air condition');
+    }
   },
   {
     key: 'driver',
@@ -19,29 +55,13 @@ const POPULAR_SERVICES_CONFIG = [
     categoryName: 'Driver',
     categoryId: 'cat_car',
     defaultPrice: 399,
-    // Professional chauffeur/driver wearing a neat dark blue uniform next to a modern car
-    image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=800&q=80',
-    match: (s) => (s.categoryName + ' ' + s.title).toLowerCase().includes('driver') || (s.categoryName + ' ' + s.title).toLowerCase().includes('chauffeur')
-  },
-  {
-    key: 'garden',
-    title: 'Garden & Outdoor Work',
-    categoryName: 'Garden & Outdoor Work',
-    categoryId: 'cat_garden',
-    defaultPrice: 399,
-    // European gardener in blue work overalls working in a bright outdoor garden space
-    image: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=800&q=80',
-    match: (s) => (s.categoryName + ' ' + s.title).toLowerCase().includes('garden')
-  },
-  {
-    key: 'electrician',
-    title: 'Electrician',
-    categoryName: 'Electrician',
-    categoryId: 'cat_electrician',
-    defaultPrice: 320,
-    // European electrician wearing a blue uniform with safety gear inspecting an electrical circuit panel
-    image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=800&q=80',
-    match: (s) => (s.categoryName + ' ' + s.title).toLowerCase().includes('elect')
+    image: driverImg,
+    staticPath: '/assets/images/driver_service.jpg',
+    remoteFallback: 'https://plain-apac-prod-public.komododecks.com/202610/13/A5bkDbHqJW9Z2zvX6HjN/image.jpg',
+    match: (s) => {
+      const text = `${s.categoryName || ''} ${s.title || ''} ${s.categoryId || ''}`.toLowerCase();
+      return text.includes('driver') || text.includes('chauffeur');
+    }
   }
 ];
 
@@ -54,26 +74,43 @@ export function PopularServiceSection({
   const popularList = POPULAR_SERVICES_CONFIG.map((cfg) => {
     const existing = (services || []).find(cfg.match);
 
-    const activeImage = existing?.heroImage || existing?.imageUrl || existing?.image || cfg.image;
+    const activeImage = cfg.image || cfg.staticPath;
     const activePrice = existing?.price !== undefined && existing?.price !== null ? existing.price : cfg.defaultPrice;
-    const activeTitle = existing?.title || cfg.title;
 
     return {
       id: existing?.id || `serv_popular_${cfg.key}`,
-      title: activeTitle,
+      title: cfg.title,
       categoryName: existing?.categoryName || cfg.categoryName,
       categoryId: existing?.categoryId || cfg.categoryId,
       price: activePrice,
       rating: existing?.rating || 4.9,
-      reviewCount: existing?.reviewCount || 190,
+      reviewCount: existing?.reviewCount || 230,
+      ordersCompleted: existing?.ordersCompleted || 450,
       heroImage: activeImage,
       imageUrl: activeImage,
       image: activeImage,
+      fallbackRemote: cfg.remoteFallback,
+      workerId: existing?.workerId || 'worker_verified_pro',
+      workerName: existing?.workerName || 'JOBit Certified Pro',
+      workerPhone: existing?.workerPhone || '8289968045',
+      badge: existing?.badge || 'Certified & Background Checked',
+      city: existing?.city || 'Melattur, Kerala',
+      available: true,
+      approved: true,
       subCategories: existing?.subCategories || [
-        `${activeTitle} Inspection & Diagnostics`,
-        `${activeTitle} Standard Service & Maintenance`
+        `${cfg.title} Inspection & Diagnostics`,
+        `${cfg.title} Standard Service & Maintenance`
       ],
-      about: existing?.about || `Professional, verified ${activeTitle} delivered by certified European technicians in neat blue uniforms with high-precision equipment.`
+      details: existing?.details || [
+        `Complete ${cfg.title} inspection and diagnosis`,
+        `Fixed transparent task-based rates`,
+        `Safety verified technician equipped with tools`
+      ],
+      faqs: existing?.faqs || [
+        { q: `What is included in ${cfg.title}?`, a: `Complete doorstep service with inspection and labor included.` },
+        { q: `Are replacement materials covered?`, a: `Labor and diagnosis are covered; extra parts are billed at actual cost.` }
+      ],
+      about: existing?.about || `Professional, verified ${cfg.title} delivered by certified JOBit technicians equipped with specialized tools.`
     };
   });
 
@@ -82,7 +119,7 @@ export function PopularServiceSection({
       {/* Section Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-extrabold text-[#111827] tracking-tight">
-          Popular Service
+          Popular Services
         </h2>
         <button
           onClick={onOpenAll}
@@ -98,7 +135,7 @@ export function PopularServiceSection({
           <div
             key={service.id}
             onClick={() => onSelectService?.(service)}
-            className="group relative w-full min-w-0 aspect-[4/5] rounded-[16px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.05)] cursor-pointer active:scale-[0.98] transition-all duration-200 border border-slate-100 bg-slate-100"
+            className="group relative w-full min-w-0 aspect-[4/5] rounded-[16px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] transition-all duration-200 border border-slate-100 bg-slate-100"
             style={{
               borderRadius: '16px',
               isolation: 'isolate',
@@ -133,23 +170,26 @@ export function PopularServiceSection({
                 }}
                 loading="lazy"
                 onError={(e) => {
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80';
+                  if (service.fallbackRemote && e.currentTarget.src !== service.fallbackRemote) {
+                    e.currentTarget.src = service.fallbackRemote;
+                  }
                 }}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
             </div>
 
             {/* Bottom Frosted-Glass Strip */}
             <div 
-              className="absolute inset-x-2 bottom-2 z-10 bg-white/85 backdrop-blur-md p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-1.5 transition-all"
+              className="absolute inset-x-2 bottom-2 z-10 bg-white/90 backdrop-blur-md p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-1.5 transition-all"
               style={{ borderRadius: '12px' }}
             >
               {/* Price & Service Name */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800 leading-none">
-                  <Zap className="w-3 h-3 text-slate-800 fill-slate-800 shrink-0" />
+                  <Zap className="w-3 h-3 text-[#0EA5E0] fill-[#0EA5E0] shrink-0" />
                   <span className="truncate">From ₹{service.price}</span>
                 </div>
-                <p className="text-xs font-black text-[#111827] truncate mt-1 leading-tight">
+                <p className="text-xs font-black text-[#111827] truncate mt-1 leading-tight" title={service.title}>
                   {service.title}
                 </p>
               </div>
@@ -161,7 +201,8 @@ export function PopularServiceSection({
                   onSelectService?.(service);
                 }}
                 className="w-8 h-8 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 transition cursor-pointer"
-                title={`View ${service.title}`}
+                title={`Book ${service.title}`}
+                aria-label={`View details for ${service.title}`}
               >
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
               </button>

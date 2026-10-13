@@ -194,7 +194,7 @@ export const initialServices = [
     categoryId: "cat_ac",
     categoryName: "AC Repair",
     workerName: "Amit Verma",
-    title: "AC Repair & Jet Service",
+    title: "AC Repair",
     badge: "Certified HVAC Specialist",
     about: "Expert air conditioner technician with 8+ years experience handling split, window, and inverter AC systems. Equipped with professional high-pressure jet pumps and gas gauges.",
     price: 450,
@@ -204,7 +204,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=900&q=80",
+    heroImage: "/assets/images/ac_repair.jpg",
     gallery: [
       "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=500&q=80",
       "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=500&q=80"
@@ -255,7 +255,7 @@ export const initialServices = [
     categoryId: "cat_electrician",
     categoryName: "Electrician",
     workerName: "Vikram Sen",
-    title: "Electrical Diagnostics",
+    title: "Electrical Diagnosis",
     badge: "Licensed Electrician",
     about: "Specialist in short-circuit detection, appliance installation, MCB trip troubleshooting, and modern home automation switches.",
     price: 320,
@@ -265,7 +265,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=900&q=80",
+    heroImage: "/assets/images/electrical_diagnosis.jpg",
     gallery: [
       "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=500&q=80"
     ],
@@ -393,7 +393,7 @@ export const initialServices = [
     categoryId: "cat_garden",
     categoryName: "Garden & Outdoor Work",
     workerName: "Green Thumb Care",
-    title: "Lawn & Garden Care",
+    title: "Lawn & Garden",
     badge: "Horticulture Specialist",
     about: "Lawn mowing, hedge trimming, weed removal, organic soil fertilization, and drip irrigation setup.",
     price: 399,
@@ -403,7 +403,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=800&q=80",
+    heroImage: "/assets/images/lawn_and_garden.jpg",
     details: ["Lawn mowing & hedge pruning", "Organic fertilizer treatment", "Potted plants trimming"],
     faqs: [{ q: "Do you take green waste away?", a: "Yes, full garden debris clearing is provided." }]
   },
@@ -463,7 +463,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=800&q=80",
+    heroImage: "/assets/images/driver_service.jpg",
     details: ["Professional chauffeur in neat dark blue uniform", "Safe city & highway driving", "Punctual airport & corporate transfers"],
     faqs: [{ q: "Is the driver background verified?", a: "Yes, verified commercial driving license and safety background check." }]
   },
