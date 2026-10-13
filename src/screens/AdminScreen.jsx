@@ -1998,37 +1998,74 @@ export function AdminScreen({ onBack, onLogout }) {
 
                 <div className="grid grid-cols-2 gap-2 text-slate-600">
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Aadhaar / ID No:</span>
-                    <span className="font-black text-slate-900">{selectedPendingWorker.aadhaarNumber}</span>
+                    <span className="text-[10px] text-slate-400 block font-bold">Aadhaar Card No:</span>
+                    <span className="font-black text-slate-900">{selectedPendingWorker.aadhaarNumber || 'Attached'}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-bold">Document Type:</span>
-                    <span className="font-bold text-slate-800">{selectedPendingWorker.idProofType || 'Govt ID Proof'}</span>
+                    <span className="text-[10px] text-slate-400 block font-bold">Driving License No:</span>
+                    <span className="font-black text-slate-900">{selectedPendingWorker.drivingLicenseNumber || 'Not provided'}</span>
                   </div>
                 </div>
 
-                {/* ID Proof Document Preview */}
-                {selectedPendingWorker.idProofUrl && (
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-slate-400 block font-bold">Document Scan / Copy:</span>
-                    <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 bg-black/5">
-                      <img 
-                        src={selectedPendingWorker.idProofUrl} 
-                        alt="ID Proof" 
-                        className="w-full h-36 object-cover"
-                      />
-                      <a 
-                        href={selectedPendingWorker.idProofUrl} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/70 hover:bg-black text-white text-[10px] font-bold rounded-lg flex items-center gap-1"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>View Original</span>
-                      </a>
+                {/* Document Thumbnails & Verification Preview */}
+                <div className="space-y-2 pt-1">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
+                    Uploaded Verification Documents:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Aadhaar Card Document Preview */}
+                    <div className="border border-slate-200 rounded-xl p-2 bg-white space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-800 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Aadhaar Card
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-50 text-[#0EA5E0] font-bold">Govt ID</span>
+                      </div>
+                      <div className="relative rounded-lg overflow-hidden border border-slate-100 bg-slate-100 h-28">
+                        <img 
+                          src={selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl || 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80'} 
+                          alt="Aadhaar Card" 
+                          className="w-full h-full object-cover"
+                        />
+                        <a 
+                          href={selectedPendingWorker.aadhaarDocUrl || selectedPendingWorker.idProofUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-black/75 hover:bg-black text-white text-[9px] font-bold rounded flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>View Full</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Driving License Document Preview */}
+                    <div className="border border-slate-200 rounded-xl p-2 bg-white space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-800 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Driving License
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-bold">Trade/DL</span>
+                      </div>
+                      <div className="relative rounded-lg overflow-hidden border border-slate-100 bg-slate-100 h-28">
+                        <img 
+                          src={selectedPendingWorker.drivingLicenseDocUrl || 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80'} 
+                          alt="Driving License" 
+                          className="w-full h-full object-cover"
+                        />
+                        <a 
+                          href={selectedPendingWorker.drivingLicenseDocUrl || selectedPendingWorker.idProofUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="absolute bottom-1.5 right-1.5 px-2 py-0.5 bg-black/75 hover:bg-black text-white text-[9px] font-bold rounded flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>View Full</span>
+                        </a>
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Bank Account */}
                 <div className="p-2.5 bg-white rounded-xl border border-slate-200/80 grid grid-cols-2 gap-2">

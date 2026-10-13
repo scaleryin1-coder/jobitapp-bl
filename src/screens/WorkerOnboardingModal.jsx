@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   ChevronRight, 
@@ -18,7 +18,13 @@ import {
   Calendar,
   Phone,
   Mail,
-  Camera
+  Camera,
+  Image as ImageIcon,
+  Trash2,
+  Eye,
+  RefreshCw,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { registerWorkerOnboarding, getLocalCategories } from '../data/bookingService';
@@ -83,6 +89,21 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
 
   // Step 4: Verification & Bank Details
   const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarDoc, setAadhaarDoc] = useState({
+    url: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+    name: 'Aadhaar_Card_Front_Back.jpg',
+    size: '1.4 MB',
+    type: 'image/jpeg',
+    isCameraCaptured: false
+  });
+  const [drivingLicenseNumber, setDrivingLicenseNumber] = useState('');
+  const [drivingLicenseDoc, setDrivingLicenseDoc] = useState({
+    url: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
+    name: 'Driving_License_Trade_ID.jpg',
+    size: '980 KB',
+    type: 'image/jpeg',
+    isCameraCaptured: false
+  });
   const [idProofUrl, setIdProofUrl] = useState(ID_PROOF_SAMPLES[0].url);
   const [idProofType, setIdProofType] = useState('Aadhaar Card (Front & Back)');
   const [accountHolderName, setAccountHolderName] = useState('');
@@ -91,6 +112,135 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const [confirmAccountNumber, setConfirmAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('SBIN0008421');
   const [upiId, setUpiId] = useState('');
+
+  // Live Camera Viewfinder modal state
+  const [liveCameraTarget, setLiveCameraTarget] = useState(null); // 'aadhaar' | 'license' | null
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
+  // Enlarge Document Preview Lightbox
+  const [previewModalDoc, setPreviewModalDoc] = useState(null);
+
+  // Hidden File input & camera viewfinder refs
+  const aadhaarCameraInputRef = useRef(null);
+  const aadhaarGalleryInputRef = useRef(null);
+  const licenseCameraInputRef = useRef(null);
+  const licenseGalleryInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+
+  // Start in-app live camera viewfinder stream
+  const startLiveCamera = async (target) => {
+    setLiveCameraTarget(target);
+    setCameraLoading(true);
+    setCameraError('');
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera streaming is not available. Please use the device photo capture option.');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+      setCameraLoading(false);
+    } catch (err) {
+      console.warn('Camera access fallback:', err);
+      setCameraLoading(false);
+      setCameraError('Camera access unavailable or permission not granted. You can still use the direct camera capture button below!');
+    }
+  };
+
+  const stopLiveCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    setLiveCameraTarget(null);
+    setCameraError('');
+    setCameraLoading(false);
+  };
+
+  const captureLivePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    const docMeta = {
+      url: dataUrl,
+      name: `${liveCameraTarget === 'aadhaar' ? 'Aadhaar_Camera' : 'DrivingLicense_Camera'}_${Date.now()}.jpg`,
+      size: `${Math.round((dataUrl.length * 0.75) / 1024)} KB`,
+      type: 'image/jpeg',
+      isCameraCaptured: true
+    };
+    if (liveCameraTarget === 'aadhaar') {
+      setAadhaarDoc(docMeta);
+      setIdProofUrl(dataUrl);
+    } else {
+      setDrivingLicenseDoc(docMeta);
+    }
+    stopLiveCamera();
+  };
+
+  // Handle native file input (Camera capture or Gallery selection)
+  const handleFileInput = (e, target, isCamera = false) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 12 * 1024 * 1024) {
+      setErrorMsg('Selected file exceeds 12MB limit. Please choose a smaller photo.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const docMeta = {
+        url: dataUrl,
+        name: file.name || `${target === 'aadhaar' ? 'Aadhaar_Card' : 'Driving_License'}_${Date.now()}.jpg`,
+        size: `${(file.size / 1024).toFixed(1)} KB`,
+        type: file.type || 'image/jpeg',
+        isCameraCaptured: isCamera
+      };
+      if (target === 'aadhaar') {
+        setAadhaarDoc(docMeta);
+        setIdProofUrl(dataUrl);
+      } else {
+        setDrivingLicenseDoc(docMeta);
+      }
+      setErrorMsg('');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const removeDoc = (target) => {
+    if (target === 'aadhaar') {
+      setAadhaarDoc(null);
+      setIdProofUrl('');
+    } else {
+      setDrivingLicenseDoc(null);
+    }
+  };
+
+  // Clean up camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   // Load available categories
   useEffect(() => {
@@ -214,8 +364,8 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     if (cleanAadhaar.length !== 12 && cleanAadhaar.length < 8) {
       return 'Please enter valid 12-digit Aadhaar / Govt ID number';
     }
-    if (!idProofUrl) {
-      return 'Please provide or upload a Govt ID Proof document';
+    if (!aadhaarDoc?.url && !idProofUrl) {
+      return 'Please take photo or upload your Aadhaar Card document';
     }
     if (!accountHolderName.trim() || accountHolderName.trim().length < 3) {
       return 'Please enter Account Holder Name as printed in bank passbook';
@@ -293,13 +443,23 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       baseRate: Number(baseRate) || 350,
       documents: {
         aadhaarNumber: aadhaarNumber.trim(),
-        idProofUrl,
-        idProofType,
+        aadhaarDocUrl: aadhaarDoc?.url || idProofUrl,
+        aadhaarDocName: aadhaarDoc?.name || 'Aadhaar Card Front & Back',
+        drivingLicenseNumber: drivingLicenseNumber.trim(),
+        drivingLicenseDocUrl: drivingLicenseDoc?.url || '',
+        drivingLicenseDocName: drivingLicenseDoc?.name || '',
+        idProofUrl: aadhaarDoc?.url || idProofUrl,
+        idProofType: 'Aadhaar & Driving License',
         photoUrl
       },
       aadhaarNumber: aadhaarNumber.trim(),
-      idProofUrl,
-      idProofType,
+      aadhaarDocUrl: aadhaarDoc?.url || idProofUrl,
+      aadhaarDocName: aadhaarDoc?.name || 'Aadhaar Card Front & Back',
+      drivingLicenseNumber: drivingLicenseNumber.trim(),
+      drivingLicenseDocUrl: drivingLicenseDoc?.url || '',
+      drivingLicenseDocName: drivingLicenseDoc?.name || '',
+      idProofUrl: aadhaarDoc?.url || idProofUrl,
+      idProofType: 'Aadhaar & Driving License',
       accountHolderName: accountHolderName.trim(),
       bankName: bankName.trim(),
       accountNumber: accountNumber.trim(),
@@ -833,48 +993,379 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     </h4>
                   </div>
 
-                  {/* Aadhaar Number */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Aadhaar / Govt ID Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={aadhaarNumber}
-                      onChange={(e) => setAadhaarNumber(e.target.value)}
-                      placeholder="e.g. 7845 2319 8812"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                    />
+                  {/* Hidden inputs for native camera & file gallery picking */}
+                  <input
+                    ref={aadhaarCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => handleFileInput(e, 'aadhaar', true)}
+                  />
+                  <input
+                    ref={aadhaarGalleryInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleFileInput(e, 'aadhaar', false)}
+                  />
+                  <input
+                    ref={licenseCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => handleFileInput(e, 'license', true)}
+                  />
+                  <input
+                    ref={licenseGalleryInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleFileInput(e, 'license', false)}
+                  />
+
+                  {/* 1. AADHAAR CARD VERIFICATION */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-sky-100 text-[#0EA5E0] text-[11px] font-black flex items-center justify-center">1</span>
+                        <label className="text-xs font-black text-slate-800">
+                          Aadhaar Card <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400">Government UID</span>
+                    </div>
+
+                    {/* Aadhaar Number */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 block">
+                        12-Digit Aadhaar Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={14}
+                        value={aadhaarNumber}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+                          const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+                          setAadhaarNumber(formatted);
+                        }}
+                        placeholder="e.g. 7845 2319 8812"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] tracking-wider"
+                      />
+                    </div>
+
+                    {/* Aadhaar Upload / Preview Box */}
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+                        <span>Aadhaar Document Photo (Front & Back) <span className="text-red-500">*</span></span>
+                        {aadhaarDoc?.url && (
+                          <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Ready
+                          </span>
+                        )}
+                      </label>
+
+                      {/* If Aadhaar is uploaded -> display Thumbnail Preview Card */}
+                      {aadhaarDoc?.url ? (
+                        <div className="p-2.5 bg-white rounded-2xl border-2 border-emerald-200/80 shadow-xs flex items-center gap-3">
+                          <div 
+                            onClick={() => setPreviewModalDoc({ title: 'Aadhaar Card Preview', ...aadhaarDoc })}
+                            className="relative w-20 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200 cursor-pointer group"
+                            title="Click to enlarge"
+                          >
+                            <img
+                              src={aadhaarDoc.url}
+                              alt="Aadhaar Card"
+                              className="w-full h-full object-cover transition group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                              <Eye className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[11px] font-black text-slate-900 truncate">
+                                {aadhaarDoc.name || 'Aadhaar Card Front & Back'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                              <span>{aadhaarDoc.size || 'Captured Photo'}</span>
+                              <span>•</span>
+                              <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                                <Check className="w-2.5 h-2.5" /> Attached
+                              </span>
+                            </div>
+
+                            {/* Dual action buttons for re-uploading */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (aadhaarCameraInputRef.current) {
+                                    aadhaarCameraInputRef.current.click();
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
+                                title="Retake with Camera"
+                              >
+                                <Camera className="w-3 h-3" />
+                                <span>Retake Photo</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (aadhaarGalleryInputRef.current) {
+                                    aadhaarGalleryInputRef.current.click();
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                                title="Upload new from Gallery"
+                              >
+                                <ImageIcon className="w-3 h-3" />
+                                <span>Gallery</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => removeDoc('aadhaar')}
+                                className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 transition cursor-pointer ml-auto"
+                                title="Remove document"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Dual Choice Buttons when no document attached */
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (aadhaarCameraInputRef.current) {
+                                aadhaarCameraInputRef.current.click();
+                              }
+                            }}
+                            className="p-3 rounded-2xl bg-sky-50 border-2 border-dashed border-[#0EA5E0]/60 hover:border-[#0EA5E0] hover:bg-sky-100/60 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-[#0EA5E0] group-hover:scale-110 transition">
+                              <Camera className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-black text-[#0EA5E0]">Take Photo</span>
+                            <span className="text-[9px] text-sky-700/70 font-semibold">Live Camera Capture</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (aadhaarGalleryInputRef.current) {
+                                aadhaarGalleryInputRef.current.click();
+                              }
+                            }}
+                            className="p-3 rounded-2xl bg-white border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:scale-110 transition">
+                              <ImageIcon className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-800">Upload from Gallery</span>
+                            <span className="text-[9px] text-slate-400 font-semibold">Select File / Storage</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* ID Proof Document Selection / Upload Simulation */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      ID Proof Document <span className="text-red-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {ID_PROOF_SAMPLES.map((doc, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => {
-                            setIdProofUrl(doc.url);
-                            setIdProofType(doc.label);
-                          }}
-                          className={`p-2 rounded-2xl border-2 transition cursor-pointer flex flex-col items-center text-center ${
-                            idProofUrl === doc.url 
-                              ? 'border-[#0EA5E0] bg-sky-50/50' 
-                              : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                          }`}
-                        >
-                          <img 
-                            src={doc.url} 
-                            alt={doc.label} 
-                            className="w-full h-14 rounded-xl object-cover mb-1.5"
-                          />
-                          <span className="text-[10px] font-bold text-slate-800 line-clamp-1">{doc.label}</span>
-                          <span className="text-[9px] text-emerald-600 font-extrabold">Attached</span>
+                  {/* 2. DRIVING LICENSE / TRADE ID VERIFICATION */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 text-[11px] font-black flex items-center justify-center">2</span>
+                        <label className="text-xs font-black text-slate-800">
+                          Driving License / Trade ID
+                        </label>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                        Recommended for Pros
+                      </span>
+                    </div>
+
+                    {/* Driving License Number */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 block">
+                        License / Badge Number (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={drivingLicenseNumber}
+                        onChange={(e) => setDrivingLicenseNumber(e.target.value.toUpperCase())}
+                        placeholder="e.g. KL-10-2020-0045129"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] uppercase"
+                      />
+                    </div>
+
+                    {/* Driving License Upload / Preview Box */}
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+                        <span>Driving License Photo</span>
+                        {drivingLicenseDoc?.url && (
+                          <span className="text-[10px] text-purple-600 font-extrabold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Ready
+                          </span>
+                        )}
+                      </label>
+
+                      {/* If Driving License is uploaded -> display Thumbnail Preview Card */}
+                      {drivingLicenseDoc?.url ? (
+                        <div className="p-2.5 bg-white rounded-2xl border-2 border-purple-200/80 shadow-xs flex items-center gap-3">
+                          <div 
+                            onClick={() => setPreviewModalDoc({ title: 'Driving License Preview', ...drivingLicenseDoc })}
+                            className="relative w-20 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200 cursor-pointer group"
+                            title="Click to enlarge"
+                          >
+                            <img
+                              src={drivingLicenseDoc.url}
+                              alt="Driving License"
+                              className="w-full h-full object-cover transition group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                              <Eye className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[11px] font-black text-slate-900 truncate">
+                                {drivingLicenseDoc.name || 'Driving License Photo'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                              <span>{drivingLicenseDoc.size || 'Captured Photo'}</span>
+                              <span>•</span>
+                              <span className="text-purple-600 font-bold flex items-center gap-0.5">
+                                <Check className="w-2.5 h-2.5" /> Attached
+                              </span>
+                            </div>
+
+                            {/* Dual action buttons for re-uploading */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (licenseCameraInputRef.current) {
+                                    licenseCameraInputRef.current.click();
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-600 text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
+                                title="Retake with Camera"
+                              >
+                                <Camera className="w-3 h-3" />
+                                <span>Retake Photo</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (licenseGalleryInputRef.current) {
+                                    licenseGalleryInputRef.current.click();
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                                title="Upload new from Gallery"
+                              >
+                                <ImageIcon className="w-3 h-3" />
+                                <span>Gallery</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => removeDoc('license')}
+                                className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 transition cursor-pointer ml-auto"
+                                title="Remove document"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                      ) : (
+                        /* Dual Choice Buttons when no DL attached */
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (licenseCameraInputRef.current) {
+                                licenseCameraInputRef.current.click();
+                              }
+                            }}
+                            className="p-3 rounded-2xl bg-purple-50/60 border-2 border-dashed border-purple-300 hover:border-purple-400 hover:bg-purple-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-purple-600 group-hover:scale-110 transition">
+                              <Camera className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-black text-purple-600">Take Photo</span>
+                            <span className="text-[9px] text-purple-600/70 font-semibold">Live Camera Capture</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (licenseGalleryInputRef.current) {
+                                licenseGalleryInputRef.current.click();
+                              }
+                            }}
+                            className="p-3 rounded-2xl bg-white border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:scale-110 transition">
+                              <ImageIcon className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-800">Upload from Gallery</span>
+                            <span className="text-[9px] text-slate-400 font-semibold">Select File / Storage</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick sample demo buttons for instant demo testing */}
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold mb-1.5">
+                      <span>Quick Demo Presets:</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Click to test instant preview</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {ID_PROOF_SAMPLES.map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            if (idx === 0) {
+                              setAadhaarDoc({
+                                url: s.url,
+                                name: 'Aadhaar_Demo_Front_Back.jpg',
+                                size: '1.4 MB',
+                                type: 'image/jpeg',
+                                isCameraCaptured: false
+                              });
+                              setIdProofUrl(s.url);
+                            } else {
+                              setDrivingLicenseDoc({
+                                url: s.url,
+                                name: s.label.replace(/\s+/g, '_') + '.jpg',
+                                size: '920 KB',
+                                type: 'image/jpeg',
+                                isCameraCaptured: false
+                              });
+                            }
+                          }}
+                          className="px-2 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-600 truncate transition cursor-pointer text-center"
+                        >
+                          {idx === 0 ? 'Sample Aadhaar' : idx === 1 ? 'Sample License' : 'Sample Voter ID'}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -1026,6 +1517,174 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 )}
               </button>
             )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* LIVE IN-APP CAMERA VIEWFINDER MODAL */}
+        {/* ========================================================= */}
+        {liveCameraTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-sm bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col">
+              {/* Header */}
+              <div className="p-4 bg-slate-800/90 flex items-center justify-between text-white border-b border-slate-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-[#0EA5E0] flex items-center justify-center text-white">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black">
+                      Capture {liveCameraTarget === 'aadhaar' ? 'Aadhaar Card' : 'Driving License'}
+                    </h4>
+                    <p className="text-[10px] text-slate-400">Position document inside the frame</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={stopLiveCamera}
+                  className="w-7 h-7 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-300 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Viewfinder stream area */}
+              <div className="relative aspect-4/3 bg-black flex items-center justify-center overflow-hidden">
+                {cameraLoading && (
+                  <div className="text-center text-white space-y-2 p-4">
+                    <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-xs font-bold text-slate-300">Requesting camera permissions...</p>
+                  </div>
+                )}
+
+                {cameraError ? (
+                  <div className="text-center text-slate-200 p-5 space-y-3">
+                    <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
+                    <p className="text-xs font-semibold leading-relaxed text-slate-300">{cameraError}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopLiveCamera();
+                        if (liveCameraTarget === 'aadhaar') {
+                          aadhaarCameraInputRef.current?.click();
+                        } else {
+                          licenseCameraInputRef.current?.click();
+                        }
+                      }}
+                      className="px-4 py-2 bg-[#0EA5E0] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                    >
+                      Use Phone Camera App
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Framing Guidelines */}
+                    <div className="absolute inset-4 border-2 border-dashed border-sky-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
+                      <div className="flex justify-between text-[9px] text-sky-300 font-bold tracking-wider uppercase bg-black/40 px-2 py-0.5 rounded-md self-start">
+                        {liveCameraTarget === 'aadhaar' ? 'Aadhaar Card' : 'Driving License'} Frame
+                      </div>
+                      <div className="text-center text-[10px] text-white/90 bg-black/50 px-2 py-1 rounded-lg backdrop-blur-xs font-medium">
+                        Hold steady & ensure text is clearly visible
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+
+              {/* Footer Capture Controls */}
+              <div className="p-4 bg-slate-800 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopLiveCamera();
+                    if (liveCameraTarget === 'aadhaar') {
+                      aadhaarCameraInputRef.current?.click();
+                    } else {
+                      licenseCameraInputRef.current?.click();
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Native App</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={cameraLoading || !!cameraError}
+                  onClick={captureLivePhoto}
+                  className="w-14 h-14 rounded-full bg-white hover:bg-slate-100 border-4 border-sky-400 shadow-xl flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-40"
+                  title="Snap Photo"
+                >
+                  <div className="w-10 h-10 rounded-full bg-[#0EA5E0] flex items-center justify-center text-white">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={stopLiveCamera}
+                  className="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-[10px] font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* DOCUMENT ENLARGE LIGHTBOX PREVIEW MODAL */}
+        {/* ========================================================= */}
+        {previewModalDoc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
+              <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-black text-slate-900">{previewModalDoc.title}</h4>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    {previewModalDoc.name} • {previewModalDoc.size}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-700 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-3 bg-slate-900 flex items-center justify-center max-h-[380px] overflow-hidden">
+                <img
+                  src={previewModalDoc.url}
+                  alt={previewModalDoc.title}
+                  className="max-h-[360px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                />
+              </div>
+
+              <div className="p-3 bg-white flex items-center justify-between gap-2 border-t border-slate-100">
+                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> High-Resolution Verification Ready
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

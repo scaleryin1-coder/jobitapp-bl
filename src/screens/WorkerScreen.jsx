@@ -18,7 +18,10 @@ import {
   User,
   MessageCircle,
   Sparkles,
-  LogOut
+  LogOut,
+  Compass,
+  FileText,
+  Camera
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -190,9 +193,48 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 <span className="font-black text-slate-900">{currentUser?.phone || activeWorker?.phone}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
-                <span className="font-semibold">Aadhaar Status:</span>
-                <span className="font-bold text-amber-600">Attached & Under KYC Check</span>
+                <span className="font-semibold">Aadhaar Card:</span>
+                <span className="font-bold text-amber-600">
+                  {currentUser?.aadhaarNumber ? `Verified (${currentUser.aadhaarNumber.slice(-4).padStart(12, '•')})` : 'Attached & Under KYC Check'}
+                </span>
               </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-semibold">Driving License:</span>
+                <span className="font-bold text-amber-600">
+                  {currentUser?.drivingLicenseNumber || currentUser?.drivingLicenseDocUrl ? 'Attached & Under KYC Check' : 'Optional / Attached'}
+                </span>
+              </div>
+
+              {/* Uploaded Documents Thumbnails */}
+              {(currentUser?.aadhaarDocUrl || currentUser?.drivingLicenseDocUrl || currentUser?.idProofUrl) && (
+                <div className="pt-2 border-t border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase tracking-wider">
+                    Uploaded Documents
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(currentUser?.aadhaarDocUrl || currentUser?.idProofUrl) && (
+                      <div className="rounded-xl overflow-hidden border border-slate-200 bg-white p-1 text-center">
+                        <img 
+                          src={currentUser?.aadhaarDocUrl || currentUser?.idProofUrl} 
+                          alt="Aadhaar" 
+                          className="w-full h-16 object-cover rounded-lg mb-1" 
+                        />
+                        <span className="text-[10px] font-bold text-slate-700 block truncate">Aadhaar Card</span>
+                      </div>
+                    )}
+                    {currentUser?.drivingLicenseDocUrl && (
+                      <div className="rounded-xl overflow-hidden border border-slate-200 bg-white p-1 text-center">
+                        <img 
+                          src={currentUser.drivingLicenseDocUrl} 
+                          alt="Driving License" 
+                          className="w-full h-16 object-cover rounded-lg mb-1" 
+                        />
+                        <span className="text-[10px] font-bold text-slate-700 block truncate">Driving License</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Explanatory Timeline Note */}
