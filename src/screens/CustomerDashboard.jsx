@@ -24,7 +24,8 @@ export function CustomerDashboard({
   onUpdateCity,
   onOpenSearch,
   onOpenFilter,
-  onOpenProfileDrawer
+  onOpenProfileDrawer,
+  onOpenWorkerOnboarding
 }) {
   const { currentUser } = useAuth();
 
@@ -220,6 +221,25 @@ export function CustomerDashboard({
         onSelectService={(serv) => onSelectService?.(serv)}
         onOpenAll={() => onOpenSearch?.()}
       />
+
+      {/* 6. Partner Pro Onboarding Banner */}
+      <div className="px-5 my-3">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-4 text-white shadow-md relative overflow-hidden flex items-center justify-between">
+          <div className="space-y-1 pr-2 max-w-[220px]">
+            <span className="text-[10px] bg-amber-400 text-slate-900 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Earn With JOBit
+            </span>
+            <h4 className="text-xs font-black leading-tight">Register as a Verified Technician</h4>
+            <p className="text-[11px] text-slate-300 font-medium">Fixed rates, direct payouts, zero joining fee.</p>
+          </div>
+          <button
+            onClick={() => onOpenWorkerOnboarding?.()}
+            className="px-3.5 py-2.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black rounded-2xl shadow-sm transition cursor-pointer shrink-0"
+          >
+            Register Pro →
+          </button>
+        </div>
+      </div>
 
       {/* All 20 Categories Modal (Opened via 'See All' in Service Category) */}
       <AllCategoriesModal

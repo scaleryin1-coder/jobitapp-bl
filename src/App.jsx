@@ -24,6 +24,7 @@ import { AdminScreen } from './screens/AdminScreen';
 import { WorkerScreen } from './screens/WorkerScreen';
 import { AuthModal } from './screens/AuthModal';
 import { PartnerLoginModal } from './screens/PartnerLoginModal';
+import { WorkerOnboardingModal } from './screens/WorkerOnboardingModal';
 import { ProfileDrawerModal } from './screens/ProfileDrawerModal';
 import { BottomNav } from './components/BottomNav';
 
@@ -37,6 +38,7 @@ function MainLayout() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPartnerLoginOpen, setIsPartnerLoginOpen] = useState(false);
+  const [isWorkerOnboardingOpen, setIsWorkerOnboardingOpen] = useState(false);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -45,12 +47,14 @@ function MainLayout() {
     return localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   });
 
-  // Check URL hash for direct partner/staff login route (e.g. #partner, #worker, #admin)
+  // Check URL hash for direct partner/staff login route or worker onboarding
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#partner' || hash === '#worker' || hash === '#admin') {
         setIsPartnerLoginOpen(true);
+      } else if (hash === '#register-pro' || hash === '#onboard' || hash === '#onboarding' || hash === '#pro') {
+        setIsWorkerOnboardingOpen(true);
       }
     };
 
@@ -211,6 +215,7 @@ function MainLayout() {
                   onNavigateTab={(tab) => {
                     if (tab === 'bookings') setActiveTab('bookings');
                   }}
+                  onOpenWorkerOnboarding={() => setIsWorkerOnboardingOpen(true)}
                 />
               )}
 
@@ -239,6 +244,7 @@ function MainLayout() {
                 <ProfileScreen
                   onOpenPartnerLogin={() => setIsPartnerLoginOpen(true)}
                   onOpenAuth={() => setIsAuthModalOpen(true)}
+                  onOpenWorkerOnboarding={() => setIsWorkerOnboardingOpen(true)}
                   onViewSplash={() => setCurrentScreen('splash')}
                 />
               )}
@@ -316,16 +322,9 @@ function MainLayout() {
           onSuccess={() => {
             setCurrentScreen('main');
           }}
-        />
-
-        {/* Floating Profile Card / Drawer Modal */}
-        <ProfileDrawerModal
-          isOpen={isProfileDrawerOpen}
-          onClose={() => setIsProfileDrawerOpen(false)}
-          onLogoutComplete={() => {
-            setIsProfileDrawerOpen(false);
-            setCurrentScreen('splash');
-            setActiveTab('home');
+          onOpenWorkerOnboarding={() => {
+            setIsAuthModalOpen(false);
+            setIsWorkerOnboardingOpen(true);
           }}
         />
 
@@ -339,6 +338,38 @@ function MainLayout() {
             }
           }}
           onSuccess={handlePartnerLoginSuccess}
+          onOpenWorkerOnboarding={() => {
+            setIsPartnerLoginOpen(false);
+            setIsWorkerOnboardingOpen(true);
+          }}
+        />
+
+        {/* Multi-Step Partner / Worker Onboarding Modal */}
+        <WorkerOnboardingModal
+          isOpen={isWorkerOnboardingOpen}
+          onClose={() => {
+            setIsWorkerOnboardingOpen(false);
+            if (window.location.hash) {
+              history.replaceState(null, '', ' ');
+            }
+          }}
+          onSuccess={() => {
+            setIsWorkerOnboardingOpen(false);
+            if (window.location.hash) {
+              history.replaceState(null, '', ' ');
+            }
+          }}
+        />
+
+        {/* Floating Profile Card / Drawer Modal */}
+        <ProfileDrawerModal
+          isOpen={isProfileDrawerOpen}
+          onClose={() => setIsProfileDrawerOpen(false)}
+          onLogoutComplete={() => {
+            setIsProfileDrawerOpen(false);
+            setCurrentScreen('splash');
+            setActiveTab('home');
+          }}
         />
 
         {/* City Location Picker Dialog */}

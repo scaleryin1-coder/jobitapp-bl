@@ -15,8 +15,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { getLocalWorkers } from '../data/bookingService';
 
-export function PartnerLoginModal({ isOpen, onClose, onSuccess }) {
-  const { loginAsWorker, loginAsAdmin } = useAuth();
+export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }) {
+  const { loginAsWorker, loginAsAdmin, loginWithPhone } = useAuth();
   const [activeTab, setActiveTab] = useState('worker'); // 'worker' | 'admin'
   
   // Worker state
@@ -205,14 +205,14 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess }) {
         {activeTab === 'worker' && (
           <div className="space-y-3.5">
             {/* Quick 1-Click Login Card */}
-            <div className="p-3 bg-sky-50 border border-sky-100 rounded-2xl">
-              <div className="flex items-center justify-between mb-1.5">
+            <div className="p-3 bg-sky-50 border border-sky-100 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black text-sky-900 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                  <span>Demo Worker Pro</span>
+                  <span>Verified Pro Shortcut</span>
                 </span>
                 <span className="text-[10px] bg-sky-200/60 text-sky-800 px-2 py-0.5 rounded-full font-bold">
-                  worker@jobit.com
+                  Rajesh Sharma
                 </span>
               </div>
               <button
@@ -220,8 +220,20 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess }) {
                 onClick={handleQuickWorkerLogin}
                 className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
               >
-                <span>⚡ Instant Worker Login</span>
+                <span>⚡ Instant Verified Pro Login</span>
                 <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Onboard New Worker Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenWorkerOnboarding?.();
+                }}
+                className="w-full py-2 rounded-xl bg-white border border-[#0EA5E0] text-[#0EA5E0] hover:bg-sky-50 text-[11px] font-black transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>🚀 Register as New Pro (4-Step Form)</span>
               </button>
             </div>
 
@@ -345,23 +357,39 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess }) {
         {activeTab === 'admin' && (
           <div className="space-y-3.5">
             {/* Quick 1-Click Admin Card */}
-            <div className="p-3 bg-purple-50 border border-purple-100 rounded-2xl">
-              <div className="flex items-center justify-between mb-1.5">
+            <div className="p-3 bg-purple-50 border border-purple-100 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black text-purple-900 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Demo Admin Access</span>
+                  <span>Master Admin Rule (Critical)</span>
                 </span>
-                <span className="text-[10px] bg-purple-200/60 text-purple-800 px-2 py-0.5 rounded-full font-bold">
-                  admin@jobit.com
+                <span className="text-[10px] bg-purple-200/60 text-purple-800 px-2 py-0.5 rounded-full font-black">
+                  8289968045
                 </span>
               </div>
+
+              {/* 8289968045 Direct Admin Trigger */}
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoading(true);
+                  await loginWithPhone('8289968045', '1234', 'Master Admin', 'admin');
+                  setLoading(false);
+                  onSuccess?.('admin');
+                  onClose();
+                }}
+                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <span>👑 Login with Admin Phone 8289968045</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+
               <button
                 type="button"
                 onClick={handleQuickAdminLogin}
-                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                className="w-full py-2 rounded-xl bg-white border border-purple-200 text-purple-700 hover:bg-purple-100/50 text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <span>⚡ Instant Admin Login</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>📧 Instant Admin Email Login (admin@jobit.com)</span>
               </button>
             </div>
 

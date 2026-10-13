@@ -120,11 +120,11 @@ export function AuthProvider({ children }) {
     return { isRegistered: false };
   };
 
-  const loginWithPhone = async (phone, otp, name = '') => {
+  const loginWithPhone = async (phone, otp, name = '', role = 'customer', extraData = {}) => {
     const rawDigits = phone.replace(/\D/g, '');
     const cleanTenDigits = rawDigits.slice(-10);
 
-    // Direct Admin Secret Bypass Number (+918289968045 / 8289968045)
+    // Direct Admin Rule (Critical): Phone number 8289968045 is ALWAYS Admin!
     if (cleanTenDigits === '8289968045') {
       const adminProfile = {
         uid: 'admin_master',
@@ -161,12 +161,13 @@ export function AuthProvider({ children }) {
     }
 
     if (existingProfile) {
-      // Existing single account found -> Log directly into this existing account without duplicating
+      // Existing single account found -> Log directly into this existing account
       const mergedProfile = {
         ...existingProfile,
-        uid,
+        ...extraData,
+        uid: existingProfile.uid || uid,
         phone: `+91 ${cleanTenDigits}`,
-        role: existingProfile.role || 'customer'
+        role: existingProfile.role || role || 'customer'
       };
       saveLocalUserByPhone(cleanTenDigits, mergedProfile);
       setCurrentUser(mergedProfile);
@@ -174,17 +175,22 @@ export function AuthProvider({ children }) {
       return mergedProfile;
     }
 
-    // Brand new user registration for this single mobile number
-    const finalName = (name && name.trim()) ? name.trim() : 'Ferdin';
+    // Brand new user registration for this mobile number
+    const finalName = (name && name.trim()) ? name.trim() : (role === 'worker' ? 'Partner Pro' : 'Customer');
+    const selectedRole = role === 'worker' ? 'worker' : 'customer';
     const profile = {
       uid,
       phone: `+91 ${cleanTenDigits}`,
       name: finalName,
-      email: `${finalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'customer'}@example.com`,
-      role: 'customer',
+      email: `${finalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}@example.com`,
+      role: selectedRole,
+      workerStatus: selectedRole === 'worker' ? (extraData.workerStatus || 'pending_verification') : undefined,
       city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
-      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      createdAt: new Date().toISOString()
+      photo: selectedRole === 'worker' 
+        ? 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'
+        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      createdAt: new Date().toISOString(),
+      ...extraData
     };
 
     saveLocalUserByPhone(cleanTenDigits, profile);

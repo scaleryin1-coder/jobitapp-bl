@@ -24,13 +24,23 @@ import {
   Sparkles,
   Layers,
   Star,
-  ExternalLink
+  ExternalLink,
+  Eye,
+  UserCheck,
+  UserX,
+  FileText,
+  CreditCard
 } from 'lucide-react';
 import { 
   subscribeBookings, 
   subscribeWorkers, 
   subscribeServices,
   subscribeCategories,
+  subscribePendingWorkers,
+  approveWorkerApplication,
+  rejectWorkerApplication,
+  subscribeCustomers,
+  adminDeleteWorker,
   adminAssignJob, 
   updateBookingStatus, 
   toggleWorkerDuty,
@@ -58,12 +68,25 @@ const TECHNICIAN_PRESETS = [
 ];
 
 export function AdminScreen({ onBack, onLogout }) {
-  const [tab, setTab] = useState('services'); // 'dispatch' | 'services' | 'categories' | 'workers' | 'banners'
+  const [tab, setTab] = useState('approvals'); // 'approvals' | 'users_workers' | 'dispatch' | 'services' | 'categories' | 'banners'
   const [bookings, setBookings] = useState([]);
   const [workers, setWorkers] = useState([]);
+  const [pendingWorkers, setPendingWorkers] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState(initialServices || []);
   const [categories, setCategories] = useState(initialCategories || []);
   const [banners, setBanners] = useState(initialBanners || []);
+
+  // Approvals & KYC Inspection
+  const [selectedPendingWorker, setSelectedPendingWorker] = useState(null);
+  const [rejectModalApp, setRejectModalApp] = useState(null);
+  const [rejectReason, setRejectReason] = useState('Govt ID copy requires clear photo of address and seal');
+  const [approvalSuccessMsg, setApprovalSuccessMsg] = useState('');
+
+  // Users & Workers Sub-tab
+  const [userWorkerSubTab, setUserWorkerSubTab] = useState('workers'); // 'workers' | 'customers'
+  const [workerSearch, setWorkerSearch] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
 
   // Dispatch Filter
   const [dispatchFilter, setDispatchFilter] = useState('all'); // 'all' | 'pending' | 'ongoing' | 'completed'
@@ -119,12 +142,16 @@ export function AdminScreen({ onBack, onLogout }) {
   useEffect(() => {
     const unsubB = subscribeBookings((list) => setBookings(list || []));
     const unsubW = subscribeWorkers((list) => setWorkers(list || []));
+    const unsubP = subscribePendingWorkers((list) => setPendingWorkers(list || []));
+    const unsubCust = subscribeCustomers((list) => setCustomers(list || []));
     const unsubS = subscribeServices((list) => setServices(list || []));
     const unsubC = subscribeCategories((list) => setCategories(list || []));
 
     return () => {
       unsubB();
       unsubW();
+      unsubP();
+      unsubCust();
       unsubS();
       unsubC();
     };
@@ -152,6 +179,42 @@ export function AdminScreen({ onBack, onLogout }) {
   const ongoingJobs = bookings.filter(b => ['accepted', 'on_the_way', 'in_progress'].includes(b.status));
   const completedJobs = bookings.filter(b => b.status === 'completed');
   const onlineWorkers = workers.filter(w => w.isOnline);
+  const pendingRegistrations = pendingWorkers.filter(p => p.status === 'pending_verification');
+
+  // ==========================================
+  // PENDING ONBOARDING APPROVALS OPERATIONS
+  // ==========================================
+  const handleApproveWorker = async (workerApp) => {
+    await approveWorkerApplication(workerApp.id);
+    setApprovalSuccessMsg(`Approved ${workerApp.name}! Pro has been moved to verified technicians.`);
+    setSelectedPendingWorker(null);
+    setTimeout(() => setApprovalSuccessMsg(''), 4000);
+  };
+
+  const handleConfirmRejectWorker = async () => {
+    if (!rejectModalApp) return;
+    await rejectWorkerApplication(rejectModalApp.id, rejectReason);
+    setRejectModalApp(null);
+    setSelectedPendingWorker(null);
+  };
+
+  const handleDeletePro = async (workerId, name) => {
+    if (window.confirm(`Are you sure you want to remove verified worker "${name}"?`)) {
+      await adminDeleteWorker(workerId);
+    }
+  };
+
+  const handleAdvanceBookingStatus = async (bookingId, currentStatus) => {
+    const nextMap = {
+      'pending': 'accepted',
+      'accepted': 'in_progress',
+      'in_progress': 'completed'
+    };
+    const nextStatus = nextMap[currentStatus];
+    if (nextStatus) {
+      await updateBookingStatus(bookingId, nextStatus);
+    }
+  };
 
   // ==========================================
   // DISPATCH OPERATIONS
@@ -351,26 +414,48 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
       </header>
 
+      {/* Feedback Toast */}
+      {approvalSuccessMsg && (
+        <div className="mx-5 mb-2 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-xs font-black text-emerald-800 animate-fade-in shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{approvalSuccessMsg}</span>
+        </div>
+      )}
+
       {/* 2. Operational Metrics Bar */}
       <div className="px-5 py-3">
         <div className="grid grid-cols-4 gap-2">
-          <div className="bg-white p-2.5 rounded-2xl border border-slate-200/70 shadow-xs text-center">
-            <p className="text-[9px] text-slate-400 font-bold uppercase">Services</p>
-            <p className="text-base font-black text-slate-900 mt-0.5">{services.length}</p>
+          <div 
+            onClick={() => setTab('approvals')}
+            className={`p-2.5 rounded-2xl border shadow-xs text-center cursor-pointer transition ${
+              pendingRegistrations.length > 0 ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-300/40' : 'bg-white border-slate-200/70'
+            }`}
+          >
+            <p className="text-[9px] text-amber-700 font-bold uppercase">Approvals</p>
+            <p className="text-base font-black text-amber-700 mt-0.5">{pendingRegistrations.length}</p>
           </div>
-          <div className="bg-white p-2.5 rounded-2xl border border-amber-200 shadow-xs text-center bg-amber-50/30">
-            <p className="text-[9px] text-amber-600 font-bold uppercase">Pending</p>
-            <p className="text-base font-black text-amber-600 mt-0.5">{pendingJobs.length}</p>
-          </div>
-          <div className="bg-white p-2.5 rounded-2xl border border-sky-200 shadow-xs text-center bg-sky-50/30">
-            <p className="text-[9px] text-[#0EA5E0] font-bold uppercase">Ongoing</p>
-            <p className="text-base font-black text-[#0EA5E0] mt-0.5">{ongoingJobs.length}</p>
-          </div>
-          <div className="bg-white p-2.5 rounded-2xl border border-emerald-200 shadow-xs text-center bg-emerald-50/30">
+          <div 
+            onClick={() => setTab('users_workers')}
+            className="bg-white p-2.5 rounded-2xl border border-emerald-200 shadow-xs text-center bg-emerald-50/30 cursor-pointer"
+          >
             <p className="text-[9px] text-emerald-600 font-bold uppercase">Pros Active</p>
             <p className="text-base font-black text-emerald-600 mt-0.5">
               {onlineWorkers.length}/{workers.length}
             </p>
+          </div>
+          <div 
+            onClick={() => setTab('dispatch')}
+            className="bg-white p-2.5 rounded-2xl border border-sky-200 shadow-xs text-center bg-sky-50/30 cursor-pointer"
+          >
+            <p className="text-[9px] text-[#0EA5E0] font-bold uppercase">Bookings</p>
+            <p className="text-base font-black text-[#0EA5E0] mt-0.5">{totalBookingsCount}</p>
+          </div>
+          <div 
+            onClick={() => { setTab('users_workers'); setUserWorkerSubTab('customers'); }}
+            className="bg-white p-2.5 rounded-2xl border border-purple-200 shadow-xs text-center bg-purple-50/30 cursor-pointer"
+          >
+            <p className="text-[9px] text-purple-700 font-bold uppercase">Customers</p>
+            <p className="text-base font-black text-purple-700 mt-0.5">{customers.length}</p>
           </div>
         </div>
       </div>
@@ -379,12 +464,33 @@ export function AdminScreen({ onBack, onLogout }) {
       <div className="px-5 mb-3">
         <div className="flex bg-[#E9ECEF] rounded-full p-1 text-xs font-bold overflow-x-auto no-scrollbar gap-1">
           <button
-            onClick={() => setTab('services')}
-            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'services' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setTab('approvals')}
+            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+              tab === 'approvals' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Services ({services.length})
+            <span>Approvals</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+              tab === 'approvals' ? 'bg-white text-amber-700' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {pendingRegistrations.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setTab('users_workers')}
+            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'users_workers' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Users & Pros ({workers.length + customers.length})
+          </button>
+          <button
+            onClick={() => setTab('dispatch')}
+            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'dispatch' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Bookings Tracker ({bookings.length})
           </button>
           <button
             onClick={() => setTab('categories')}
@@ -395,20 +501,12 @@ export function AdminScreen({ onBack, onLogout }) {
             Categories ({categories.length})
           </button>
           <button
-            onClick={() => setTab('dispatch')}
-            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'dispatch' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            onClick={() => setTab('services')}
+            className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
+              tab === 'services' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Dispatch ({pendingJobs.length + ongoingJobs.length})
-          </button>
-          <button
-            onClick={() => setTab('workers')}
-            className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold ${
-              tab === 'workers' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Pros ({workers.length})
+            Services ({services.length})
           </button>
           <button
             onClick={() => setTab('banners')}
@@ -420,6 +518,298 @@ export function AdminScreen({ onBack, onLogout }) {
           </button>
         </div>
       </div>
+
+      {/* ========================================================= */}
+      {/* 3.1 TAB: PENDING APPROVALS (Urban Company Style KYC Review) */}
+      {/* ========================================================= */}
+      {tab === 'approvals' && (
+        <div className="px-5 space-y-3.5 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                Worker Onboarding Approvals
+              </h4>
+              <p className="text-[11px] text-slate-400 font-semibold">
+                Verify govt ID, trade skills, coverage area & bank details
+              </p>
+            </div>
+            <span className="text-xs font-black text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+              {pendingRegistrations.length} Awaiting Review
+            </span>
+          </div>
+
+          {pendingRegistrations.length === 0 ? (
+            <div className="py-12 px-4 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h5 className="text-sm font-black text-slate-800">No Pending Approvals</h5>
+              <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto">
+                All technician registrations and KYC document requests have been reviewed and processed!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingRegistrations.map((app) => (
+                <div 
+                  key={app.id}
+                  className="bg-white rounded-3xl p-4 border border-amber-200/80 shadow-xs space-y-3 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-2xl">
+                    Pending Verification
+                  </div>
+
+                  {/* Header: Photo + Name + Trade */}
+                  <div className="flex items-start gap-3 pr-20">
+                    <img 
+                      src={app.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
+                      alt={app.name}
+                      className="w-13 h-13 rounded-2xl object-cover border-2 border-amber-400 shrink-0 shadow-xs"
+                    />
+                    <div>
+                      <h5 className="text-sm font-black text-slate-900">{app.name}</h5>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] font-black px-2 py-0.5 bg-sky-100 text-[#0EA5E0] rounded-full">
+                          {app.categoryName || app.skill}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {app.experience ? `${app.experience} yrs exp` : 'Experienced'}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500">
+                          • {app.gender || 'Partner'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-500 mt-1 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{app.city} ({app.pincode}) • {app.serviceRadius || '15'} km radius</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Sub-skills chips */}
+                  {app.subSkills && app.subSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-100">
+                      {app.subSkills.map((s, idx) => (
+                        <span key={idx} className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Quick Verification & Bank Snapshot */}
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl text-[11px] font-semibold text-slate-600">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-bold">Govt ID / Aadhaar:</span>
+                      <span className="font-black text-slate-800">{app.aadhaarNumber || 'Attached ID'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-bold">Payout Bank:</span>
+                      <span className="font-black text-slate-800 truncate block">
+                        {app.bankName || 'Bank'} ({app.ifscCode || 'IFSC'})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPendingWorker(app)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Inspect KYC</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRejectModalApp(app);
+                        setRejectReason('Govt ID document requires clearer upload');
+                      }}
+                      className="py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                      <span>Reject</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApproveWorker(app)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Approve Pro</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 3.2 TAB: USERS & WORKERS MANAGEMENT                      */}
+      {/* ========================================================= */}
+      {tab === 'users_workers' && (
+        <div className="px-5 space-y-3.5 animate-fade-in">
+          {/* Sub-tab toggle */}
+          <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => setUserWorkerSubTab('workers')}
+              className={`flex-1 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                userWorkerSubTab === 'workers' 
+                  ? 'bg-white text-slate-900 shadow-xs' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Verified Technicians ({workers.length})</span>
+            </button>
+            <button
+              onClick={() => setUserWorkerSubTab('customers')}
+              className={`flex-1 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                userWorkerSubTab === 'customers' 
+                  ? 'bg-white text-purple-700 shadow-xs' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Customers ({customers.length})</span>
+            </button>
+          </div>
+
+          {/* VERIFIED TECHNICIANS SUB-VIEW */}
+          {userWorkerSubTab === 'workers' && (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={workerSearch}
+                  onChange={(e) => setWorkerSearch(e.target.value)}
+                  placeholder="Search technicians by name, trade or phone..."
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+
+              <div className="space-y-2.5">
+                {workers
+                  .filter(w => !workerSearch || 
+                    (w.name || '').toLowerCase().includes(workerSearch.toLowerCase()) ||
+                    (w.skill || '').toLowerCase().includes(workerSearch.toLowerCase()) ||
+                    (w.phone || '').includes(workerSearch)
+                  )
+                  .map((w) => (
+                    <div 
+                      key={w.id} 
+                      className="p-3.5 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <img
+                            src={w.avatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                            alt={w.name}
+                            className="w-11 h-11 rounded-2xl object-cover"
+                          />
+                          <span 
+                            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                              w.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <h5 className="text-xs font-extrabold text-slate-900">{w.name}</h5>
+                          <p className="text-[11px] font-semibold text-slate-400">{w.skill} • {w.phone}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
+                            <span className="font-bold text-amber-500">★ {w.rating || '4.9'}</span>
+                            <span>• {w.jobsCompleted || 120} jobs</span>
+                            <span>• {w.city || 'Kerala'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleWorkerDuty(w.id, !w.isOnline)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                            w.isOnline 
+                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <Power className="w-3 h-3" />
+                          <span>{w.isOnline ? 'Online' : 'Offline'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeletePro(w.id, w.name)}
+                          className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center transition cursor-pointer"
+                          title="Remove Worker"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE CUSTOMERS SUB-VIEW */}
+          {userWorkerSubTab === 'customers' && (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="Search customers by name, phone or city..."
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+
+              <div className="space-y-2.5">
+                {customers
+                  .filter(c => !customerSearch ||
+                    (c.name || '').toLowerCase().includes(customerSearch.toLowerCase()) ||
+                    (c.phone || '').includes(customerSearch) ||
+                    (c.city || '').toLowerCase().includes(customerSearch.toLowerCase())
+                  )
+                  .map((c) => (
+                    <div 
+                      key={c.id} 
+                      className="p-3.5 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={c.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80"}
+                          alt={c.name}
+                          className="w-11 h-11 rounded-2xl object-cover"
+                        />
+                        <div>
+                          <h5 className="text-xs font-extrabold text-slate-900">{c.name}</h5>
+                          <p className="text-[11px] font-semibold text-slate-400">{c.phone} • {c.email || 'customer@example.com'}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
+                            <span className="font-bold text-[#0EA5E0]">{c.totalBookings || 1} Orders Placed</span>
+                            <span>• {c.city || 'Melattur, Kerala'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                        Active User
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* 4. TAB: SERVICES MANAGEMENT (Comprehensive CRUD & Prices) */}
@@ -1454,6 +1844,256 @@ export function AdminScreen({ onBack, onLogout }) {
         </div>
       )}
 
+      {/* ========================================================= */}
+      {/* 13. MODAL: DETAILED KYC APPLICATION INSPECTION            */}
+      {/* ========================================================= */}
+      {selectedPendingWorker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in select-none">
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
+            
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <img 
+                  src={selectedPendingWorker.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
+                  alt={selectedPendingWorker.name}
+                  className="w-10 h-10 rounded-xl object-cover border-2 border-amber-400"
+                />
+                <div>
+                  <h4 className="text-sm font-black">{selectedPendingWorker.name}</h4>
+                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">
+                    KYC Application ID: {selectedPendingWorker.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPendingWorker(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Application Data Body */}
+            <div className="p-4 overflow-y-auto no-scrollbar space-y-4 text-xs">
+              
+              {/* Step 1: Personal Details */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <User className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                  <span>Personal Details</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-slate-600">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Primary Mobile:</span>
+                    <span className="font-black text-slate-900">{selectedPendingWorker.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Alternate Contact:</span>
+                    <span className="font-bold text-slate-800">{selectedPendingWorker.altPhone || 'None'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Email Address:</span>
+                    <span className="font-bold text-slate-800">{selectedPendingWorker.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Gender & DOB:</span>
+                    <span className="font-bold text-slate-800">
+                      {selectedPendingWorker.gender} • {selectedPendingWorker.dob || '1995-01-01'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Coverage & Location */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                  <span>Coverage & Location</span>
+                </div>
+                <p className="text-slate-800 font-semibold">{selectedPendingWorker.address}</p>
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 text-slate-600">
+                  <span className="font-black text-slate-900">{selectedPendingWorker.city}</span>
+                  <span>• PIN: <strong>{selectedPendingWorker.pincode}</strong></span>
+                  <span>• Radius: <strong className="text-emerald-600">{selectedPendingWorker.serviceRadius || '15'} km</strong></span>
+                </div>
+              </div>
+
+              {/* Step 3: Trade & Skills */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <Briefcase className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                  <span>Trade Skills & Pricing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 bg-sky-100 text-[#0EA5E0] font-black rounded-full">
+                    {selectedPendingWorker.categoryName}
+                  </span>
+                  <span className="font-bold text-slate-700">
+                    {selectedPendingWorker.experience} Years Experience
+                  </span>
+                  <span className="ml-auto font-black text-emerald-700">
+                    ₹{selectedPendingWorker.baseRate}/job
+                  </span>
+                </div>
+                {selectedPendingWorker.subSkills && selectedPendingWorker.subSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-200/60">
+                    {selectedPendingWorker.subSkills.map((sk, idx) => (
+                      <span key={idx} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-800 rounded-md text-[10px] font-bold">
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 4: Verification & Bank Details */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+                <div className="flex items-center gap-1.5 text-slate-800 font-black text-xs uppercase tracking-wider">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Govt ID & Payout Account</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-slate-600">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Aadhaar / ID No:</span>
+                    <span className="font-black text-slate-900">{selectedPendingWorker.aadhaarNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Document Type:</span>
+                    <span className="font-bold text-slate-800">{selectedPendingWorker.idProofType || 'Govt ID Proof'}</span>
+                  </div>
+                </div>
+
+                {/* ID Proof Document Preview */}
+                {selectedPendingWorker.idProofUrl && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-bold">Document Scan / Copy:</span>
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 bg-black/5">
+                      <img 
+                        src={selectedPendingWorker.idProofUrl} 
+                        alt="ID Proof" 
+                        className="w-full h-36 object-cover"
+                      />
+                      <a 
+                        href={selectedPendingWorker.idProofUrl} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/70 hover:bg-black text-white text-[10px] font-bold rounded-lg flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>View Original</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bank Account */}
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200/80 grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Bank Name:</span>
+                    <span className="font-black text-slate-900">{selectedPendingWorker.bankName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">IFSC Code:</span>
+                    <span className="font-black text-slate-900">{selectedPendingWorker.ifscCode}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Account Holder:</span>
+                    <span className="font-bold text-slate-900">{selectedPendingWorker.accountHolderName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold">Account Number:</span>
+                    <span className="font-mono font-bold text-slate-900">{selectedPendingWorker.accountNumber}</span>
+                  </div>
+                  {selectedPendingWorker.upiId && (
+                    <div className="col-span-2 pt-1 border-t border-slate-100">
+                      <span className="text-[10px] text-slate-400 block font-bold">UPI ID:</span>
+                      <span className="font-bold text-purple-700">{selectedPendingWorker.upiId}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Actions Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectModalApp(selectedPendingWorker);
+                  setRejectReason('Govt ID copy requires clear photo of address and seal');
+                }}
+                className="py-2.5 px-4 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <UserX className="w-4 h-4" />
+                <span>Reject Application</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleApproveWorker(selectedPendingWorker)}
+                className="py-2.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Approve & Verify Technician</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 14. MODAL: REJECT REASON                                   */}
+      {/* ========================================================= */}
+      {rejectModalApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h4 className="text-sm font-black text-slate-900">Reject Application</h4>
+              <button
+                onClick={() => setRejectModalApp(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Rejecting onboarding for <strong>{rejectModalApp.name}</strong>. Please provide a clear reason:
+            </p>
+
+            <textarea
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-500"
+              placeholder="e.g. Incomplete ID document or invalid phone number"
+            />
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setRejectModalApp(null)}
+                className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectWorker}
+                className="flex-1 py-2 rounded-xl bg-red-600 text-white text-xs font-black shadow-xs hover:bg-red-700 transition"
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+

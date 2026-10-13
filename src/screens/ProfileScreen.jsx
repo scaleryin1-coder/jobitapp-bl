@@ -19,7 +19,8 @@ import { isFirebaseConfigured } from '../firebase';
 export function ProfileScreen({ 
   onOpenPartnerLogin,
   onOpenAuth, 
-  onViewSplash 
+  onViewSplash,
+  onOpenWorkerOnboarding
 }) {
   const { currentUser, updateUserProfile, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -157,7 +158,7 @@ export function ProfileScreen({
 
         {/* Apply as Worker Pro */}
         <button
-          onClick={() => setBecomeWorkerOpen(true)}
+          onClick={() => onOpenWorkerOnboarding?.()}
           className="w-full p-4 rounded-[24px] bg-white border border-slate-200/70 hover:border-slate-300 transition flex items-center justify-between text-left shadow-xs cursor-pointer"
         >
           <div className="flex items-center gap-3">
@@ -166,7 +167,24 @@ export function ProfileScreen({
             </div>
             <div>
               <p className="text-xs font-extrabold text-slate-800">Become a Verified Pro</p>
-              <p className="text-[11px] text-slate-400">Offer your skills & earn hourly</p>
+              <p className="text-[11px] text-slate-400">Complete 4-Step Registration to earn on JOBit</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </button>
+
+        {/* Staff & Partner Portal (Admins & Workers) */}
+        <button
+          onClick={onOpenPartnerLogin}
+          className="w-full p-4 rounded-[24px] bg-white border border-slate-200/70 hover:border-slate-300 transition flex items-center justify-between text-left shadow-xs cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-extrabold text-slate-800">Admin & Worker Login</p>
+              <p className="text-[11px] text-slate-400">Access Admin Dashboard (8289968045) or Pro Portal</p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400" />

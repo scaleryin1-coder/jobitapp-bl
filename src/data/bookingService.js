@@ -13,11 +13,15 @@ import { initialWorkers, initialServices, initialCategories } from './seedData';
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
 const STORAGE_KEY_WORKERS = 'jobit_workers';
+const STORAGE_KEY_PENDING_WORKERS = 'jobit_pending_workers';
+const STORAGE_KEY_CUSTOMERS = 'jobit_customers';
 const STORAGE_KEY_SERVICES = 'jobit_services';
 const STORAGE_KEY_CATEGORIES = 'jobit_categories';
 
 const EVENT_BOOKINGS_CHANGED = 'jobit_bookings_changed';
 const EVENT_WORKERS_CHANGED = 'jobit_workers_changed';
+const EVENT_PENDING_WORKERS_CHANGED = 'jobit_pending_workers_changed';
+const EVENT_CUSTOMERS_CHANGED = 'jobit_customers_changed';
 const EVENT_SERVICES_CHANGED = 'jobit_services_changed';
 const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
 
@@ -585,3 +589,394 @@ export async function adminDeleteCategory(catId) {
     }
   }
 }
+
+// ==========================================
+// PENDING WORKER ONBOARDING & APPROVALS
+// ==========================================
+
+export const initialPendingWorkers = [
+  {
+    id: 'app_worker_anil',
+    name: 'Anil Kumar',
+    phone: '98471 23456',
+    altPhone: '98471 99880',
+    email: 'anil.electric@gmail.com',
+    gender: 'Male',
+    dob: '1992-06-15',
+    avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+    address: 'Near Old Bus Stand, Market Road, Melattur',
+    city: 'Melattur, Kerala',
+    pincode: '679326',
+    serviceRadius: '25',
+    categoryName: 'Electrician',
+    categoryId: 'cat_electrician',
+    subSkills: ['House Wiring', 'Distribution Board Repair', 'Inverter Installation', 'Switchboard Repair', 'Appliance Earthing'],
+    experience: '7',
+    baseRate: 350,
+    aadhaarNumber: '7845 2319 8812',
+    idProofUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+    idProofType: 'Aadhaar Card Front & Back',
+    bankName: 'State Bank of India',
+    accountHolderName: 'Anil Kumar K',
+    accountNumber: '38291048291',
+    ifscCode: 'SBIN0008421',
+    upiId: 'anilkumar@oksbi',
+    status: 'pending_verification', // 'pending_verification' | 'verified' | 'rejected'
+    appliedAt: new Date(Date.now() - 7200000).toISOString()
+  },
+  {
+    id: 'app_worker_fathima',
+    name: 'Fathima Beevi',
+    phone: '98472 88771',
+    altPhone: '98472 55443',
+    email: 'fathima.cleanpro@gmail.com',
+    gender: 'Female',
+    dob: '1995-11-20',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    address: 'Opposite Community Health Center, Perinthalmanna',
+    city: 'Perinthalmanna, Kerala',
+    pincode: '679322',
+    serviceRadius: '15',
+    categoryName: 'Cleaning',
+    categoryId: 'cat_cleaning',
+    subSkills: ['Deep Home Cleaning', 'Kitchen Degreasing', 'Bathroom Sanitization', 'Sofa Shampooing'],
+    experience: '5',
+    baseRate: 400,
+    aadhaarNumber: '8912 4432 1029',
+    idProofUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
+    idProofType: 'Government Voter ID',
+    bankName: 'Federal Bank',
+    accountHolderName: 'Fathima Beevi T',
+    accountNumber: '1420010049281',
+    ifscCode: 'FDRL0001420',
+    upiId: 'fathimabeevi@federal',
+    status: 'pending_verification',
+    appliedAt: new Date(Date.now() - 14400000).toISOString()
+  }
+];
+
+export function getPendingWorkers() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PENDING_WORKERS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(initialPendingWorkers));
+      return initialPendingWorkers;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : initialPendingWorkers;
+  } catch {
+    return initialPendingWorkers;
+  }
+}
+
+export function savePendingWorkers(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent(EVENT_PENDING_WORKERS_CHANGED, { detail: list }));
+  } catch (err) {
+    console.warn('Failed to save pending workers', err);
+  }
+}
+
+export function subscribePendingWorkers(callback) {
+  let unsubFirestore = () => {};
+
+  const handleLocalChange = () => {
+    callback(getPendingWorkers());
+  };
+
+  window.addEventListener(EVENT_PENDING_WORKERS_CHANGED, handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  callback(getPendingWorkers());
+
+  if (isFirebaseConfigured && db) {
+    try {
+      unsubFirestore = onSnapshot(collection(db, 'pending_workers'), (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          savePendingWorkers(list);
+          callback(list);
+        }
+      }, (err) => console.warn('Firestore subscribePendingWorkers err', err));
+    } catch (err) {}
+  }
+
+  return () => {
+    window.removeEventListener(EVENT_PENDING_WORKERS_CHANGED, handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+    unsubFirestore();
+  };
+}
+
+// Multi-step Worker Onboarding Submission
+export async function registerWorkerOnboarding(onboardingData) {
+  const current = getPendingWorkers();
+  const appId = 'app_worker_' + Date.now();
+  
+  const newApplication = {
+    id: appId,
+    status: 'pending_verification',
+    appliedAt: new Date().toISOString(),
+    rating: 5.0,
+    jobsCompleted: 0,
+    isOnline: false,
+    ...onboardingData
+  };
+
+  const updated = [newApplication, ...current];
+  savePendingWorkers(updated);
+
+  // Also save in user profiles table as pending worker so they can log in
+  try {
+    const cleanTen = (onboardingData.phone || '').replace(/\D/g, '').slice(-10);
+    if (cleanTen) {
+      const rawUsers = localStorage.getItem('jobit_registered_users');
+      const users = rawUsers ? JSON.parse(rawUsers) : {};
+      users[cleanTen] = {
+        uid: appId,
+        workerId: appId,
+        role: 'worker',
+        workerStatus: 'pending_verification',
+        ...newApplication
+      };
+      localStorage.setItem('jobit_registered_users', JSON.stringify(users));
+    }
+  } catch {}
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'pending_workers', appId), {
+        ...newApplication,
+        serverTimestamp: serverTimestamp()
+      });
+      await setDoc(doc(db, 'users', appId), {
+        ...newApplication,
+        role: 'worker',
+        workerStatus: 'pending_verification'
+      }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore registerWorkerOnboarding fallback', e);
+    }
+  }
+
+  return newApplication;
+}
+
+// Admin approves a worker registration
+export async function approveWorkerApplication(workerAppId) {
+  const pending = getPendingWorkers();
+  const target = pending.find(p => p.id === workerAppId);
+  if (!target) return false;
+
+  // 1. Remove from pending list or mark verified
+  const updatedPending = pending.filter(p => p.id !== workerAppId);
+  savePendingWorkers(updatedPending);
+
+  // 2. Add to active verified workers roster
+  const activeWorkers = getLocalWorkers();
+  const verifiedWorker = {
+    id: target.id.replace('app_', ''),
+    originalAppId: target.id,
+    name: target.name,
+    phone: target.phone,
+    altPhone: target.altPhone || '',
+    email: target.email,
+    gender: target.gender || 'Not specified',
+    dob: target.dob || '',
+    skill: target.categoryName || 'Home Services Pro',
+    categoryName: target.categoryName,
+    categoryId: target.categoryId,
+    subSkills: target.subSkills || [],
+    experience: target.experience ? `${target.experience} years` : '3 years',
+    baseRate: target.baseRate || 300,
+    address: target.address,
+    city: target.city || 'Melattur, Kerala',
+    pincode: target.pincode || '',
+    serviceRadius: target.serviceRadius || '15',
+    aadhaarNumber: target.aadhaarNumber || 'Verified',
+    idProofUrl: target.idProofUrl || '',
+    bankName: target.bankName || '',
+    accountNumber: target.accountNumber || '',
+    ifscCode: target.ifscCode || '',
+    upiId: target.upiId || '',
+    rating: target.rating || 5.0,
+    jobsCompleted: 0,
+    isOnline: true, // Auto set online upon approval
+    status: 'available',
+    workerStatus: 'verified',
+    approvedAt: new Date().toISOString(),
+    avatar: target.avatar || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+    vehicle: 'Bike'
+  };
+
+  const updatedActive = [verifiedWorker, ...activeWorkers.filter(w => w.id !== verifiedWorker.id)];
+  saveLocalWorkers(updatedActive);
+
+  // 3. Update registered user cache
+  try {
+    const cleanTen = (target.phone || '').replace(/\D/g, '').slice(-10);
+    if (cleanTen) {
+      const rawUsers = localStorage.getItem('jobit_registered_users');
+      const users = rawUsers ? JSON.parse(rawUsers) : {};
+      users[cleanTen] = {
+        ...verifiedWorker,
+        uid: verifiedWorker.id,
+        role: 'worker',
+        workerStatus: 'verified'
+      };
+      localStorage.setItem('jobit_registered_users', JSON.stringify(users));
+    }
+  } catch {}
+
+  // 4. Update current user in local storage if they happen to be logged in
+  try {
+    const activeCurrent = localStorage.getItem('jobit_user');
+    if (activeCurrent) {
+      const parsed = JSON.parse(activeCurrent);
+      if (parsed.uid === target.id || parsed.id === target.id || parsed.phone === target.phone) {
+        const merged = { ...parsed, ...verifiedWorker, workerStatus: 'verified' };
+        localStorage.setItem('jobit_user', JSON.stringify(merged));
+      }
+    }
+  } catch {}
+
+  // 5. Sync to Firestore if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      await deleteDoc(doc(db, 'pending_workers', workerAppId));
+      await setDoc(doc(db, 'workers', verifiedWorker.id), verifiedWorker, { merge: true });
+      await setDoc(doc(db, 'users', verifiedWorker.id), {
+        ...verifiedWorker,
+        role: 'worker',
+        workerStatus: 'verified'
+      }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore approveWorker fallback', e);
+    }
+  }
+
+  return verifiedWorker;
+}
+
+// Admin rejects a worker application
+export async function rejectWorkerApplication(workerAppId, reason = 'Document verification could not be completed') {
+  const pending = getPendingWorkers();
+  const updatedPending = pending.map(p => {
+    if (p.id === workerAppId) {
+      return {
+        ...p,
+        status: 'rejected',
+        workerStatus: 'rejected',
+        rejectedReason: reason,
+        rejectedAt: new Date().toISOString()
+      };
+    }
+    return p;
+  });
+  savePendingWorkers(updatedPending);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'pending_workers', workerAppId), {
+        status: 'rejected',
+        workerStatus: 'rejected',
+        rejectedReason: reason,
+        rejectedAt: new Date().toISOString()
+      });
+    } catch {}
+  }
+}
+
+// Admin delete an active worker
+export async function adminDeleteWorker(workerId) {
+  const workers = getLocalWorkers();
+  const updated = workers.filter(w => w.id !== workerId);
+  saveLocalWorkers(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await deleteDoc(doc(db, 'workers', workerId));
+    } catch {}
+  }
+}
+
+// ==========================================
+// REGISTERED CUSTOMERS MANAGEMENT
+// ==========================================
+
+export const initialCustomers = [
+  {
+    id: 'cust_aman',
+    name: 'Aman Gupta',
+    phone: '98765 00001',
+    email: 'aman.gupta@example.com',
+    city: 'Melattur, Kerala',
+    pincode: '679326',
+    totalBookings: 6,
+    joinedAt: '2026-08-10',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+  },
+  {
+    id: 'cust_priya',
+    name: 'Priya Nair',
+    phone: '98765 00002',
+    email: 'priya.nair@example.com',
+    city: 'Perinthalmanna, Kerala',
+    pincode: '679322',
+    totalBookings: 4,
+    joinedAt: '2026-09-02',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
+  },
+  {
+    id: 'cust_rahul',
+    name: 'Rahul Varma',
+    phone: '98765 00003',
+    email: 'rahul.v@example.com',
+    city: 'Manjeri, Kerala',
+    pincode: '676121',
+    totalBookings: 2,
+    joinedAt: '2026-09-18',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
+  }
+];
+
+export function getLocalCustomers() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOMERS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_CUSTOMERS, JSON.stringify(initialCustomers));
+      return initialCustomers;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialCustomers;
+  } catch {
+    return initialCustomers;
+  }
+}
+
+export function saveLocalCustomers(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY_CUSTOMERS, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent(EVENT_CUSTOMERS_CHANGED, { detail: list }));
+  } catch (err) {
+    console.warn('Failed to save customers', err);
+  }
+}
+
+export function subscribeCustomers(callback) {
+  const handleLocalChange = () => {
+    callback(getLocalCustomers());
+  };
+
+  window.addEventListener(EVENT_CUSTOMERS_CHANGED, handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  callback(getLocalCustomers());
+
+  return () => {
+    window.removeEventListener(EVENT_CUSTOMERS_CHANGED, handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+  };
+}
+

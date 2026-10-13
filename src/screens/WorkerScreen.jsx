@@ -126,6 +126,96 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     }
   };
 
+  const isPendingVerification = 
+    (currentUser?.workerStatus === 'pending_verification') || 
+    (activeWorker?.status === 'pending_verification') || 
+    (activeWorker?.workerStatus === 'pending_verification');
+
+  // IF WORKER IS AWAITING ADMIN APPROVAL -> RENDER DEDICATED REVIEW SCREEN
+  if (isPendingVerification) {
+    return (
+      <div className="w-full min-h-screen bg-slate-50 p-5 flex flex-col justify-between text-slate-900 select-none animate-fade-in">
+        <div>
+          {/* Top Bar */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                <Clock className="w-5 h-5 animate-spin-slow" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 leading-tight">Partner Portal</h3>
+                <p className="text-[11px] text-amber-600 font-bold">Status: Verification In Progress</p>
+              </div>
+            </div>
+
+            <button
+              onClick={onLogout || onBack}
+              className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Under Review Card */}
+          <div className="mt-5 bg-white rounded-3xl p-5 border border-amber-200/90 shadow-md text-center space-y-3">
+            <div className="w-16 h-16 bg-amber-50 rounded-3xl border-2 border-amber-200 flex items-center justify-center mx-auto text-amber-500 shadow-xs">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+
+            <div>
+              <span className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-[10px] font-black rounded-full uppercase tracking-wider mb-1.5">
+                Admin Review Pending
+              </span>
+              <h4 className="text-lg font-black text-slate-900">Application Under Verification</h4>
+              <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
+                Welcome, <strong>{currentUser?.name || activeWorker?.name}</strong>. Your KYC credentials and trade certificates are being verified by the JOBit Master Admin.
+              </p>
+            </div>
+
+            {/* Profile Overview */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-left text-xs space-y-2 mt-2">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-semibold">Registered Trade:</span>
+                <span className="font-black text-slate-900">{currentUser?.categoryName || activeWorker?.skill || 'Home Services'}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-semibold">Service Location:</span>
+                <span className="font-black text-slate-900">{currentUser?.city || activeWorker?.city || 'Kerala'}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-semibold">Registered Contact:</span>
+                <span className="font-black text-slate-900">{currentUser?.phone || activeWorker?.phone}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-semibold">Aadhaar Status:</span>
+                <span className="font-bold text-amber-600">Attached & Under KYC Check</span>
+              </div>
+            </div>
+
+            {/* Explanatory Timeline Note */}
+            <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100 text-[11px] text-sky-900 font-semibold text-left flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-[#0EA5E0] shrink-0 mt-0.5" />
+              <span>
+                Once approved, your profile will immediately unlock the live dispatch radar, job notifications, and daily earnings dashboard.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="pt-6 space-y-2">
+          <button
+            onClick={onLogout || onBack}
+            className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition cursor-pointer shadow-sm"
+          >
+            Switch to Customer Browsing
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
