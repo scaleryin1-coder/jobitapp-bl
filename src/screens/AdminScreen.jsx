@@ -2262,7 +2262,7 @@ export function AdminScreen({ onBack, onLogout }) {
                     </h3>
                     <span className="px-2.5 py-0.5 bg-sky-50 text-[#0EA5E0] border border-sky-200/80 font-black text-xs rounded-full inline-flex items-center gap-1">
                       <Briefcase className="w-3 h-3 text-[#0EA5E0]" />
-                      <span>{selectedPendingWorker.name} - {selectedPendingWorker.categoryName || selectedPendingWorker.skill || 'AC Service'}</span>
+                      <span>{selectedPendingWorker.categoryName || selectedPendingWorker.skill || 'AC Service'}</span>
                     </span>
                   </div>
 

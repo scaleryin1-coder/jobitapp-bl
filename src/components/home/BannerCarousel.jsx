@@ -99,8 +99,12 @@ export function BannerCarousel({
       title: 'AC Service',
       subtitle: 'Expert coil cleaning & cooling repairs',
       keyword: 'ac',
-      gradient: 'from-[#BFF5E3] via-[#D3F8EE] to-[#E6FCF5]',
+      bgStyle: 'bg-[#1E3A8A]',
       isAcBanner: true,
+      titleColor: 'text-white',
+      subtitleColor: 'text-amber-100',
+      buttonClass: 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black',
+      buttonArrowColor: 'text-slate-950',
       imagePrimary: AC_TECHNICIAN_HERO_IMAGE,
       imageDirect: AC_TECHNICIAN_HERO_DIRECT,
       imageFallback: AC_TECHNICIAN_HERO_FALLBACK,
@@ -111,8 +115,12 @@ export function BannerCarousel({
       title: 'Plumbing Service',
       subtitle: 'Leak repairs, pipe fitting & maintenance',
       keyword: 'plumb',
-      gradient: 'from-[#C9D6FF] via-[#D8E2FF] to-[#EBF0FF]',
+      bgStyle: 'bg-gradient-to-r from-[#C9D6FF] via-[#D8E2FF] to-[#EBF0FF]',
       isAcBanner: false,
+      titleColor: 'text-[#111827]',
+      subtitleColor: 'text-slate-600',
+      buttonClass: 'bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-bold',
+      buttonArrowColor: 'text-white',
       imagePrimary: PLUMBER_HERO_IMAGE,
       imageDirect: PLUMBER_HERO_DIRECT,
       imageFallback: PLUMBER_HERO_FALLBACK,
@@ -142,7 +150,7 @@ export function BannerCarousel({
               className="w-full min-w-full shrink-0 snap-center"
             >
               <div
-                className={`w-full rounded-[22px] bg-gradient-to-r ${banner.gradient} p-4 relative min-h-[145px] sm:min-h-[150px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.03)] border border-white/70 overflow-hidden`}
+                className={`w-full rounded-[22px] ${banner.bgStyle} p-4 relative min-h-[145px] sm:min-h-[150px] flex flex-col justify-center shadow-[0_4px_16px_rgba(0,0,0,0.06)] border ${banner.isAcBanner ? 'border-blue-900/60' : 'border-white/70'} overflow-hidden`}
               >
                 {/* 
                   Hero Banner Graphic seamlessly blended on right side:
@@ -170,26 +178,26 @@ export function BannerCarousel({
                 {/* 
                   Clean Text Layout:
                   - Headline and Subtitle preserved exactly
-                  - Responsive proportions and clear hierarchy
+                  - High contrast against background
                 */}
                 <div className="relative z-20 max-w-[56%] sm:max-w-[54%] flex flex-col items-start justify-center">
                   {/* Clean Headline */}
-                  <h3 className="text-xl sm:text-[22px] font-black text-[#111827] tracking-tight leading-tight">
+                  <h3 className={`text-xl sm:text-[22px] font-black tracking-tight leading-tight ${banner.titleColor}`}>
                     {banner.title}
                   </h3>
 
                   {/* Clean Concise Subtitle */}
-                  <p className="text-[11px] text-slate-600 font-medium mt-1 leading-snug line-clamp-2">
+                  <p className={`text-[11px] font-medium mt-1 leading-snug line-clamp-2 ${banner.subtitleColor}`}>
                     {banner.subtitle}
                   </p>
 
                   {/* Book Now Button */}
                   <button
                     onClick={() => handleBookService(banner.keyword)}
-                    className="mt-3 bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-bold text-[11px] px-4 py-1.5 rounded-full shadow-sm active:scale-95 transition cursor-pointer inline-flex items-center gap-1.5"
+                    className={`mt-3 text-[11px] px-4 py-1.5 rounded-full shadow-sm active:scale-95 transition cursor-pointer inline-flex items-center gap-1.5 ${banner.buttonClass}`}
                   >
                     <span>Book Now</span>
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className={`w-3 h-3 ${banner.buttonArrowColor}`} />
                   </button>
                 </div>
               </div>
