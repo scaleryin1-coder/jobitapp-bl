@@ -167,7 +167,7 @@ export function AdminScreen({ onBack, onLogout }) {
         if (!snap.empty) {
           setBanners(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         }
-      });
+      }, () => {});
     } catch {}
 
     return () => unsubBan();

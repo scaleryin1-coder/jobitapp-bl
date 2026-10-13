@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, setLogLevel } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Read all keys strictly from import.meta.env.VITE_*
@@ -23,6 +23,11 @@ export const isFirebaseConfigured = Boolean(
   !firebaseConfig.projectId.includes('placeholder')
 );
 
+// Silence internal Firestore connection logs/offline notices to avoid noisy unhandled connection warnings
+try {
+  setLogLevel('silent');
+} catch {}
+
 let app = null;
 let auth = null;
 let db = null;
@@ -32,7 +37,13 @@ if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     auth = getAuth(app);
-    db = getFirestore(app);
+    try {
+      db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+      });
+    } catch {
+      db = getFirestore(app);
+    }
     try {
       storage = getStorage(app);
     } catch {

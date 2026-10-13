@@ -140,12 +140,10 @@ export function subscribeBookings(callback) {
             } catch {}
           });
         }
-      }, (err) => {
-        console.warn('Firestore bookings snapshot error, fallback to local', err);
+      }, () => {
+        // Fallback silently to local state when backend is offline
       });
-    } catch (e) {
-      console.warn('Firestore subscription failed', e);
-    }
+    } catch {}
   }
 
   return () => {
@@ -361,10 +359,8 @@ export function subscribeServices(callback) {
           saveLocalServices(list);
           callback(list);
         }
-      }, (err) => console.warn('Firestore subscribeServices err', err));
-    } catch (err) {
-      console.warn('Firestore subscribeServices setup err', err);
-    }
+      }, () => {});
+    } catch {}
   }
 
   return () => {
@@ -527,10 +523,8 @@ export function subscribeCategories(callback) {
           saveLocalCategories(list);
           callback(list);
         }
-      }, (err) => console.warn('Firestore subscribeCategories err', err));
-    } catch (err) {
-      console.warn('Firestore subscribeCategories setup err', err);
-    }
+      }, () => {});
+    } catch {}
   }
 
   return () => {
@@ -709,8 +703,8 @@ export function subscribePendingWorkers(callback) {
           savePendingWorkers(list);
           callback(list);
         }
-      }, (err) => console.warn('Firestore subscribePendingWorkers err', err));
-    } catch (err) {}
+      }, () => {});
+    } catch {}
   }
 
   return () => {
