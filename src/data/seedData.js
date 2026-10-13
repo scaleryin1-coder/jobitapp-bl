@@ -194,7 +194,7 @@ export const initialServices = [
     categoryId: "cat_ac",
     categoryName: "AC Repair",
     workerName: "Amit Verma",
-    title: "AC Repair",
+    title: "AC Technician",
     badge: "Certified HVAC Specialist",
     about: "Expert air conditioner technician with 8+ years experience handling split, window, and inverter AC systems. Equipped with professional high-pressure jet pumps and gas gauges.",
     price: 450,
@@ -204,7 +204,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "/assets/images/ac_repair.jpg",
+    heroImage: "/assets/images/ac_technician_new.png",
     gallery: [
       "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=500&q=80",
       "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=500&q=80"
@@ -255,7 +255,7 @@ export const initialServices = [
     categoryId: "cat_electrician",
     categoryName: "Electrician",
     workerName: "Vikram Sen",
-    title: "Electrical Diagnosis",
+    title: "Electrician",
     badge: "Licensed Electrician",
     about: "Specialist in short-circuit detection, appliance installation, MCB trip troubleshooting, and modern home automation switches.",
     price: 320,
@@ -265,7 +265,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "/assets/images/electrical_diagnosis.jpg",
+    heroImage: "/assets/images/electrician_new.png",
     gallery: [
       "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=500&q=80"
     ],
@@ -403,7 +403,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "/assets/images/lawn_and_garden.jpg",
+    heroImage: "/assets/images/lawn_and_garden_new.png",
     details: ["Lawn mowing & hedge pruning", "Organic fertilizer treatment", "Potted plants trimming"],
     faqs: [{ q: "Do you take green waste away?", a: "Yes, full garden debris clearing is provided." }]
   },
@@ -463,7 +463,7 @@ export const initialServices = [
     city: "Melattur, Kerala",
     available: true,
     approved: true,
-    heroImage: "/assets/images/driver_service.jpg",
+    heroImage: "/assets/images/driver_new.png",
     details: ["Professional chauffeur in neat dark blue uniform", "Safe city & highway driving", "Punctual airport & corporate transfers"],
     faqs: [{ q: "Is the driver background verified?", a: "Yes, verified commercial driving license and safety background check." }]
   },
