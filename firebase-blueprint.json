@@ -194,9 +194,36 @@
         "isActive": { "type": "boolean" }
       },
       "required": ["id", "title", "isActive"]
+    },
+    "DailyGig": {
+      "title": "DailyGig",
+      "description": "Urgent short-term daily job vacancies and shift gigs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "shop_name": { "type": "string" },
+        "location": { "type": "string" },
+        "wage": { "type": "string" },
+        "duration": { "type": "string" },
+        "timing": { "type": "string" },
+        "category": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["urgent", "normal", "today"] },
+        "contact_number": { "type": "string" },
+        "whatsapp_number": { "type": "string" },
+        "description": { "type": "string" },
+        "employer_name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "filled", "expired"] },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "title", "shop_name", "location", "wage", "duration", "contact_number", "status"]
     }
   },
   "firestore": {
+    "/daily_gigs/{gigId}": {
+      "schema": { "$ref": "#/entities/DailyGig" },
+      "description": "Short-term daily job vacancies and shift gigs"
+    },
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "User profile documents"

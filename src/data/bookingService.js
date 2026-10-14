@@ -9,7 +9,7 @@ import {
   deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
-import { initialWorkers, initialServices, initialCategories } from './seedData';
+import { initialWorkers, initialServices, initialCategories, initialDailyGigs } from './seedData';
 import { ALL_MAIN_CATEGORIES } from './categoriesData';
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
@@ -18,6 +18,7 @@ const STORAGE_KEY_PENDING_WORKERS = 'jobit_pending_workers';
 const STORAGE_KEY_CUSTOMERS = 'jobit_customers';
 const STORAGE_KEY_SERVICES = 'jobit_services';
 const STORAGE_KEY_CATEGORIES = 'jobit_categories';
+const STORAGE_KEY_DAILY_GIGS = 'jobit_daily_gigs';
 
 const EVENT_BOOKINGS_CHANGED = 'jobit_bookings_changed';
 const EVENT_WORKERS_CHANGED = 'jobit_workers_changed';
@@ -25,6 +26,7 @@ const EVENT_PENDING_WORKERS_CHANGED = 'jobit_pending_workers_changed';
 const EVENT_CUSTOMERS_CHANGED = 'jobit_customers_changed';
 const EVENT_SERVICES_CHANGED = 'jobit_services_changed';
 const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
+const EVENT_DAILY_GIGS_CHANGED = 'jobit_daily_gigs_changed';
 
 // Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
 export const safeDbPromise = (promise, timeoutMs = 2500) => {
@@ -1208,4 +1210,129 @@ export function subscribeCustomers(callback) {
     window.removeEventListener('storage', handleLocalChange);
   };
 }
+
+// ============================================================================
+// DAILY GIGS & SHIFT WORK MARKETPLACE SERVICE
+// ============================================================================
+
+export function getLocalDailyGigs() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DAILY_GIGS);
+    if (!raw) {
+      saveLocalDailyGigs(initialDailyGigs);
+      return initialDailyGigs;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialDailyGigs;
+  } catch {
+    return initialDailyGigs;
+  }
+}
+
+export function saveLocalDailyGigs(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY_DAILY_GIGS, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent(EVENT_DAILY_GIGS_CHANGED, { detail: list }));
+  } catch (err) {
+    console.warn('Failed to save daily gigs locally', err);
+  }
+}
+
+/**
+ * Real-time reactive subscription for Daily Gigs
+ * Supports instant localStorage fallback + live Firestore snapshot listener
+ */
+export function subscribeDailyGigs(callback) {
+  let unsubFirestore = () => {};
+
+  const handleLocalChange = () => {
+    callback(getLocalDailyGigs());
+  };
+
+  window.addEventListener(EVENT_DAILY_GIGS_CHANGED, handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  // Push immediate state
+  callback(getLocalDailyGigs());
+
+  // Firestore sync if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      unsubFirestore = onSnapshot(collection(db, 'daily_gigs'), (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          // Merge with initial/local if list is non-empty
+          saveLocalDailyGigs(list);
+          callback(list);
+        }
+      }, (err) => {
+        console.warn('Firestore daily_gigs listener fallback to local', err);
+      });
+    } catch (err) {
+      console.warn('Firestore daily_gigs setup error', err);
+    }
+  }
+
+  return () => {
+    window.removeEventListener(EVENT_DAILY_GIGS_CHANGED, handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+    unsubFirestore();
+  };
+}
+
+/**
+ * Post a new daily gig / shift vacancy (both Firestore & localStorage)
+ */
+export async function createDailyGig(gigData) {
+  const newGigId = `gig_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const cleanGig = {
+    id: newGigId,
+    title: gigData.title?.trim() || 'Daily Shift Worker',
+    shop_name: gigData.shop_name?.trim() || 'Local Business',
+    location: gigData.location?.trim() || 'Melattur, Kerala',
+    wage: gigData.wage?.trim() || '₹800 / day',
+    duration: gigData.duration?.trim() || 'Today Only',
+    timing: gigData.timing?.trim() || 'Full Day',
+    category: gigData.category?.trim() || 'General Helper',
+    urgency: gigData.urgency || 'urgent',
+    contact_number: gigData.contact_number?.trim() || '+91 98471 00000',
+    whatsapp_number: (gigData.whatsapp_number || gigData.contact_number || '').replace(/[^0-9]/g, '') || '919847100000',
+    description: gigData.description?.trim() || 'Immediate requirement. Contact directly to confirm shift.',
+    employer_name: gigData.employer_name?.trim() || 'Shop Owner',
+    status: 'active',
+    created_at: new Date().toISOString()
+  };
+
+  // 1. Instant local update
+  const currentList = getLocalDailyGigs();
+  const updated = [cleanGig, ...currentList.filter(g => g.id !== newGigId)];
+  saveLocalDailyGigs(updated);
+
+  // 2. Persist to Firestore if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      await safeDbPromise(setDoc(doc(db, 'daily_gigs', newGigId), cleanGig));
+    } catch (err) {
+      console.warn('Failed to persist daily gig to Firestore', err);
+    }
+  }
+
+  return cleanGig;
+}
+
+/**
+ * Update a gig status (e.g. 'active', 'filled', 'expired')
+ */
+export async function updateDailyGigStatus(gigId, newStatus = 'filled') {
+  const currentList = getLocalDailyGigs();
+  const updated = currentList.map(g => g.id === gigId ? { ...g, status: newStatus } : g);
+  saveLocalDailyGigs(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await safeDbPromise(updateDoc(doc(db, 'daily_gigs', gigId), { status: newStatus }));
+    } catch (err) {}
+  }
+}
+
 

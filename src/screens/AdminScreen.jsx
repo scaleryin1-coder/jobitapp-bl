@@ -58,8 +58,11 @@ import {
   adminDeleteService,
   adminAddCategory,
   adminUpdateCategory,
-  adminDeleteCategory
+  adminDeleteCategory,
+  subscribeDailyGigs,
+  updateDailyGigStatus
 } from '../data/bookingService';
+import { PostGigModal } from '../components/gigs/PostGigModal';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { initialCategories, initialBanners, initialServices } from '../data/seedData';
@@ -85,6 +88,8 @@ export function AdminScreen({ onBack, onLogout }) {
   const [services, setServices] = useState(initialServices || []);
   const [categories, setCategories] = useState(initialCategories || []);
   const [banners, setBanners] = useState(initialBanners || []);
+  const [dailyGigs, setDailyGigs] = useState([]);
+  const [isPostGigOpen, setIsPostGigOpen] = useState(false);
 
   // Approvals & KYC Inspection
   const [selectedPendingWorker, setSelectedPendingWorker] = useState(null);
@@ -157,6 +162,7 @@ export function AdminScreen({ onBack, onLogout }) {
     const unsubCust = subscribeCustomers((list) => setCustomers(list || []));
     const unsubS = subscribeServices((list) => setServices(list || []));
     const unsubC = subscribeCategories((list) => setCategories(list || []));
+    const unsubGigs = subscribeDailyGigs((list) => setDailyGigs(list || []));
 
     return () => {
       unsubB();
@@ -165,6 +171,7 @@ export function AdminScreen({ onBack, onLogout }) {
       unsubCust();
       unsubS();
       unsubC();
+      unsubGigs();
     };
   }, []);
 
@@ -691,6 +698,16 @@ export function AdminScreen({ onBack, onLogout }) {
             >
               <ImageIcon className="w-3.5 h-3.5" />
               <span>Banners ({banners.length})</span>
+            </button>
+
+            <button
+              onClick={() => setTab('daily_gigs')}
+              className={`py-2 px-3 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'daily_gigs' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Daily Gigs ({dailyGigs.length})</span>
             </button>
           </div>
 
@@ -1716,6 +1733,137 @@ export function AdminScreen({ onBack, onLogout }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 8. TAB: DAILY GIGS & SHIFT BOARD MANAGEMENT              */}
+      {/* ========================================================= */}
+      {tab === 'daily_gigs' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-3xl bg-white border border-slate-100 shadow-xs flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-900">Daily Gigs & Shift Vacancies</h4>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Active short-term vacancies posted by local shops & employers
+              </p>
+            </div>
+            <button
+              onClick={() => setIsPostGigOpen(true)}
+              className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-slate-950 text-xs font-black shadow-xs flex items-center gap-1.5 transition cursor-pointer border border-amber-300"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <span>Post New Vacancy</span>
+            </button>
+          </div>
+
+          {/* Quick Stats Strip */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="p-3 rounded-2xl bg-white border border-slate-100 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total</span>
+              <span className="text-lg font-black text-slate-900 font-mono tabular-nums">{dailyGigs.length}</span>
+            </div>
+            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Active</span>
+              <span className="text-lg font-black text-emerald-900 font-mono tabular-nums">
+                {dailyGigs.filter(g => g.status === 'active').length}
+              </span>
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Filled</span>
+              <span className="text-lg font-black text-slate-700 font-mono tabular-nums">
+                {dailyGigs.filter(g => g.status === 'filled').length}
+              </span>
+            </div>
+          </div>
+
+          {/* Gigs List */}
+          <div className="space-y-2.5">
+            {dailyGigs.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-slate-100">
+                <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-600">No daily gigs currently posted</p>
+              </div>
+            ) : (
+              dailyGigs.map((g) => (
+                <div 
+                  key={g.id} 
+                  className={`p-4 rounded-2xl bg-white border transition shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    g.status === 'filled' ? 'opacity-70 border-slate-200 bg-slate-50/50' : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        g.urgency === 'urgent' ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-800'
+                      }`}>
+                        {g.urgency === 'urgent' ? '⚡ Urgent' : 'Standard'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        g.status === 'filled' ? 'bg-slate-200 text-slate-700' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {g.status === 'filled' ? 'Filled / Closed' : 'Active Live'}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">·</span>
+                      <span className="text-xs font-bold text-slate-500">{g.duration}</span>
+                    </div>
+
+                    <h5 className="text-sm font-black text-slate-900">{g.title}</h5>
+
+                    <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+                      <span className="font-bold text-[#0EA5E0] flex items-center gap-1">
+                        <Building2 className="w-3.5 h-3.5" />
+                        {g.shop_name}
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-500">
+                        <MapPin className="w-3 h-3 text-rose-500" />
+                        {g.location}
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        {g.timing}
+                      </span>
+                    </div>
+
+                    <div className="pt-1 flex items-center gap-2">
+                      <span className="text-xs font-black text-emerald-800 font-mono tabular-nums bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                        {g.wage}
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Contact: <strong className="text-slate-800">{g.contact_number}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <button
+                      onClick={() => updateDailyGigStatus(g.id, g.status === 'active' ? 'filled' : 'active')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                        g.status === 'active'
+                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                      }`}
+                    >
+                      {g.status === 'active' ? 'Mark Filled' : 'Reactivate'}
+                    </button>
+                    <a
+                      href={`tel:${g.contact_number}`}
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer"
+                      title="Call Employer"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <PostGigModal
+            isOpen={isPostGigOpen}
+            onClose={() => setIsPostGigOpen(false)}
+            currentCity="Melattur, Kerala"
+          />
         </div>
       )}
 

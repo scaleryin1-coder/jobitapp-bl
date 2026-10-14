@@ -39,6 +39,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // DAILY GIGS & SHORT-TERM JOB VACANCIES
+    match /daily_gigs/{gigId} {
+      allow read, write: if true;
+    }
+
     // CHATS COLLECTION & SUBCOLLECTION
     match /chats/{bookingId} {
       allow read, write: if true;

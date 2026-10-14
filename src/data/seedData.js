@@ -786,3 +786,92 @@ export const initialReviews = [
     date: "1 week ago"
   }
 ];
+
+export const initialDailyGigs = [
+  {
+    id: "gig_petrol_attendant",
+    title: "Petrol Pump Attendant",
+    shop_name: "HPCL Auto Fuels Melattur",
+    location: "Melattur Junction, Kerala",
+    wage: "₹800 / day",
+    duration: "Today Only",
+    timing: "8:00 AM - 4:00 PM",
+    category: "Fuel & Auto",
+    urgency: "urgent",
+    contact_number: "+91 98471 23456",
+    whatsapp_number: "919847123456",
+    description: "Urgent dispenser attendant for day shift. Immediate spot joining with cash wage payout at shift end.",
+    employer_name: "HPCL Station Manager",
+    status: "active",
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString()
+  },
+  {
+    id: "gig_supermarket_cashier",
+    title: "Supermarket Billing Assistant",
+    shop_name: "Al-Madina Fresh Hypermarket",
+    location: "Main Road, Melattur",
+    wage: "₹850 / day",
+    duration: "2 Days",
+    timing: "10:00 AM - 7:00 PM",
+    category: "Retail & Billing",
+    urgency: "urgent",
+    contact_number: "+91 94472 89101",
+    whatsapp_number: "919447289101",
+    description: "POS billing support needed for festival weekend footfall. Basic barcode scanner experience preferred.",
+    employer_name: "Store Manager",
+    status: "active",
+    created_at: new Date(Date.now() - 3600000 * 4).toISOString()
+  },
+  {
+    id: "gig_shop_helper",
+    title: "Shop Helper & Stock Assistant",
+    shop_name: "City Hardware & Sanitary",
+    location: "Bus Stand Road, Melattur",
+    wage: "₹750 / day",
+    duration: "1-Day Job",
+    timing: "9:00 AM - 6:00 PM",
+    category: "Shop Helper",
+    urgency: "today",
+    contact_number: "+91 98950 44321",
+    whatsapp_number: "919895044321",
+    description: "Assist unloading carton shipments and shelf restocking. Tea and snacks provided.",
+    employer_name: "City Hardware",
+    status: "active",
+    created_at: new Date(Date.now() - 3600000 * 6).toISOString()
+  },
+  {
+    id: "gig_delivery_driver",
+    title: "Express Parcel Delivery Staff",
+    shop_name: "Melattur Logistics Hub",
+    location: "Railway Station Road, Melattur",
+    wage: "₹900 / day + Fuel",
+    duration: "Part-Time",
+    timing: "1:00 PM - 7:00 PM",
+    category: "Delivery & Logistics",
+    urgency: "urgent",
+    contact_number: "+91 97455 67890",
+    whatsapp_number: "919745567890",
+    description: "Local area parcel delivery within 5 km radius. Must have two-wheeler and valid driving license.",
+    employer_name: "Hub Supervisor",
+    status: "active",
+    created_at: new Date(Date.now() - 3600000 * 9).toISOString()
+  },
+  {
+    id: "gig_cafe_helper",
+    title: "Cafe Counter & Table Assistant",
+    shop_name: "Malabar Tea House & Bakers",
+    location: "Town Square, Melattur",
+    wage: "₹700 / day",
+    duration: "1-Day Job",
+    timing: "7:00 AM - 3:30 PM",
+    category: "Food & Cafe",
+    urgency: "normal",
+    contact_number: "+91 96051 12233",
+    whatsapp_number: "919605112233",
+    description: "Morning shift customer service and table turnover assistance. Free breakfast and lunch included.",
+    employer_name: "Tea House Owner",
+    status: "active",
+    created_at: new Date(Date.now() - 3600000 * 12).toISOString()
+  }
+];
+
