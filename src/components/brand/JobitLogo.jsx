@@ -43,13 +43,17 @@ export function JobitLogo({
         onClick={onClick}
       >
         <img
-          src="/jobit-logo.png"
+          src="/apple-touch-icon.png?v=2"
           alt="JOBit - Reliable Local Services | Melattur"
           className="w-full h-full object-contain p-1"
           referrerPolicy="no-referrer"
           onError={(e) => {
-            // Fallback to SVG if image fails
-            e.currentTarget.style.display = 'none';
+            // Fallback to jobit-logo.png or SVG if image fails
+            if (e.currentTarget.src.includes('apple-touch-icon')) {
+              e.currentTarget.src = '/jobit-logo.png?v=2';
+            } else {
+              e.currentTarget.style.display = 'none';
+            }
           }}
         />
       </div>

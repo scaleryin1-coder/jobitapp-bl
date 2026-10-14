@@ -1,1 +1,45 @@
-{"name":"JOBit","short_name":"JOBit","description":"Hyperlocal home service and job marketplace connecting customers and verified workers with transparent pricing.","start_url":"/","display":"standalone","background_color":"#FFFFFF","theme_color":"#0EA5E0","lang":"en","scope":"/","orientation":"portrait","icons":[{"src":"/pwa-192x192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"/pwa-512x512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"/pwa-maskable-192x192.png","sizes":"192x192","type":"image/png","purpose":"maskable"},{"src":"/pwa-maskable-512x512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}
+{
+  "id": "/",
+  "name": "JOBit",
+  "short_name": "JOBit",
+  "description": "Hyperlocal home service and job marketplace connecting customers and verified workers with transparent pricing.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0EA5E0",
+  "lang": "en",
+  "scope": "/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png?v=2",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-192x192.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -606,7 +606,7 @@ export function ProfileDrawerModal({
                     <span>Download SVG</span>
                   </a>
                   <a
-                    href="/jobit-logo.png"
+                    href="/apple-touch-icon.png?v=2"
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 py-2 px-3 rounded-xl bg-[#0B172E] hover:bg-[#1E293B] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"

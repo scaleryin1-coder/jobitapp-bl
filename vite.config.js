@@ -7,11 +7,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'jobit-logo.png'],
       devOptions: {
         enabled: true
       },
       manifest: {
+        id: '/',
         name: 'JOBit',
         short_name: 'JOBit',
         description: 'Hyperlocal home service and job marketplace connecting customers and verified workers with transparent pricing.',
@@ -23,25 +24,31 @@ export default defineConfig({
         background_color: '#FFFFFF',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/apple-touch-icon.png?v=2',
+            sizes: '180x180',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-192x192.png?v=2',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/pwa-512x512.png?v=2',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-maskable-192x192.png',
+            src: '/pwa-maskable-192x192.png?v=2',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'maskable'
           },
           {
-            src: '/pwa-maskable-512x512.png',
+            src: '/pwa-maskable-512x512.png?v=2',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
