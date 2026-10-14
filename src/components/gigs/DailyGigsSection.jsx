@@ -77,28 +77,28 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
 
   return (
     <section className="px-5 my-5 select-none">
-      {/* 1. Brand-Aligned Dark Sleek Header & Hero Action Strip */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-[#0B1528] via-[#0F1E38] to-[#0A1424] p-4 sm:p-5 shadow-[0_8px_28px_rgba(11,21,40,0.25)] border border-[#1E3A8A]/50 text-white overflow-hidden mb-3">
+      {/* 1. Soft Pastel Yellow Header & Hero Action Strip */}
+      <div className="relative rounded-3xl bg-gradient-to-br from-[#FEF3C7] via-[#FEF9C3] to-[#FFFBEB] p-4 sm:p-5 shadow-[0_4px_20px_rgba(245,158,11,0.06)] border border-[#FDE68A]/80 text-slate-900 overflow-hidden mb-3">
         {/* Subtle Ambient Decorative Glow Accents */}
-        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#0EA5E0]/15 blur-2xl pointer-events-none" />
-        <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full bg-[#4B6EF5]/15 blur-xl pointer-events-none" />
+        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-amber-300/20 blur-2xl pointer-events-none" />
+        <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full bg-yellow-200/30 blur-xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0EA5E0]/15 text-[#38BDF8] border border-[#0EA5E0]/30 text-[10px] font-black uppercase tracking-wider">
-                <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/90 text-amber-900 border border-amber-300/70 text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
                 <span>Urgent Daily Vacancies</span>
               </span>
-              <span className="text-[11px] font-bold text-slate-400">
+              <span className="text-[11px] font-bold text-amber-950/75">
                 · Spot Cash Wage
               </span>
             </div>
 
-            <h3 className="text-xl font-black text-white tracking-tight leading-tight">
+            <h3 className="text-xl font-black text-slate-950 tracking-tight leading-tight">
               Daily Gigs & Shift Work
             </h3>
-            <p className="text-xs font-medium text-slate-300 max-w-md">
+            <p className="text-xs font-bold text-slate-700 max-w-md leading-snug">
               Short-term staff needed today in {currentCity.split(',')[0]} (Petrol pumps, stores, helpers)
             </p>
           </div>
@@ -107,9 +107,9 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
           <button
             type="button"
             onClick={() => setIsPostModalOpen(true)}
-            className="self-start sm:self-center px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-xs font-black shadow-[0_4px_16px_rgba(14,165,224,0.35)] transition active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer border border-[#38BDF8]/40"
+            className="self-start sm:self-center px-4 py-2.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white text-xs font-black shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer border border-slate-800"
           >
-            <Plus className="w-4 h-4 text-white stroke-[3]" />
+            <Plus className="w-4 h-4 text-amber-400 stroke-[3]" />
             <span>Post a Gig</span>
           </button>
         </div>

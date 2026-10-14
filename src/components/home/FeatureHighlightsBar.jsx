@@ -3,7 +3,6 @@ import {
   CalendarClock, 
   UserCheck, 
   ShieldCheck, 
-  BadgePercent, 
   CreditCard 
 } from 'lucide-react';
 
@@ -27,12 +26,6 @@ const HIGHLIGHT_ITEMS = [
     line2: 'WARRANTY'
   },
   {
-    id: 'pricing',
-    icon: BadgePercent,
-    line1: 'TRANSPARENT',
-    line2: 'PRICING'
-  },
-  {
     id: 'payments',
     icon: CreditCard,
     line1: 'ONLINE',
@@ -44,36 +37,36 @@ export function FeatureHighlightsBar({ className = '' }) {
   return (
     <section 
       aria-label="Platform Highlights & Trust Guarantees"
-      className={`w-full py-6 mt-4 mb-2 border-y border-slate-200/90 bg-slate-50/70 overflow-hidden select-none ${className}`}
+      className={`w-full py-2.5 px-2 my-2 border-y border-slate-200/70 bg-slate-50/50 select-none ${className}`}
     >
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Horizontal scrollable track with vertical stacked items */}
-        <div className="flex items-center gap-1 sm:gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth justify-start sm:justify-center py-1">
+      <div className="max-w-4xl mx-auto">
+        {/* Fixed 4-column compact row without any horizontal scroll */}
+        <div className="flex items-center justify-between w-full">
           {HIGHLIGHT_ITEMS.map((item, idx) => {
             const Icon = item.icon;
             return (
               <React.Fragment key={item.id}>
                 {/* Vertical Stack: Icon on top, Text below */}
-                <div className="flex flex-col items-center justify-center text-center shrink-0 min-w-[115px] sm:min-w-[135px] md:min-w-[150px] px-2 py-1 group cursor-default">
-                  {/* Prominent Outline Icon */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center mb-2.5 group-hover:border-slate-300 group-hover:shadow-xs transition-all">
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-0.5 py-0.5 group cursor-default">
+                  {/* Compact Monochrome Outline Icon Tile */}
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex items-center justify-center mb-1 group-hover:border-slate-300 transition-all shrink-0">
                     <Icon 
-                      className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-slate-500 group-hover:text-slate-700 stroke-[1.6] transition-colors shrink-0" 
+                      className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-500 group-hover:text-slate-700 stroke-[1.7] transition-colors shrink-0" 
                       aria-hidden="true"
                     />
                   </div>
 
-                  {/* Balanced 2-Line Bold Uppercase Text */}
-                  <div className="text-[11px] sm:text-[11.5px] font-black text-slate-500 group-hover:text-slate-700 tracking-wider uppercase leading-tight transition-colors">
-                    <span className="block">{item.line1}</span>
-                    <span className="block">{item.line2}</span>
+                  {/* Compact 2-Line Bold Uppercase Text */}
+                  <div className="text-[8.5px] sm:text-[9.5px] md:text-[10.5px] font-black text-slate-500 group-hover:text-slate-700 tracking-tight uppercase leading-[1.15] transition-colors max-w-[76px] sm:max-w-none">
+                    <span className="block truncate">{item.line1}</span>
+                    <span className="block truncate">{item.line2}</span>
                   </div>
                 </div>
 
                 {/* Subtle Gray Dot Divider between items */}
                 {idx < HIGHLIGHT_ITEMS.length - 1 && (
                   <span 
-                    className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0 mx-1 sm:mx-2 self-center opacity-75" 
+                    className="w-1 h-1 rounded-full bg-slate-300 shrink-0 self-center opacity-70" 
                     aria-hidden="true" 
                   />
                 )}
