@@ -15,6 +15,7 @@ import { FilterModal } from '../components/home/FilterModal';
 import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { NotificationModal } from './NotificationModal';
 import { LocationPickerModal } from './LocationPickerModal';
+import { matchesStrictPrefix } from '../utils/searchUtils';
 
 export function CustomerDashboard({ 
   onSelectCategory, 
@@ -99,21 +100,13 @@ export function CustomerDashboard({
     };
   }, []);
 
-  // Filter services by search query and category/rating/price filter menu
+  // Filter services by search query (strict prefix match) and category/rating/price
   const searchResults = (services || []).filter(s => {
     if (!s) return false;
 
-    // If search query is typed
+    // Strict Prefix-Based Matching when user types
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesQuery = (
-        (s.title && s.title.toLowerCase().includes(q)) ||
-        (s.categoryName && s.categoryName.toLowerCase().includes(q)) ||
-        (s.badge && s.badge.toLowerCase().includes(q)) ||
-        (s.about && s.about.toLowerCase().includes(q)) ||
-        (s.details && s.details.some(d => d.toLowerCase().includes(q)))
-      );
-      if (!matchesQuery) return false;
+      if (!matchesStrictPrefix(s, searchQuery)) return false;
     } else if (selectedCategoryFilter === 'All' && minRatingFilter === 0 && maxPriceFilter === 2000) {
       // No active search and no custom filter -> no dropdown list
       return false;
@@ -199,6 +192,8 @@ export function CustomerDashboard({
           setMaxPriceFilter(2000);
         }}
         searchResults={searchResults}
+        services={services}
+        categories={categories}
         onSelectService={(serv) => onSelectService?.(serv)}
         onBookService={(serv) => onBookService?.(serv)}
       />

@@ -12,6 +12,7 @@ import {
 import { initialCategories, initialServices } from '../data/seedData';
 import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { subscribeServices } from '../data/bookingService';
+import { matchesStrictPrefix, highlightPrefix, getMatchedSnippet } from '../utils/searchUtils';
 
 export function ServiceListScreen({ 
   onBack, 
@@ -130,14 +131,9 @@ export function ServiceListScreen({
       return false;
     }
 
-    // 2. Search Query
+    // 2. Search Query (Strict Prefix / Exact Start Match)
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchTitle = (service.title || '').toLowerCase().includes(q);
-      const matchCat = (service.categoryName || '').toLowerCase().includes(q);
-      const matchBadge = (service.badge || '').toLowerCase().includes(q);
-      const matchAbout = (service.about || '').toLowerCase().includes(q);
-      if (!matchTitle && !matchCat && !matchBadge && !matchAbout) {
+      if (!matchesStrictPrefix(service, searchQuery)) {
         return false;
       }
     }
@@ -463,8 +459,18 @@ export function ServiceListScreen({
                 {/* Middle: Service Title, Star rating with review count, Hourly rate/price */}
                 <div className="flex-1 min-w-0 pr-1">
                   <h3 className="text-sm sm:text-base font-extrabold text-[#111827] leading-snug truncate">
-                    {service.title}
+                    {searchQuery.trim() ? highlightPrefix(service.title, searchQuery) : service.title}
                   </h3>
+                  {searchQuery.trim() && (() => {
+                    const snippet = getMatchedSnippet(service, searchQuery);
+                    if (!snippet) return null;
+                    return (
+                      <div className="text-[10px] text-slate-500 font-semibold mt-0.5 truncate flex items-center gap-1">
+                        <span className="text-[#00A3E0] font-black">•</span>
+                        <span>Matched: {highlightPrefix(snippet.label || snippet.text, searchQuery)}</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Star rating with review count: e.g. ★ 4.8 (180 reviews) */}
                   <div className="flex items-center gap-1.5 mt-1 text-xs">

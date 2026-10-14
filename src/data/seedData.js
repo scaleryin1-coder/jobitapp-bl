@@ -328,6 +328,13 @@ export const initialServices = [
       "Switchboard rewiring & socket replacement",
       "Chandelier and LED strip fitting"
     ],
+    subCategories: [
+      "Diagnostics & Short Circuit Check",
+      "Domestic Wiring & Switchboard",
+      "Distribution Board & MCB Repair",
+      "Doorbell & Lighting Installation"
+    ],
+    tags: ["Diagnostics", "Domestic Wiring", "Distribution Box"],
     faqs: [
       { q: "Is emergency service supported?", a: "Yes, we dispatch with heavy-duty safety gear." }
     ]
@@ -504,7 +511,7 @@ export const initialServices = [
   {
     id: "serv_driver_1",
     workerId: "worker_rajesh",
-    categoryId: "cat_car",
+    categoryId: "cat_driver",
     categoryName: "Driver",
     workerName: "Vikram Executive Chauffeur",
     title: "Driver",
@@ -519,7 +526,46 @@ export const initialServices = [
     approved: true,
     heroImage: "/assets/images/driver_new.png",
     details: ["Professional chauffeur in neat dark blue uniform", "Safe city & highway driving", "Punctual airport & corporate transfers"],
+    subCategories: [
+      "Driver",
+      "Doorstep Chauffeur",
+      "Safe Highway & City Driving",
+      "Airport Transfer Chauffeur"
+    ],
+    tags: ["Driver", "Chauffeur", "Driving Service"],
     faqs: [{ q: "Is the driver background verified?", a: "Yes, verified commercial driving license and safety background check." }]
+  },
+  {
+    id: "serv_drain_1",
+    workerId: "worker_rajesh",
+    categoryId: "cat_drainage",
+    categoryName: "Drain Cleaning",
+    workerName: "AquaFlow Drain Specialists",
+    title: "Drain Cleaning & Gutter Wash",
+    badge: "High-Pressure Jet Unclogging",
+    about: "Professional high-pressure drain cleaning, stormwater gutter washing, kitchen & bathroom waste pipe unclogging, and sludge evacuation.",
+    price: 499,
+    rating: 4.9,
+    reviewCount: 275,
+    ordersCompleted: 390,
+    city: "Melattur, Kerala",
+    available: true,
+    approved: true,
+    heroImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=800&q=80",
+    details: [
+      "High-pressure rotary drain jetting & auger clearing",
+      "Outdoor storm gutter wash & debris clearance",
+      "Kitchen sink & bathroom floor drain unclogging",
+      "Flat ₹99 inspection & doorstep booking"
+    ],
+    subCategories: [
+      "Drain Cleaning",
+      "Drain & Gutter Wash",
+      "Kitchen Drain Pipe Unclogging",
+      "Stormwater Gutter Descaling"
+    ],
+    tags: ["Drain Cleaning", "Drain & Gutter Wash", "Drainage", "Drain Wash"],
+    faqs: [{ q: "How fast can heavy drain blockages be cleared?", a: "Most severe blockages are cleared within 30-45 minutes using motorized drain augers and pressure jets." }]
   },
   {
     id: "serv_car_1",

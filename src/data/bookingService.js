@@ -425,15 +425,26 @@ export function getLocalServices() {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Gracefully sync local services if updated asset imagery is provided in seedData
+      // Gracefully sync local services if updated asset imagery/details are provided in seedData
+      const existingIds = new Set(parsed.map(s => s.id));
       const synced = parsed.map(serv => {
         const init = (initialServices || []).find(i => i.id === serv.id);
-        if (init && init.heroImage && init.heroImage.startsWith('/assets/images/')) {
-          return { ...serv, heroImage: init.heroImage, title: init.title || serv.title };
+        if (init) {
+          return {
+            ...serv,
+            title: init.title || serv.title,
+            categoryName: init.categoryName || serv.categoryName,
+            subCategories: init.subCategories || serv.subCategories,
+            tags: init.tags || serv.tags,
+            heroImage: (init.heroImage && init.heroImage.startsWith('/assets/images/')) ? init.heroImage : (serv.heroImage || init.heroImage)
+          };
         }
         return serv;
       });
-      return synced;
+      // Add any new initialServices not yet present in localStorage
+      const missing = (initialServices || []).filter(s => !existingIds.has(s.id));
+      const merged = [...synced, ...missing];
+      return merged;
     }
     return initialServices || [];
   } catch {
