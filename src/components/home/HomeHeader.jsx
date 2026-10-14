@@ -20,34 +20,14 @@ export function HomeHeader({
     <header className="px-5 pt-4 pb-2.5 flex items-center justify-between">
       {/* Left: Profile Icon / Avatar & Clean Location Detail */}
       <div className="flex items-center gap-3">
-        {/* Profile Avatar Button in Primary Navy Blue Theme */}
+        {/* Clean Minimalist Static Profile Icon Button */}
         <button
           type="button"
           onClick={onOpenProfileDrawer}
-          title={isLoggedIn ? `${currentUser.name} - Open Profile` : 'Sign In / Profile'}
-          className="relative w-11 h-11 rounded-2xl bg-[#0B1528] text-white ring-2 ring-[#1E3A8A]/50 shadow-[0_4px_14px_rgba(11,21,40,0.25)] flex items-center justify-center cursor-pointer active:scale-95 transition-all hover:ring-[#4B6EF5] group overflow-hidden shrink-0"
+          title={isLoggedIn ? `${currentUser.name} - Account` : 'Sign In / Account'}
+          className="w-11 h-11 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 hover:bg-slate-50 text-slate-500 hover:text-slate-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all group shrink-0"
         >
-          {isLoggedIn ? (
-            userPhoto ? (
-              <img
-                src={userPhoto}
-                alt={displayName || 'User'}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            ) : (
-              <span className="font-black text-sm tracking-wide text-white group-hover:scale-105 transition-transform">
-                {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
-              </span>
-            )
-          ) : (
-            <div className="flex flex-col items-center justify-center">
-              <UserIcon className="w-5 h-5 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
-              <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-[#0EA5E0] ring-2 ring-[#0B1528]" />
-            </div>
-          )}
+          <UserIcon className="w-5 h-5 stroke-[1.8] group-hover:scale-105 transition-transform" />
         </button>
 
         {/* Location & Name Details */}

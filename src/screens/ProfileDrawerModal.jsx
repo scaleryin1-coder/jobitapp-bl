@@ -249,28 +249,13 @@ export function ProfileDrawerModal({
           </div>
 
           {/* ======================================================== */}
-          {/* TOP PROFILE INFO (PLAIN HIGH-CONTRAST LAYOUT)            */}
+          {/* TOP PROFILE INFO (MINIMALIST STATIC ICON LAYOUT)          */}
           {/* ======================================================== */}
           {isLoggedIn ? (
-            <div className="flex items-start gap-4">
-              {/* Profile Avatar with Cyan Accent Ring */}
-              <div className="relative shrink-0">
-                <div className="w-16 h-16 rounded-2xl bg-white ring-2 ring-[#0EA5E0] flex items-center justify-center overflow-hidden shadow-sm">
-                  {userPhoto ? (
-                    <img
-                      src={userPhoto}
-                      alt={displayName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl font-black text-[#0EA5E0]">
-                      {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
-                    </span>
-                  )}
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-emerald-500 ring-2 ring-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs" title="Verified Single Account">
-                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                </div>
+            <div className="flex items-start gap-3.5">
+              {/* Single Clean Standard Static Profile Icon */}
+              <div className="w-13 h-13 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
+                <User className="w-6 h-6 stroke-[1.8]" />
               </div>
 
               {/* User Identity Details */}
@@ -279,19 +264,19 @@ export function ProfileDrawerModal({
                   {displayName}
                 </h3>
                 <p className="text-xs font-semibold text-slate-600 mt-0.5 truncate flex items-center gap-1">
-                  <Phone className="w-3 h-3 text-[#0EA5E0] shrink-0" />
+                  <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                   <span>{displayPhone}</span>
                 </p>
-                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-[#D0EEF9] text-[#0EA5E0] text-[10px] font-black shadow-xs">
+                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 text-[10px] font-bold shadow-2xs">
                   <span>{currentUser?.role === 'admin' ? 'Admin Profile' : (currentUser?.role === 'worker' ? 'Verified Pro' : 'Customer Account')}</span>
                 </div>
               </div>
             </div>
           ) : (
             /* Unauthenticated Guest Header */
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white ring-2 ring-[#0EA5E0] flex items-center justify-center text-[#0EA5E0] shrink-0 shadow-sm">
-                <User className="w-7 h-7" />
+            <div className="flex items-start gap-3.5">
+              <div className="w-13 h-13 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center text-slate-400 shrink-0">
+                <User className="w-6 h-6 stroke-[1.8]" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
