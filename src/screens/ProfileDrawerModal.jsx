@@ -15,9 +15,13 @@ import {
   Edit2,
   Check,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Download,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { JobitLogo } from '../components/brand/JobitLogo';
 
 export function ProfileDrawerModal({ 
   isOpen, 
@@ -536,6 +540,9 @@ export function ProfileDrawerModal({
           {/* ======================================================== */}
           {/* SUB-VIEW: 1. ABOUT US                                    */}
           {/* ======================================================== */}
+          {/* ======================================================== */}
+          {/* SUB-VIEW: 1. ABOUT US & BRAND IDENTITY                    */}
+          {/* ======================================================== */}
           {activeSubView === 'about' && (
             <div className="space-y-4">
               <div>
@@ -543,6 +550,71 @@ export function ProfileDrawerModal({
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                   JOBit is Melattur's premier on-demand hyperlocal home services platform. We bridge local households with thoroughly background-verified professionals across Malappuram district.
                 </p>
+              </div>
+
+              {/* Official Brand Logo Card */}
+              <div className="p-4 rounded-3xl bg-white border border-[#D0EEF9] shadow-sm flex flex-col items-center text-center">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#D32F2F] mb-1">
+                  Official Brand Identity
+                </span>
+                
+                {/* Crisp Vector Logo */}
+                <div className="w-full flex justify-center py-2">
+                  <JobitLogo variant="full" size={190} showTagline={true} />
+                </div>
+
+                {/* Color Scheme Badges */}
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#D32F2F]" />
+                    <span className="text-[10px] font-bold text-red-700">Vibrant Red (#D32F2F)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#0B172E]" />
+                    <span className="text-[10px] font-bold text-slate-800">Navy Blue (#0B172E)</span>
+                  </div>
+                </div>
+
+                {/* Icon Breakdown Pill Highlights */}
+                <div className="w-full mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-1.5 text-left text-[10px]">
+                  <div className="p-2 rounded-xl bg-slate-50 text-slate-700">
+                    <p className="font-bold text-[#D32F2F]">📍 Location Pin</p>
+                    <p className="text-[9px] text-slate-500">Hyperlocal Melattur</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 text-slate-700">
+                    <p className="font-bold text-[#0B172E]">🔧 Hand & Spanner</p>
+                    <p className="text-[9px] text-slate-500">Plumbing & Mechanics</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 text-slate-700">
+                    <p className="font-bold text-[#0B172E]">🏠 House & Check</p>
+                    <p className="text-[9px] text-slate-500">Verified Doorstep</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 text-slate-700">
+                    <p className="font-bold text-[#0B172E]">⚡⚡ Power & Ladder</p>
+                    <p className="text-[9px] text-slate-500">Electrical & Tree Climbers</p>
+                  </div>
+                </div>
+
+                {/* Action Links */}
+                <div className="flex items-center gap-2 w-full mt-3">
+                  <a
+                    href="/jobit-logo.svg"
+                    download="JOBit-Logo.svg"
+                    className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download SVG</span>
+                  </a>
+                  <a
+                    href="/jobit-logo.png"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 py-2 px-3 rounded-xl bg-[#0B172E] hover:bg-[#1E293B] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>View PNG</span>
+                  </a>
+                </div>
               </div>
 
               <div className="space-y-2.5">

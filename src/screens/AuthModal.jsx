@@ -9,11 +9,11 @@ import {
   ShieldCheck, 
   Briefcase, 
   Sparkles, 
-  ArrowRight,
   UserCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isFirebaseConfigured } from '../firebase';
+import { JobitLogo } from '../components/brand/JobitLogo';
 
 export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }) {
   const { loginWithPhone, checkPhoneRegistered, loginAsWorker } = useAuth();
@@ -215,10 +215,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
         {/* STEP 1: PHONE INPUT */}
         {step === 'phone' && (
           <form onSubmit={handleSendOtp} className="space-y-3.5">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight">Login to JOBit</h3>
+            <div className="flex flex-col items-center text-center pb-1">
+              <JobitLogo variant="horizontal" showTagline={false} className="mb-1" />
               <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                Hyperlocal home services marketplace
+                Hyperlocal home services marketplace • Melattur
               </p>
             </div>
 

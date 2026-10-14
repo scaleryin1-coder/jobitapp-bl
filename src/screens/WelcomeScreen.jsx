@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, ShieldCheck, Star } from 'lucide-react';
+import { JobitLogo } from '../components/brand/JobitLogo';
 
 const WELCOME_HERO_IMAGE_URL = 'https://i.imgur.com/1OViWYh.png';
 
@@ -41,21 +42,13 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
         
         {/* Top Overlay Header: JOBit Brand Badge & Skip Button */}
         <div className="absolute top-4 inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-none">
-          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-200/70 shadow-md">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0EA5E0] to-[#38BDF8] flex items-center justify-center text-white shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 fill-white" />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="font-extrabold text-sm tracking-tight text-slate-900">
-                JOB<span className="text-[#0EA5E0]">it</span>
-              </span>
-              <span className="text-[10px] text-slate-500 font-semibold">• Pro</span>
-            </div>
+          <div className="bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-slate-200/80 shadow-md">
+            <JobitLogo variant="horizontal" showTagline={false} />
           </div>
 
           <button
             onClick={onGetStarted}
-            className="pointer-events-auto text-xs font-bold text-slate-700 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-200/80 hover:bg-white hover:text-[#0EA5E0] transition-all active:scale-95 cursor-pointer shadow-md"
+            className="pointer-events-auto text-xs font-bold text-slate-700 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-200/80 hover:bg-white hover:text-[#D32F2F] transition-all active:scale-95 cursor-pointer shadow-md"
           >
             Skip
           </button>
