@@ -74,12 +74,12 @@
       </g>
     </g>
 
-    <!-- 3. TYPOGRAPHY: 'JOBit' (Vibrant Red 'JOB' and Deep Navy Blue 'it') -->
+    <!-- 3. TYPOGRAPHY: 'JOBit' (Navy Blue 'JOB' and Vivid Red 'it') -->
     <g id="brand-text" transform="translate(250, 395)">
       <!-- Rendered as high-contrast paths/text with standard sans-serif font stack -->
       <text text-anchor="middle" font-family="'Outfit', 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="78" letter-spacing="-1">
-        <tspan fill="#D32F2F">JOB</tspan>
-        <tspan dx="4" fill="#0B172E">it</tspan>
+        <tspan fill="#0B172E">JOB</tspan>
+        <tspan dx="4" fill="#D32F2F">it</tspan>
       </text>
     </g>
 

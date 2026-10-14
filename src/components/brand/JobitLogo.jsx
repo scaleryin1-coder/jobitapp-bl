@@ -13,8 +13,8 @@ import React from 'react';
  *   - Water droplet with power symbol (water/utilities)
  *   - Clean vertical ladder silhouette (tree services/climbing)
  * - Modern sans-serif 'JOBit' typography:
- *   - 'JOB' (ALL CAPS, bold) in rich Red (#D32F2F)
- *   - 'it' (bold) in deep Navy Blue (#0B172E)
+ *   - 'JOB' (ALL CAPS, bold) in deep Navy Blue (#0B172E)
+ *   - 'it' (bold) in rich Red (#D32F2F)
  * - Tagline: 'Reliable Local Services | Melattur' in deep navy blue
  */
 export function JobitLogo({
@@ -87,8 +87,8 @@ export function JobitLogo({
         {/* Text */}
         <div className="flex flex-col leading-none">
           <div className="flex items-baseline font-extrabold tracking-tight">
-            <span className="text-[#D32F2F] text-lg font-black font-sans">JOB</span>
-            <span className="text-[#0B172E] text-lg font-black font-sans ml-0.5">it</span>
+            <span className="text-[#0B172E] text-lg font-black font-sans">JOB</span>
+            <span className="text-[#D32F2F] text-lg font-black font-sans ml-0.5">it</span>
           </div>
           {showTagline && (
             <span className="text-[9px] font-bold text-[#0B172E] tracking-tight mt-0.5 opacity-90">
@@ -181,7 +181,7 @@ export function JobitLogo({
           </g>
         </g>
 
-        {/* 3. TYPOGRAPHY: 'JOBit' (Vivid Red 'JOB' and Deep Navy Blue 'it') */}
+        {/* 3. TYPOGRAPHY: 'JOBit' (Deep Navy Blue 'JOB' and Vivid Red 'it') */}
         <g id="brand-typography" transform="translate(250, 395)">
           <text 
             textAnchor="middle" 
@@ -190,8 +190,8 @@ export function JobitLogo({
             fontSize="78" 
             letterSpacing="-1"
           >
-            <tspan fill="#D32F2F">JOB</tspan>
-            <tspan dx="4" fill="#0B172E">it</tspan>
+            <tspan fill="#0B172E">JOB</tspan>
+            <tspan dx="4" fill="#D32F2F">it</tspan>
           </text>
         </g>
 
