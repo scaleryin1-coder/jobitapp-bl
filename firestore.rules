@@ -44,6 +44,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // WORKER PORTFOLIOS (Work albums with photo collections)
+    match /worker_portfolios/{portfolioId} {
+      allow read, write: if true;
+    }
+
     // CHATS COLLECTION & SUBCOLLECTION
     match /chats/{bookingId} {
       allow read, write: if true;

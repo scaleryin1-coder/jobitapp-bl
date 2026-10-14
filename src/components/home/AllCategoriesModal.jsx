@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Search, ChevronRight, Sparkles } from 'lucide-react';
-import { ALL_MAIN_CATEGORIES } from '../../data/categoriesData';
+import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from '../../data/categoriesData';
 import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 
 export function AllCategoriesModal({
@@ -65,32 +65,48 @@ export function AllCategoriesModal({
         {/* 20 Categories Grid List */}
         <div className="flex-1 overflow-y-auto no-scrollbar p-5 pt-2 space-y-2.5">
           <div className="grid grid-cols-2 gap-2.5">
-            {filteredCategories.map((cat) => (
-              <div
-                key={cat.id}
-                onClick={() => {
-                  onSelectCategory(cat);
-                  onClose();
-                }}
-                className="bg-[#F8FAFC] hover:bg-[#EAF0FF] border border-slate-200/70 hover:border-[#4B6EF5] rounded-2xl p-3 cursor-pointer transition active:scale-98 group flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="group-hover:scale-105 transition-transform">
-                    <CategoryBadgeIcon category={cat} />
+            {filteredCategories.map((cat) => {
+              const isPortfolio = isPortfolioCategory(cat);
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => {
+                    onSelectCategory(cat);
+                    onClose();
+                  }}
+                  className="bg-[#F8FAFC] hover:bg-[#EAF0FF] border border-slate-200/70 hover:border-[#4B6EF5] rounded-2xl p-3 cursor-pointer transition active:scale-98 group flex flex-col justify-between relative"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="group-hover:scale-105 transition-transform">
+                      <CategoryBadgeIcon category={cat} />
+                    </div>
+                    {isPortfolio ? (
+                      <span className="text-[9px] bg-sky-100 text-[#0EA5E0] font-black px-1.5 py-0.5 rounded-full">
+                        Pro Albums
+                      </span>
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#4B6EF5] group-hover:translate-x-0.5 transition-all" />
+                    )}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#4B6EF5] group-hover:translate-x-0.5 transition-all" />
-                </div>
 
-                <div className="mt-2.5">
-                  <h4 className="text-xs font-black text-[#111827] group-hover:text-[#4B6EF5] transition-colors leading-snug">
-                    {cat.name}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                    Starts ₹{cat.basePrice}
-                  </p>
+                  <div className="mt-2.5">
+                    <h4 className="text-xs font-black text-[#111827] group-hover:text-[#4B6EF5] transition-colors leading-snug">
+                      {cat.name}
+                    </h4>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className="text-[10px] text-slate-400 font-bold">
+                        Starts ₹{cat.basePrice}
+                      </p>
+                      {isPortfolio && (
+                        <span className="text-[10px] text-[#0EA5E0] font-bold">
+                          View Pros ➔
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {filteredCategories.length === 0 && (

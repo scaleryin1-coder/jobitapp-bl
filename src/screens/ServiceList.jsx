@@ -10,7 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { initialCategories, initialServices } from '../data/seedData';
-import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
+import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from '../data/categoriesData';
 import { subscribeServices } from '../data/bookingService';
 import { matchesStrictPrefix, highlightPrefix, getMatchedSnippet } from '../utils/searchUtils';
 
@@ -514,13 +514,13 @@ export function ServiceListScreen({
                   <span>View Details</span>
                 </button>
 
-                {/* Solid blue style button for 'Book Now' (with calendar icon) */}
+                {/* Solid blue style button for 'Book Now' / 'Select Pro' (with calendar icon) */}
                 <button
                   onClick={() => onBookService?.(service)}
                   className="w-full py-2.5 px-3 rounded-2xl bg-[#00A3E0] hover:bg-[#0284C7] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-sm shadow-sky-400/25"
                 >
                   <Calendar className="w-3.5 h-3.5 text-white stroke-[2.4]" />
-                  <span>Book Now</span>
+                  <span>{isPortfolioCategory(service) ? 'Select Pro ➔' : 'Book Now'}</span>
                 </button>
               </div>
 

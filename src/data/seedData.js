@@ -8,6 +8,7 @@ export const initialCategories = [
     name: "Electrician",
     icon: "⚡",
     color: "#FEF3C7",
+    booking_type: "DIRECT_BOOKING",
     order: 1
   },
   {
@@ -15,6 +16,7 @@ export const initialCategories = [
     name: "AC Service",
     icon: "❄️",
     color: "#E0F2FE",
+    booking_type: "DIRECT_BOOKING",
     order: 2
   },
   {
@@ -22,6 +24,7 @@ export const initialCategories = [
     name: "Coconut Tree Climbing",
     icon: "🌴",
     color: "#DCFCE7",
+    booking_type: "DIRECT_BOOKING",
     order: 3
   },
   {
@@ -29,28 +32,48 @@ export const initialCategories = [
     name: "Plumber",
     icon: "🔧",
     color: "#E0F2FE",
-    order: 3
+    booking_type: "DIRECT_BOOKING",
+    order: 4
   },
   {
-    id: "cat_carpenter",
-    name: "Carpenter",
-    icon: "🪚",
-    color: "#FEE2E2",
-    order: 4
+    id: "cat_mehndi",
+    name: "Mehndi Artist",
+    icon: "🖐️",
+    color: "#FFF1EE",
+    booking_type: "PORTFOLIO_SELECT",
+    order: 5
+  },
+  {
+    id: "cat_beauty",
+    name: "Beauty & Personal Care",
+    icon: "💄",
+    color: "#FDF2F8",
+    booking_type: "PORTFOLIO_SELECT",
+    order: 6
   },
   {
     id: "cat_painting",
     name: "Painting & Wall Work",
     icon: "🎨",
     color: "#F3E8FF",
-    order: 5
+    booking_type: "PORTFOLIO_SELECT",
+    order: 7
+  },
+  {
+    id: "cat_carpenter",
+    name: "Carpenter",
+    icon: "🪚",
+    color: "#FEE2E2",
+    booking_type: "PORTFOLIO_SELECT",
+    order: 8
   },
   {
     id: "cat_construction",
     name: "Construction",
     icon: "🏗️",
     color: "#FFEDD5",
-    order: 6
+    booking_type: "DIRECT_BOOKING",
+    order: 9
   }
 ];
 
@@ -160,6 +183,101 @@ export const initialWorkers = [
     avatar: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=300&q=80",
     vehicle: "Bike • DL-05-MN-7890",
     experience: "9 years",
+    status: "approved",
+    workerStatus: "approved"
+  },
+  {
+    id: "worker_zara",
+    name: "Zara Siddiqui",
+    phone: "98765 88990",
+    skill: "Mehndi Artist",
+    categoryId: "cat_mehndi",
+    categoryName: "Mehndi Artist",
+    rating: 5.0,
+    reviewCount: 420,
+    jobsCompleted: 610,
+    isOnline: true,
+    city: "Melattur, Kerala",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+    experience: "7 years",
+    bio: "Celebrity bridal henna specialist. 100% organic natural henna, intricate Marwari figures, and bespoke Arabic lace designs.",
+    startingPrice: 599,
+    status: "approved",
+    workerStatus: "approved"
+  },
+  {
+    id: "worker_fatima",
+    name: "Fatima Noor",
+    phone: "98765 44332",
+    skill: "Mehndi Artist",
+    categoryId: "cat_mehndi",
+    categoryName: "Mehndi Artist",
+    rating: 4.8,
+    reviewCount: 260,
+    jobsCompleted: 380,
+    isOnline: true,
+    city: "Melattur, Kerala",
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80",
+    experience: "5 years",
+    bio: "Specializing in fast contemporary floral henna for sangeet, engagement, and wedding guest events.",
+    startingPrice: 499,
+    status: "approved",
+    workerStatus: "approved"
+  },
+  {
+    id: "worker_ananya",
+    name: "Ananya Roy",
+    phone: "98765 22119",
+    skill: "Makeup & Beauty",
+    categoryId: "cat_beauty",
+    categoryName: "Beauty & Personal Care",
+    rating: 4.9,
+    reviewCount: 380,
+    jobsCompleted: 520,
+    isOnline: true,
+    city: "Melattur, Kerala",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
+    experience: "6 years",
+    bio: "Certified bridal esthetician & makeup artist. High-definition camera-ready finishing, hair artistry, and luxury saree draping.",
+    startingPrice: 499,
+    status: "approved",
+    workerStatus: "approved"
+  },
+  {
+    id: "worker_manoj",
+    name: "Manoj Nambiar",
+    phone: "98765 66778",
+    skill: "Wall Painting & Wallpaper",
+    categoryId: "cat_painting",
+    categoryName: "Painting & Wall Work",
+    rating: 4.9,
+    reviewCount: 310,
+    jobsCompleted: 440,
+    isOnline: true,
+    city: "Melattur, Kerala",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+    experience: "10 years",
+    bio: "Specialist in luxury stencil wall art, Italian texture stucco finishes, weatherproof exterior coating, and designer wallpaper.",
+    startingPrice: 499,
+    status: "approved",
+    workerStatus: "approved"
+  },
+  {
+    id: "worker_karthik",
+    name: "Karthik Acharya",
+    phone: "98765 99001",
+    skill: "Custom Carpentry & Modular Kitchen",
+    categoryId: "cat_carpenter",
+    categoryName: "Carpenter",
+    rating: 4.9,
+    reviewCount: 340,
+    jobsCompleted: 480,
+    isOnline: true,
+    city: "Melattur, Kerala",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
+    experience: "12 years",
+    bio: "Master bespoke carpenter specializing in customized modular kitchens, walk-in sliding wardrobes, and acoustic wooden wall paneling.",
+    startingPrice: 350,
     status: "approved",
     workerStatus: "approved"
   }
@@ -874,4 +992,121 @@ export const initialDailyGigs = [
     created_at: new Date(Date.now() - 3600000 * 12).toISOString()
   }
 ];
+
+// Initial Worker Portfolios (Photo albums for specialized artisans and skilled pros)
+export const initialPortfolios = [
+  {
+    id: "port_mehndi_1",
+    worker_id: "worker_zara",
+    category_id: "cat_mehndi",
+    title: "Bridal Dulhan Full Hands & Feet",
+    description: "Intricate traditional bridal henna with Radha-Krishna motifs, delicate peacock lace, and deep rich organic stain guaranteed.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString()
+  },
+  {
+    id: "port_mehndi_2",
+    worker_id: "worker_zara",
+    category_id: "cat_mehndi",
+    title: "Arabic Floral Wrist & Glove Patterns",
+    description: "Flowing shading techniques with bold floral outlines and contemporary lattice wristbands.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString()
+  },
+  {
+    id: "port_mehndi_3",
+    worker_id: "worker_fatima",
+    category_id: "cat_mehndi",
+    title: "Sangeet & Party Guest Henna Collection",
+    description: "Speed-applied modern mandala palms and delicate finger bands tailored for wedding party guests and bridesmaid clusters.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+  },
+  {
+    id: "port_beauty_1",
+    worker_id: "worker_ananya",
+    category_id: "cat_beauty",
+    title: "HD Bridal Makeup & Saree Draping",
+    description: "High-definition camera-ready makeup, subtle smoky eyes, natural contour, and silk saree box pleating.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString()
+  },
+  {
+    id: "port_beauty_2",
+    worker_id: "worker_ananya",
+    category_id: "cat_beauty",
+    title: "Dewy Glow Party Makeover & Hairstyling",
+    description: "Soft glam for evening receptions, textured crown braid, and hydrating skin glow treatment.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 4).toISOString()
+  },
+  {
+    id: "port_painting_1",
+    worker_id: "worker_manoj",
+    category_id: "cat_painting",
+    title: "Living Room Luxury Texture & Stencil Wall",
+    description: "Metallic bronze stucco texture with geometric stencil highlights and dust-resistant clear glaze.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 8).toISOString()
+  },
+  {
+    id: "port_painting_2",
+    worker_id: "worker_manoj",
+    category_id: "cat_painting",
+    title: "Designer 3D Embossed Wallpaper Setup",
+    description: "Laser-aligned textured vinyl wallpaper installation with moisture-barrier adhesive.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 4).toISOString()
+  },
+  {
+    id: "port_carpenter_1",
+    worker_id: "worker_karthik",
+    category_id: "cat_carpenter",
+    title: "Modular Kitchen with Soft-Close Baskets",
+    description: "Marine-grade plywood modular kitchen with acrylic finish shutters, tandem pull-outs, and quartz countertop fitment.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1556909212-d5b604d0c90d?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString()
+  },
+  {
+    id: "port_carpenter_2",
+    worker_id: "worker_karthik",
+    category_id: "cat_carpenter",
+    title: "Custom Teakwood Wardrobe & TV Unit",
+    description: "Floor-to-ceiling 3-door sliding wardrobe with concealed LED lighting and fluted acoustic wooden paneling.",
+    image_urls: [
+      "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=800&q=80"
+    ],
+    created_at: new Date(Date.now() - 86400000 * 6).toISOString()
+  }
+];
+
 

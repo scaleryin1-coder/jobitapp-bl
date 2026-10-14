@@ -1,6 +1,7 @@
 import React from 'react';
 import { LayoutGrid } from 'lucide-react';
 import { CategoryBadgeIcon } from './CategoryBadgeIcon';
+import { isPortfolioCategory } from '../../data/categoriesData';
 
 export function CategoryRow({
   categories = [],
@@ -24,23 +25,32 @@ export function CategoryRow({
 
       {/* Horizontally Scrollable Row */}
       <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-5 px-5 py-1">
-        {categories.map((cat) => (
-          <button
-            key={cat.id || cat.name}
-            onClick={() => onSelectCategory?.(cat)}
-            className="w-[74px] h-[82px] sm:w-[78px] sm:h-[86px] rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-white hover:border-[#4B6EF5]/30 hover:shadow-md active:scale-95 transition-all flex flex-col items-center justify-center p-2 shrink-0 cursor-pointer group"
-          >
-            {/* Category Icon / Image */}
-            <div className="transition-transform group-hover:scale-105">
-              <CategoryBadgeIcon category={cat} categoryName={cat.name} />
-            </div>
+        {categories.map((cat) => {
+          const isPortfolio = isPortfolioCategory(cat);
+          return (
+            <button
+              key={cat.id || cat.name}
+              onClick={() => onSelectCategory?.(cat)}
+              className="relative w-[74px] h-[82px] sm:w-[78px] sm:h-[86px] rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-white hover:border-[#4B6EF5]/30 hover:shadow-md active:scale-95 transition-all flex flex-col items-center justify-center p-2 shrink-0 cursor-pointer group"
+            >
+              {isPortfolio && (
+                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-sky-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-2xs leading-none">
+                  PORTFOLIO
+                </span>
+              )}
 
-            {/* Category Name */}
-            <span className="text-[11px] font-semibold text-slate-800 mt-1.5 text-center truncate w-full group-hover:text-[#4B6EF5] transition-colors">
-              {cat.name}
-            </span>
-          </button>
-        ))}
+              {/* Category Icon / Image */}
+              <div className="transition-transform group-hover:scale-105">
+                <CategoryBadgeIcon category={cat} categoryName={cat.name} />
+              </div>
+
+              {/* Category Name */}
+              <span className="text-[11px] font-semibold text-slate-800 mt-1.5 text-center truncate w-full group-hover:text-[#4B6EF5] transition-colors">
+                {cat.name}
+              </span>
+            </button>
+          );
+        })}
 
         {/* Last item: "+" / grid icon card for "See all" */}
         <button

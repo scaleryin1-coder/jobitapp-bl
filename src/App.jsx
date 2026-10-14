@@ -26,6 +26,8 @@ import { AuthModal } from './screens/AuthModal';
 import { PartnerLoginModal } from './screens/PartnerLoginModal';
 import { WorkerOnboardingModal } from './screens/WorkerOnboardingModal';
 import { ProfileDrawerModal } from './screens/ProfileDrawerModal';
+import { SkilledProfessionalSelectionScreen } from './screens/SkilledProfessionalSelectionScreen';
+import { isPortfolioCategory } from './data/categoriesData';
 import { BottomNav } from './components/BottomNav';
 
 function MainLayout() {
@@ -36,10 +38,11 @@ function MainLayout() {
       if (hash === '#splash' || hash === '#welcome') return 'splash';
     } catch {}
     return 'main';
-  }); // 'main' | 'splash' | 'service-list' | 'detail' | 'chat'
+  }); // 'main' | 'splash' | 'service-list' | 'detail' | 'chat' | 'portfolio-selection'
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'chat' | 'bookings' | 'profile'
   const [selectedCategoryName, setSelectedCategoryName] = useState('All');
   const [selectedService, setSelectedService] = useState(null);
+  const [selectedPortfolioCategory, setSelectedPortfolioCategory] = useState(null);
   const [activeChatBooking, setActiveChatBooking] = useState(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -201,6 +204,11 @@ function MainLayout() {
                   onOpenProfileDrawer={() => setIsProfileDrawerOpen(true)}
                   onSelectCategory={(cat) => {
                     const catName = cat?.name || 'Home Service';
+                    if (isPortfolioCategory(cat || catName)) {
+                      setSelectedPortfolioCategory(cat);
+                      setCurrentScreen('portfolio-selection');
+                      return;
+                    }
                     const serviceObj = {
                       id: `cat_${cat?.id || catName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
                       title: catName,
@@ -212,10 +220,20 @@ function MainLayout() {
                     setIsBookingModalOpen(true);
                   }}
                   onSelectService={(serv) => {
+                    if (isPortfolioCategory(serv)) {
+                      setSelectedPortfolioCategory(serv);
+                      setCurrentScreen('portfolio-selection');
+                      return;
+                    }
                     setSelectedService(serv);
                     setCurrentScreen('detail');
                   }}
                   onBookService={(serv) => {
+                    if (isPortfolioCategory(serv)) {
+                      setSelectedPortfolioCategory(serv);
+                      setCurrentScreen('portfolio-selection');
+                      return;
+                    }
                     setSelectedService(serv);
                     setIsBookingModalOpen(true);
                   }}
@@ -264,11 +282,44 @@ function MainLayout() {
               initialSearch={searchQuery}
               onBack={() => setCurrentScreen('main')}
               onSelectService={(serv) => {
+                if (isPortfolioCategory(serv)) {
+                  setSelectedPortfolioCategory(serv);
+                  setCurrentScreen('portfolio-selection');
+                  return;
+                }
                 setSelectedService(serv);
                 setCurrentScreen('detail');
               }}
               onBookService={(serv) => {
+                if (isPortfolioCategory(serv)) {
+                  setSelectedPortfolioCategory(serv);
+                  setCurrentScreen('portfolio-selection');
+                  return;
+                }
                 setSelectedService(serv);
+                setIsBookingModalOpen(true);
+              }}
+            />
+          )}
+
+          {currentScreen === 'portfolio-selection' && (
+            <SkilledProfessionalSelectionScreen
+              category={selectedPortfolioCategory}
+              onBack={() => setCurrentScreen('main')}
+              onSelectWorkerToBook={(worker, album) => {
+                const catName = selectedPortfolioCategory?.name || selectedPortfolioCategory?.title || worker.skill || 'Skilled Pro';
+                const serviceObj = {
+                  id: `serv_${worker.id}_${Date.now()}`,
+                  title: album ? `${worker.name} - ${album.title}` : `${worker.name} (${worker.skill || catName})`,
+                  categoryName: catName,
+                  price: worker.startingPrice || selectedPortfolioCategory?.basePrice || 499,
+                  workerId: worker.id,
+                  workerName: worker.name,
+                  workerPhone: worker.phone,
+                  workerAvatar: worker.avatar,
+                  subCategories: album ? [album.title, `${worker.skill} Custom Service`, 'Standard Inspection'] : [catName, 'Standard Inspection']
+                };
+                setSelectedService(serviceObj);
                 setIsBookingModalOpen(true);
               }}
             />

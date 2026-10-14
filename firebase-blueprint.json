@@ -217,9 +217,28 @@
         "created_at": { "type": "string" }
       },
       "required": ["id", "title", "shop_name", "location", "wage", "duration", "contact_number", "status"]
+    },
+    "WorkerPortfolio": {
+      "title": "WorkerPortfolio",
+      "description": "Worker portfolio work albums with photo gallery and project details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "worker_id": { "type": "string" },
+        "category_id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "image_urls": { "type": "array", "items": { "type": "string" } },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "worker_id", "category_id", "title", "image_urls"]
     }
   },
   "firestore": {
+    "/worker_portfolios/{portfolioId}": {
+      "schema": { "$ref": "#/entities/WorkerPortfolio" },
+      "description": "Worker portfolio albums with photos"
+    },
     "/daily_gigs/{gigId}": {
       "schema": { "$ref": "#/entities/DailyGig" },
       "description": "Short-term daily job vacancies and shift gigs"

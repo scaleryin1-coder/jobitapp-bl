@@ -70,6 +70,7 @@ export const ALL_MAIN_CATEGORIES = [
     icon: '🪚',
     color: '#FEE2E2', // soft warm red/pink
     basePrice: 350,
+    booking_type: 'PORTFOLIO_SELECT',
     subCategories: [
       'Furniture Repair & Assembly',
       'Door & Window Lock Fitting',
@@ -85,6 +86,7 @@ export const ALL_MAIN_CATEGORIES = [
     icon: '🎨',
     color: '#F3E8FF', // soft purple/violet
     basePrice: 499,
+    booking_type: 'PORTFOLIO_SELECT',
     subCategories: [
       'Wall Touch-up & Patch Painting',
       'Full Interior House Painting',
@@ -281,6 +283,7 @@ export const ALL_MAIN_CATEGORIES = [
     icon: '💄',
     color: '#FDF2F8', // soft pink
     basePrice: 499,
+    booking_type: 'PORTFOLIO_SELECT',
     subCategories: [
       'Haircut & Blowdry at Home',
       'Facial & Fruit Cleanup',
@@ -297,6 +300,7 @@ export const ALL_MAIN_CATEGORIES = [
     image: MEHNDI_ART_IMAGE_URL,
     color: '#FFF1EE', // soft peach/coral
     basePrice: 599,
+    booking_type: 'PORTFOLIO_SELECT',
     subCategories: [
       'Bridal Mehndi Full Hands & Feet',
       'Arabic Designer Mehndi',
@@ -368,3 +372,47 @@ export function getSubCategoriesForCategory(categoryName = '') {
     `${categoryName} Emergency Service`
   ];
 }
+
+// Keywords that identify creative and artisan categories requiring visual portfolio worker selection
+export const PORTFOLIO_CATEGORY_KEYWORDS = [
+  'mehndi',
+  'henna',
+  'beauty',
+  'makeup',
+  'salon',
+  'painting',
+  'wall work',
+  'wallpaper',
+  'carpenter',
+  'carpentry',
+  'modular kitchen'
+];
+
+/**
+ * Checks whether a category or service requires portfolio-based worker selection
+ * instead of direct automatic dispatch.
+ */
+export function isPortfolioCategory(categoryOrName) {
+  if (!categoryOrName) return false;
+  if (typeof categoryOrName === 'object') {
+    if (categoryOrName.booking_type === 'PORTFOLIO_SELECT' || categoryOrName.bookingType === 'PORTFOLIO_SELECT') {
+      return true;
+    }
+    const name = (categoryOrName.name || categoryOrName.title || categoryOrName.categoryName || '').toLowerCase();
+    const id = (categoryOrName.id || categoryOrName.categoryId || '').toLowerCase();
+    if (id.includes('mehndi') || id.includes('beauty') || id.includes('paint') || id.includes('carpenter')) {
+      return true;
+    }
+    return PORTFOLIO_CATEGORY_KEYWORDS.some(kw => name.includes(kw));
+  }
+  const str = String(categoryOrName).toLowerCase();
+  return PORTFOLIO_CATEGORY_KEYWORDS.some(kw => str.includes(kw));
+}
+
+/**
+ * Returns 'PORTFOLIO_SELECT' or 'DIRECT_BOOKING' for a category
+ */
+export function getCategoryBookingType(categoryOrName) {
+  return isPortfolioCategory(categoryOrName) ? 'PORTFOLIO_SELECT' : 'DIRECT_BOOKING';
+}
+

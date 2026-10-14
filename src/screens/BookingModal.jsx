@@ -216,6 +216,29 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
           /* ========================================================= */
           <form onSubmit={handleConfirm} className="space-y-4 pt-4">
             
+            {/* Selected Skilled Professional Indicator (for Portfolio-based bookings) */}
+            {service.workerId && service.workerName && (
+              <div className="p-3 bg-gradient-to-r from-sky-50 to-indigo-50/40 rounded-2xl border border-sky-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={service.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                    alt={service.workerName}
+                    className="w-10 h-10 rounded-xl object-cover ring-2 ring-white shadow-2xs"
+                  />
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0EA5E0] block">
+                      Dedicated Skilled Professional
+                    </span>
+                    <p className="text-xs font-black text-slate-900">{service.workerName}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  <span>Assigned</span>
+                </span>
+              </div>
+            )}
+
             {/* Issue / Sub-Category Selector */}
             {availableSubCategories.length > 0 && (
               <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5">

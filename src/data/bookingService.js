@@ -9,8 +9,8 @@ import {
   deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
-import { initialWorkers, initialServices, initialCategories, initialDailyGigs } from './seedData';
-import { ALL_MAIN_CATEGORIES } from './categoriesData';
+import { initialWorkers, initialServices, initialCategories, initialDailyGigs, initialPortfolios } from './seedData';
+import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from './categoriesData';
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
 const STORAGE_KEY_WORKERS = 'jobit_workers';
@@ -19,6 +19,7 @@ const STORAGE_KEY_CUSTOMERS = 'jobit_customers';
 const STORAGE_KEY_SERVICES = 'jobit_services';
 const STORAGE_KEY_CATEGORIES = 'jobit_categories';
 const STORAGE_KEY_DAILY_GIGS = 'jobit_daily_gigs';
+const STORAGE_KEY_WORKER_PORTFOLIOS = 'jobit_worker_portfolios';
 
 const EVENT_BOOKINGS_CHANGED = 'jobit_bookings_changed';
 const EVENT_WORKERS_CHANGED = 'jobit_workers_changed';
@@ -27,6 +28,7 @@ const EVENT_CUSTOMERS_CHANGED = 'jobit_customers_changed';
 const EVENT_SERVICES_CHANGED = 'jobit_services_changed';
 const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
 const EVENT_DAILY_GIGS_CHANGED = 'jobit_daily_gigs_changed';
+const EVENT_PORTFOLIOS_CHANGED = 'jobit_portfolios_changed';
 
 // Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
 export const safeDbPromise = (promise, timeoutMs = 2500) => {
@@ -184,7 +186,15 @@ export function getLocalWorkers() {
       localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(initialWorkers));
       return initialWorkers;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const existingList = Array.isArray(parsed) ? parsed : [];
+    const missing = initialWorkers.filter(iw => !existingList.some(w => w.id === iw.id));
+    if (missing.length > 0) {
+      const merged = [...existingList, ...missing];
+      localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(merged));
+      return merged;
+    }
+    return existingList;
   } catch {
     return initialWorkers;
   }
@@ -1334,5 +1344,175 @@ export async function updateDailyGigStatus(gigId, newStatus = 'filled') {
     } catch (err) {}
   }
 }
+
+// ==========================================
+// WORKER PORTFOLIOS & WORK ALBUMS SERVICE
+// Table / Collection: worker_portfolios
+// Schema: (id, worker_id, category_id, title, description, image_urls, created_at)
+// ==========================================
+
+export function getLocalPortfolios() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_WORKER_PORTFOLIOS);
+    if (!raw) {
+      saveLocalPortfolios(initialPortfolios || []);
+      return initialPortfolios || [];
+    }
+    const parsed = JSON.parse(raw);
+    const existingList = Array.isArray(parsed) ? parsed : [];
+    // Auto-merge any fresh seeds if missing
+    const missing = (initialPortfolios || []).filter(ip => !existingList.some(p => p.id === ip.id));
+    if (missing.length > 0) {
+      const merged = [...existingList, ...missing];
+      saveLocalPortfolios(merged);
+      return merged;
+    }
+    return existingList;
+  } catch {
+    return initialPortfolios || [];
+  }
+}
+
+export function saveLocalPortfolios(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY_WORKER_PORTFOLIOS, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent(EVENT_PORTFOLIOS_CHANGED, { detail: list }));
+  } catch (err) {
+    console.warn('Failed to save worker portfolios locally', err);
+  }
+}
+
+/**
+ * Real-time subscription to worker portfolios / photo albums
+ */
+export function subscribePortfolios(callback) {
+  let unsubFirestore = () => {};
+
+  const handleLocalChange = () => {
+    callback(getLocalPortfolios());
+  };
+
+  window.addEventListener(EVENT_PORTFOLIOS_CHANGED, handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  // Push immediate state
+  callback(getLocalPortfolios());
+
+  // Firestore sync if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      unsubFirestore = onSnapshot(collection(db, 'worker_portfolios'), (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          // Normalize field names if needed (worker_id vs workerId, image_urls vs imageUrls)
+          const normalized = list.map(item => ({
+            ...item,
+            worker_id: item.worker_id || item.workerId,
+            category_id: item.category_id || item.categoryId,
+            image_urls: item.image_urls || item.imageUrls || []
+          }));
+          saveLocalPortfolios(normalized);
+          callback(normalized);
+        } else {
+          // Push initial portfolios to Firestore if collection is brand new
+          const seeds = getLocalPortfolios();
+          seeds.forEach(async (port) => {
+            try {
+              await setDoc(doc(db, 'worker_portfolios', port.id), port);
+            } catch {}
+          });
+        }
+      }, (err) => {
+        console.warn('Firestore worker_portfolios listener fallback to local', err);
+      });
+    } catch (err) {
+      console.warn('Firestore worker_portfolios setup error', err);
+    }
+  }
+
+  return () => {
+    window.removeEventListener(EVENT_PORTFOLIOS_CHANGED, handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+    unsubFirestore();
+  };
+}
+
+/**
+ * Upload / Add a new portfolio album for a worker
+ * Schema: (id, worker_id, category_id, title, description, image_urls, created_at)
+ */
+export async function addWorkerPortfolio(albumData) {
+  const newId = `port_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const cleanAlbum = {
+    id: newId,
+    worker_id: albumData.worker_id || albumData.workerId || 'worker_zara',
+    category_id: albumData.category_id || albumData.categoryId || 'cat_mehndi',
+    title: albumData.title?.trim() || 'Work Album',
+    description: albumData.description?.trim() || 'Showcase of recently delivered client works and craftsmanship.',
+    image_urls: Array.isArray(albumData.image_urls) 
+      ? albumData.image_urls 
+      : Array.isArray(albumData.imageUrls)
+        ? albumData.imageUrls
+        : [],
+    created_at: new Date().toISOString()
+  };
+
+  // 1. Instant local persistence
+  const currentList = getLocalPortfolios();
+  const updated = [cleanAlbum, ...currentList.filter(p => p.id !== newId)];
+  saveLocalPortfolios(updated);
+
+  // 2. Persist to Firestore if configured
+  if (isFirebaseConfigured && db) {
+    try {
+      await safeDbPromise(setDoc(doc(db, 'worker_portfolios', newId), cleanAlbum));
+    } catch (err) {
+      console.warn('Failed to persist portfolio album to Firestore', err);
+    }
+  }
+
+  return cleanAlbum;
+}
+
+/**
+ * Delete a portfolio album
+ */
+export async function deleteWorkerPortfolio(portfolioId) {
+  const currentList = getLocalPortfolios();
+  const updated = currentList.filter(p => p.id !== portfolioId);
+  saveLocalPortfolios(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await safeDbPromise(deleteDoc(doc(db, 'worker_portfolios', portfolioId)));
+    } catch (err) {
+      console.warn('Failed to delete portfolio album from Firestore', err);
+    }
+  }
+}
+
+/**
+ * Get all albums uploaded by a specific worker
+ */
+export function getPortfoliosByWorker(workerId) {
+  const all = getLocalPortfolios();
+  return all.filter(p => p.worker_id === workerId || p.workerId === workerId);
+}
+
+/**
+ * Get all albums matching a category
+ */
+export function getPortfoliosByCategory(categoryIdOrName) {
+  if (!categoryIdOrName) return [];
+  const norm = String(categoryIdOrName).toLowerCase().trim();
+  const all = getLocalPortfolios();
+  return all.filter(p => {
+    const cId = (p.category_id || p.categoryId || '').toLowerCase();
+    const title = (p.title || '').toLowerCase();
+    const desc = (p.description || '').toLowerCase();
+    return cId === norm || cId.includes(norm) || norm.includes(cId) || title.includes(norm) || desc.includes(norm);
+  });
+}
+
 
 
