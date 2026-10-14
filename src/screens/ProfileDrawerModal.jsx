@@ -578,15 +578,34 @@ export function ProfileDrawerModal({
               <div>
                 <h4 className="text-sm font-black text-slate-900">Contact & Help Desk</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
-                  Need assistance with your booking or technician dispatch? Reach our Melattur team anytime.
+                  Need assistance with your booking or technician dispatch? Reach our team anytime via WhatsApp or email.
                 </p>
               </div>
 
               <div className="space-y-2.5">
-                {/* Phone Call */}
+                {/* WhatsApp Support Button */}
                 <a
-                  href="tel:+919876543210"
-                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition"
+                  href="https://wa.me/918289968045?text=Hello%20JOBit%20Support"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition group cursor-pointer active:scale-98"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Headphones className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold text-slate-900">WhatsApp Support</p>
+                      <p className="text-[11px] text-slate-600 font-bold">+91 8289968045</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded-lg">Chat Now</span>
+                </a>
+
+                {/* Direct Phone Support Button */}
+                <a
+                  href="tel:+918289968045"
+                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition group cursor-pointer active:scale-98"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-[#E0F7FA] text-[#00A3E0] flex items-center justify-center shrink-0">
@@ -594,36 +613,32 @@ export function ProfileDrawerModal({
                     </div>
                     <div>
                       <p className="text-xs font-extrabold text-slate-900">Direct Phone Support</p>
-                      <p className="text-[11px] text-slate-600 font-bold">+91 98765 43210</p>
+                      <p className="text-[11px] text-slate-600 font-bold">+91 8289968045</p>
                     </div>
                   </div>
-                  <span className="text-[10px] text-[#0EA5E0] font-black uppercase tracking-wider">Call Now</span>
+                  <span className="text-[10px] text-[#0EA5E0] font-black uppercase tracking-wider bg-sky-50 px-2 py-1 rounded-lg">Call Now</span>
                 </a>
 
-                {/* WhatsApp */}
+                {/* Official Email Link */}
                 <a
-                  href="https://wa.me/919876543210?text=Hello%20JOBit%20Support"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition"
+                  href="mailto:teamjobit@gmail.com"
+                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition group cursor-pointer active:scale-98"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                      <Headphones className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-xl bg-[#E0F7FA] text-[#00A3E0] flex items-center justify-center shrink-0">
+                      <Mail className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-extrabold text-slate-900">WhatsApp Help Desk</p>
-                      <p className="text-[11px] text-slate-600 font-bold">+91 98765 43210</p>
+                      <p className="text-xs font-extrabold text-slate-900">Official Email</p>
+                      <p className="text-[11px] text-slate-600 font-semibold">teamjobit@gmail.com</p>
                     </div>
                   </div>
-                  <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">Chat</span>
+                  <span className="text-[10px] text-[#0EA5E0] font-black uppercase tracking-wider bg-sky-50 px-2 py-1 rounded-lg">Send Email</span>
                 </a>
 
-                {/* Support Email */}
-                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
-                  <p className="text-xs font-extrabold text-slate-900">Email Desk</p>
-                  <p className="text-[11px] text-slate-600 font-semibold mt-0.5">support@jobit.in</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Operational Hours: 8:00 AM – 8:00 PM (Daily)</p>
+                {/* Office Info */}
+                <div className="p-3 rounded-2xl bg-slate-100/60 border border-slate-200/50 text-slate-500 text-[11px] text-center font-medium">
+                  Operational Hours: 8:00 AM – 8:00 PM (Daily)
                 </div>
               </div>
             </div>
@@ -635,31 +650,58 @@ export function ProfileDrawerModal({
           {activeSubView === 'terms' && (
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-black text-slate-900">Guidelines & Terms</h4>
+                <h4 className="text-sm font-black text-slate-900">Privacy Policy</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
-                  Our core policies protecting customers, service workers, and community trust.
+                  Our official privacy policies, cookie disclosure, and data protection practices.
                 </p>
               </div>
 
               <div className="space-y-2.5 text-xs">
-                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
-                  <p className="font-extrabold text-slate-900">1 Account Per Mobile Number</p>
-                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                    Strict phone-based single identity linkage prevents duplicate profiles and ensures reliable service history.
+                {/* Cookie & Service Functionality */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs space-y-1">
+                  <p className="font-extrabold text-slate-900 text-xs">Cookie & Service Functionality</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Disabling cookies may disable some actions that make your app/site experience more efficient, and some of our services may not function optimally. However, you will still be able to place orders and book services.
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
-                  <p className="font-extrabold text-slate-900">Data Confidentiality</p>
-                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                    Customer location and contact details are disclosed only to the confirmed dispatched technician.
+                {/* Third-Party Disclosure */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs space-y-1">
+                  <p className="font-extrabold text-slate-900 text-xs">Third-Party Disclosure</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    We do not sell, trade, or otherwise transfer your Personally Identifiable Information to outside parties.
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
-                  <p className="font-extrabold text-slate-900">Fair Fixed Task Pricing</p>
-                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                    All service jobs carry clearly stated task fees. Any additional materials are billed strictly with customer pre-approval.
+                {/* Third-Party Links */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs space-y-1">
+                  <p className="font-extrabold text-slate-900 text-xs">Third-Party Links</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    We do not include or offer third-party products or services through any external links on our platform.
+                  </p>
+                </div>
+
+                {/* Do Not Track (DNT) Signals */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs space-y-1">
+                  <p className="font-extrabold text-slate-900 text-xs">Do Not Track (DNT) Signals</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    We honor Do Not Track signals and do not track, plant cookies, or use advertising when a Do Not Track (DNT) browser mechanism is in place.
+                  </p>
+                </div>
+
+                {/* Third-Party Behavioral Tracking */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs space-y-1">
+                  <p className="font-extrabold text-slate-900 text-xs">Third-Party Behavioral Tracking</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    We do not allow third-party behavioral tracking on our platform.
+                  </p>
+                </div>
+
+                {/* Fair Information Practices & Data Breach Response */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs space-y-1">
+                  <p className="font-extrabold text-slate-900 text-xs">Fair Information Practices & Data Breach Response</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Should a data breach occur, we will notify users via email/phone within 1 business day, and via in-app notifications within 1 business day. We adhere to the individual redress principle, giving users legally enforceable rights regarding their personal data.
                   </p>
                 </div>
               </div>
