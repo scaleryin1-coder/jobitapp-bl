@@ -13,6 +13,7 @@ import { PopularServiceSection } from '../components/home/PopularServiceSection'
 import { AllCategoriesModal } from '../components/home/AllCategoriesModal';
 import { FilterModal } from '../components/home/FilterModal';
 import { DailyGigsSection } from '../components/gigs/DailyGigsSection';
+import { FeatureHighlightsBar } from '../components/home/FeatureHighlightsBar';
 import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { NotificationModal } from './NotificationModal';
 import { LocationPickerModal } from './LocationPickerModal';
@@ -236,8 +237,11 @@ export function CustomerDashboard({
         onOpenAll={() => onOpenSearch?.()}
       />
 
-      {/* Section 5: Urgent Daily Gigs & Short-Term Shift Work (Modern Yellow Palette) */}
+      {/* Section 5: Urgent Daily Gigs & Short-Term Shift Work */}
       <DailyGigsSection currentCity={locationName} />
+
+      {/* Section 6: Minimalist Feature Highlights Bar (Final Bottom Trust Strip) */}
+      <FeatureHighlightsBar />
 
       {/* All 20 Categories Modal (Opened via 'See All' in Service Category) */}
       <AllCategoriesModal
