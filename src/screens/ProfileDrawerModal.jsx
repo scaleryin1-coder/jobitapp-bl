@@ -15,10 +15,7 @@ import {
   Edit2,
   Check,
   ArrowLeft,
-  Lock,
-  ArrowRight,
-  Sparkles,
-  ExternalLink
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -207,16 +204,16 @@ export function ProfileDrawerModal({
   return (
     <div className="fixed inset-0 z-50 flex justify-start bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in select-none">
       
-      {/* Primary Navy Blue Slide-out Drawer Panel (Docked to Left Edge) */}
+      {/* Primary Light Blue Slide-out Drawer Panel (Docked to Left Edge) */}
       <div 
-        className="w-full max-w-[360px] sm:max-w-[380px] h-full bg-[#0B1528] text-slate-100 flex flex-col shadow-2xl relative border-r border-[#1E2E4E] overflow-hidden animate-slide-from-left z-10"
+        className="w-full max-w-[360px] sm:max-w-[380px] h-full bg-[#E9F8FD] text-slate-900 flex flex-col shadow-2xl relative border-r border-[#D0EEF9] overflow-hidden animate-slide-from-left z-10"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* ======================================================== */}
-        {/* TOP NAVY BLUE BRANDED DRAWER HEADER                      */}
+        {/* TOP LIGHT BLUE THEMED DRAWER HEADER                      */}
         {/* ======================================================== */}
-        <div className="bg-gradient-to-b from-[#070D18] via-[#0B1528] to-[#101C33] px-6 pt-5 pb-5 border-b border-[#1E2E4E] shrink-0 relative">
+        <div className="bg-gradient-to-b from-[#D8F3FC] via-[#E4F7FD] to-[#E9F8FD] px-6 pt-5 pb-5 border-b border-[#D0EEF9] shrink-0 relative">
           
           {/* Header Action Bar */}
           <div className="flex items-center justify-between mb-4">
@@ -224,15 +221,15 @@ export function ProfileDrawerModal({
               <button
                 type="button"
                 onClick={() => setActiveSubView('main')}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 transition cursor-pointer"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4 text-[#0EA5E0]" />
                 <span>Back</span>
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0EA5E0] shadow-[0_0_10px_#0EA5E0]" />
-                <span className="text-xs font-black tracking-widest text-[#93C5FD] uppercase">JOBit Account</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#0EA5E0] shadow-[0_0_8px_#0EA5E0]" />
+                <span className="text-xs font-black tracking-widest text-[#0EA5E0] uppercase">JOBit Account</span>
               </div>
             )}
 
@@ -240,7 +237,7 @@ export function ProfileDrawerModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-[#16233B] hover:bg-[#1E3052] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 flex items-center justify-center transition cursor-pointer shadow-xs border border-slate-200/80"
               title="Close Drawer"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
@@ -248,13 +245,13 @@ export function ProfileDrawerModal({
           </div>
 
           {/* ======================================================== */}
-          {/* TOP PROFILE INFO (PLAIN LAYOUT - NO BANNERS)              */}
+          {/* TOP PROFILE INFO (PLAIN HIGH-CONTRAST LAYOUT)            */}
           {/* ======================================================== */}
           {isLoggedIn ? (
             <div className="flex items-start gap-4">
-              {/* Profile Avatar with Navy Blue Ring */}
+              {/* Profile Avatar with Cyan Accent Ring */}
               <div className="relative shrink-0">
-                <div className="w-16 h-16 rounded-2xl bg-[#16233B] ring-2 ring-[#1E3A8A] flex items-center justify-center overflow-hidden shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-white ring-2 ring-[#0EA5E0] flex items-center justify-center overflow-hidden shadow-sm">
                   {userPhoto ? (
                     <img
                       src={userPhoto}
@@ -262,26 +259,26 @@ export function ProfileDrawerModal({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-2xl font-black text-white">
+                    <span className="text-2xl font-black text-[#0EA5E0]">
                       {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
                     </span>
                   )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 bg-emerald-500 ring-2 ring-[#0B1528] w-5 h-5 rounded-full flex items-center justify-center shadow-xs" title="Verified Single Account">
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 ring-2 ring-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs" title="Verified Single Account">
                   <ShieldCheck className="w-3.5 h-3.5 text-white" />
                 </div>
               </div>
 
               {/* User Identity Details */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-extrabold text-white tracking-tight truncate">
+                <h3 className="text-base font-extrabold text-slate-900 tracking-tight truncate">
                   {displayName}
                 </h3>
-                <p className="text-xs font-medium text-slate-300 mt-0.5 truncate flex items-center gap-1">
+                <p className="text-xs font-semibold text-slate-600 mt-0.5 truncate flex items-center gap-1">
                   <Phone className="w-3 h-3 text-[#0EA5E0] shrink-0" />
                   <span>{displayPhone}</span>
                 </p>
-                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#16233B] border border-[#1E3052] text-[#93C5FD] text-[10px] font-bold">
+                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-[#D0EEF9] text-[#0EA5E0] text-[10px] font-black shadow-xs">
                   <span>{currentUser?.role === 'admin' ? 'Admin Profile' : (currentUser?.role === 'worker' ? 'Verified Pro' : 'Customer Account')}</span>
                 </div>
               </div>
@@ -289,14 +286,14 @@ export function ProfileDrawerModal({
           ) : (
             /* Unauthenticated Guest Header */
             <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#16233B] ring-2 ring-[#1E3A8A] flex items-center justify-center text-slate-400 shrink-0 shadow-lg">
-                <User className="w-7 h-7 text-[#93C5FD]" />
+              <div className="w-14 h-14 rounded-2xl bg-white ring-2 ring-[#0EA5E0] flex items-center justify-center text-[#0EA5E0] shrink-0 shadow-sm">
+                <User className="w-7 h-7" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-extrabold text-white tracking-tight">
+                <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
                   Guest Account
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed font-medium">
                   Sign in with your mobile number to view and manage service bookings.
                 </p>
               </div>
@@ -330,13 +327,13 @@ export function ProfileDrawerModal({
               {isLoggedIn && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-500">
                       Personal Details
                     </h4>
                     <button
                       type="button"
                       onClick={() => setIsEditing(!isEditing)}
-                      className="text-xs font-bold text-[#0EA5E0] hover:text-[#38BDF8] flex items-center gap-1 cursor-pointer transition active:scale-95"
+                      className="text-xs font-bold text-[#0EA5E0] hover:text-[#0284C7] flex items-center gap-1 cursor-pointer transition active:scale-95"
                     >
                       <Edit2 className="w-3 h-3" />
                       <span>{isEditing ? 'Cancel' : 'Edit'}</span>
@@ -344,8 +341,8 @@ export function ProfileDrawerModal({
                   </div>
 
                   {saveSuccess && (
-                    <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs font-bold flex items-center gap-2 animate-fade-in">
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>Details saved successfully!</span>
                     </div>
                   )}
@@ -353,35 +350,35 @@ export function ProfileDrawerModal({
                   {isEditing ? (
                     <form onSubmit={handleSaveProfile} className="space-y-2.5 pt-1">
                       <div>
-                        <label className="text-[10px] font-extrabold text-slate-400 block mb-1">Full Name</label>
+                        <label className="text-[10px] font-extrabold text-slate-600 block mb-1">Full Name</label>
                         <input
                           type="text"
                           required
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="w-full px-3 py-2 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0] transition"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs transition"
                           placeholder="Your Name"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-extrabold text-slate-400 block mb-1">Email Address</label>
+                        <label className="text-[10px] font-extrabold text-slate-600 block mb-1">Email Address</label>
                         <input
                           type="email"
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full px-3 py-2 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0] transition"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs transition"
                           placeholder="email@example.com"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-extrabold text-slate-400 block mb-1">Primary Address / Location</label>
+                        <label className="text-[10px] font-extrabold text-slate-600 block mb-1">Primary Address / Location</label>
                         <input
                           type="text"
                           value={editAddress}
                           onChange={(e) => setEditAddress(e.target.value)}
-                          className="w-full px-3 py-2 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0] transition"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs transition"
                           placeholder="Melattur, Kerala"
                         />
                       </div>
@@ -399,46 +396,46 @@ export function ProfileDrawerModal({
                     /* Plain text profile rows */
                     <div className="space-y-2">
                       {/* Name */}
-                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
-                          <User className="w-3.5 h-3.5" />
+                      <div className="p-3 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#E9F8FD] text-[#0EA5E0] flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Name</p>
-                          <p className="text-xs font-extrabold text-white truncate">{displayName || 'Customer'}</p>
+                          <p className="text-xs font-extrabold text-slate-900 truncate">{displayName || 'Customer'}</p>
                         </div>
                       </div>
 
                       {/* Mobile Number */}
-                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
-                          <Phone className="w-3.5 h-3.5" />
+                      <div className="p-3 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#E9F8FD] text-[#0EA5E0] flex items-center justify-center shrink-0">
+                          <Phone className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Mobile Number</p>
-                          <p className="text-xs font-extrabold text-white truncate">{displayPhone || 'Not set'}</p>
+                          <p className="text-xs font-extrabold text-slate-900 truncate">{displayPhone || 'Not set'}</p>
                         </div>
                       </div>
 
                       {/* Email */}
-                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
-                          <Mail className="w-3.5 h-3.5" />
+                      <div className="p-3 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#E9F8FD] text-[#0EA5E0] flex items-center justify-center shrink-0">
+                          <Mail className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Email Address</p>
-                          <p className="text-xs font-extrabold text-white truncate">{displayEmail || 'Not provided'}</p>
+                          <p className="text-xs font-extrabold text-slate-900 truncate">{displayEmail || 'Not provided'}</p>
                         </div>
                       </div>
 
                       {/* Address */}
-                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
-                          <MapPin className="w-3.5 h-3.5" />
+                      <div className="p-3 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#E9F8FD] text-[#0EA5E0] flex items-center justify-center shrink-0">
+                          <MapPin className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Primary Address</p>
-                          <p className="text-xs font-extrabold text-white truncate">{displayAddress}</p>
+                          <p className="text-xs font-extrabold text-slate-900 truncate">{displayAddress}</p>
                         </div>
                       </div>
                     </div>
@@ -449,8 +446,8 @@ export function ProfileDrawerModal({
               {/* ======================================================== */}
               {/* 3 PLAIN TEXT BUTTON LINKS (VERTICAL LIST)                */}
               {/* ======================================================== */}
-              <div className="space-y-1.5 pt-2 border-t border-[#1E2E4E]">
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2">
+              <div className="space-y-2 pt-2 border-t border-[#D0EEF9]">
+                <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
                   Explore & Support
                 </h4>
 
@@ -458,13 +455,15 @@ export function ProfileDrawerModal({
                 <button
                   type="button"
                   onClick={() => setActiveSubView('about')}
-                  className="w-full py-3 px-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] text-slate-200 hover:text-white transition flex items-center justify-between text-left cursor-pointer active:scale-98"
+                  className="w-full py-3 px-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] text-slate-900 shadow-xs transition flex items-center justify-between text-left cursor-pointer active:scale-98"
                 >
                   <div className="flex items-center gap-3">
-                    <Info className="w-4 h-4 text-[#0EA5E0] shrink-0" />
+                    <div className="w-8 h-8 rounded-xl bg-[#E0F7FA] text-[#00A3E0] flex items-center justify-center shrink-0">
+                      <Info className="w-4 h-4" />
+                    </div>
                     <div>
-                      <p className="text-xs font-extrabold text-white">About Us</p>
-                      <p className="text-[10px] text-slate-400 font-medium">App overview & Melattur service platform</p>
+                      <p className="text-xs font-extrabold text-slate-900">About Us</p>
+                      <p className="text-[10px] text-slate-500 font-medium">App overview & Melattur service platform</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -474,13 +473,15 @@ export function ProfileDrawerModal({
                 <button
                   type="button"
                   onClick={() => setActiveSubView('contact')}
-                  className="w-full py-3 px-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] text-slate-200 hover:text-white transition flex items-center justify-between text-left cursor-pointer active:scale-98"
+                  className="w-full py-3 px-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] text-slate-900 shadow-xs transition flex items-center justify-between text-left cursor-pointer active:scale-98"
                 >
                   <div className="flex items-center gap-3">
-                    <Headphones className="w-4 h-4 text-[#0EA5E0] shrink-0" />
+                    <div className="w-8 h-8 rounded-xl bg-[#E0F7FA] text-[#00A3E0] flex items-center justify-center shrink-0">
+                      <Headphones className="w-4 h-4" />
+                    </div>
                     <div>
-                      <p className="text-xs font-extrabold text-white">Contact Us</p>
-                      <p className="text-[10px] text-slate-400 font-medium">Support desk, phone & WhatsApp help</p>
+                      <p className="text-xs font-extrabold text-slate-900">Contact Us</p>
+                      <p className="text-[10px] text-slate-500 font-medium">Support desk, phone & WhatsApp help</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -490,13 +491,15 @@ export function ProfileDrawerModal({
                 <button
                   type="button"
                   onClick={() => setActiveSubView('terms')}
-                  className="w-full py-3 px-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] text-slate-200 hover:text-white transition flex items-center justify-between text-left cursor-pointer active:scale-98"
+                  className="w-full py-3 px-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] text-slate-900 shadow-xs transition flex items-center justify-between text-left cursor-pointer active:scale-98"
                 >
                   <div className="flex items-center gap-3">
-                    <FileText className="w-4 h-4 text-[#0EA5E0] shrink-0" />
+                    <div className="w-8 h-8 rounded-xl bg-[#E0F7FA] text-[#00A3E0] flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
                     <div>
-                      <p className="text-xs font-extrabold text-white">Privacy Policy & Terms</p>
-                      <p className="text-[10px] text-slate-400 font-medium">App guidelines & policies</p>
+                      <p className="text-xs font-extrabold text-slate-900">Privacy Policy & Terms</p>
+                      <p className="text-[10px] text-slate-500 font-medium">App guidelines & policies</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -506,25 +509,25 @@ export function ProfileDrawerModal({
               {/* ======================================================== */}
               {/* PROFESSIONAL / PRO SWITCH DEDICATED OPTION               */}
               {/* ======================================================== */}
-              <div className="pt-2 border-t border-[#1E2E4E]">
+              <div className="pt-2 border-t border-[#D0EEF9]">
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
                     onOpenWorkerOnboarding?.();
                   }}
-                  className="w-full p-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-emerald-500/30 text-left transition cursor-pointer active:scale-98 flex items-center justify-between"
+                  className="w-full p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-emerald-300 text-left transition cursor-pointer active:scale-98 flex items-center justify-between shadow-xs"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                       <Briefcase className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-white">Switch to Pro / Become a Professional</p>
-                      <p className="text-[10px] text-emerald-400 font-medium">Register as service worker & manage jobs</p>
+                      <p className="text-xs font-black text-slate-900">Switch to Pro / Become a Professional</p>
+                      <p className="text-[10px] text-emerald-700 font-bold">Register as service worker & manage jobs</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-emerald-400" />
+                  <ChevronRight className="w-4 h-4 text-emerald-500" />
                 </button>
               </div>
             </>
@@ -536,30 +539,30 @@ export function ProfileDrawerModal({
           {activeSubView === 'about' && (
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-black text-white">About JOBit Melattur</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                <h4 className="text-sm font-black text-slate-900">About JOBit Melattur</h4>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                   JOBit is Melattur's premier on-demand hyperlocal home services platform. We bridge local households with thoroughly background-verified professionals across Malappuram district.
                 </p>
               </div>
 
               <div className="space-y-2.5">
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="text-xs font-extrabold text-white">Flat ₹99 Advance Inspection</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="text-xs font-extrabold text-slate-900">Flat ₹99 Advance Inspection</p>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
                     Transparent, fixed inspection advance booking with zero hidden platform markups.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="text-xs font-extrabold text-white">20+ Local Home Trades</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="text-xs font-extrabold text-slate-900">20+ Local Home Trades</p>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
                     Electricians, Plumbers, AC mechanics, Coconut Tree Climbers, Domestic Help, Cleaning, and more.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="text-xs font-extrabold text-white">Verified Local Technicians</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="text-xs font-extrabold text-slate-900">Verified Local Technicians</p>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
                     Every registered technician is KYC-verified with localized dispatch and live phone support.
                   </p>
                 </div>
@@ -573,8 +576,8 @@ export function ProfileDrawerModal({
           {activeSubView === 'contact' && (
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-black text-white">Contact & Help Desk</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                <h4 className="text-sm font-black text-slate-900">Contact & Help Desk</h4>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                   Need assistance with your booking or technician dispatch? Reach our Melattur team anytime.
                 </p>
               </div>
@@ -583,18 +586,18 @@ export function ProfileDrawerModal({
                 {/* Phone Call */}
                 <a
                   href="tel:+919876543210"
-                  className="p-3 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] flex items-center justify-between text-left transition"
+                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#0EA5E0]/20 text-[#0EA5E0] flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#E0F7FA] text-[#00A3E0] flex items-center justify-center shrink-0">
                       <Phone className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-extrabold text-white">Direct Phone Support</p>
-                      <p className="text-[11px] text-slate-300 font-bold">+91 98765 43210</p>
+                      <p className="text-xs font-extrabold text-slate-900">Direct Phone Support</p>
+                      <p className="text-[11px] text-slate-600 font-bold">+91 98765 43210</p>
                     </div>
                   </div>
-                  <span className="text-[10px] text-[#0EA5E0] font-bold">Call Now</span>
+                  <span className="text-[10px] text-[#0EA5E0] font-black uppercase tracking-wider">Call Now</span>
                 </a>
 
                 {/* WhatsApp */}
@@ -602,25 +605,25 @@ export function ProfileDrawerModal({
                   href="https://wa.me/919876543210?text=Hello%20JOBit%20Support"
                   target="_blank"
                   rel="noreferrer"
-                  className="p-3 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] flex items-center justify-between text-left transition"
+                  className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-[#D0EEF9] shadow-xs flex items-center justify-between text-left transition"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                       <Headphones className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-extrabold text-white">WhatsApp Help Desk</p>
-                      <p className="text-[11px] text-slate-300 font-bold">+91 98765 43210</p>
+                      <p className="text-xs font-extrabold text-slate-900">WhatsApp Help Desk</p>
+                      <p className="text-[11px] text-slate-600 font-bold">+91 98765 43210</p>
                     </div>
                   </div>
-                  <span className="text-[10px] text-emerald-400 font-bold">Chat</span>
+                  <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">Chat</span>
                 </a>
 
                 {/* Support Email */}
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="text-xs font-extrabold text-white">Email Desk</p>
-                  <p className="text-[11px] text-slate-300 font-semibold mt-0.5">support@jobit.in</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Operational Hours: 8:00 AM – 8:00 PM (Daily)</p>
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="text-xs font-extrabold text-slate-900">Email Desk</p>
+                  <p className="text-[11px] text-slate-600 font-semibold mt-0.5">support@jobit.in</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Operational Hours: 8:00 AM – 8:00 PM (Daily)</p>
                 </div>
               </div>
             </div>
@@ -632,30 +635,30 @@ export function ProfileDrawerModal({
           {activeSubView === 'terms' && (
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-black text-white">Guidelines & Terms</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                <h4 className="text-sm font-black text-slate-900">Guidelines & Terms</h4>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                   Our core policies protecting customers, service workers, and community trust.
                 </p>
               </div>
 
               <div className="space-y-2.5 text-xs">
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="font-extrabold text-white">1 Account Per Mobile Number</p>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="font-extrabold text-slate-900">1 Account Per Mobile Number</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
                     Strict phone-based single identity linkage prevents duplicate profiles and ensures reliable service history.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="font-extrabold text-white">Data Confidentiality</p>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="font-extrabold text-slate-900">Data Confidentiality</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
                     Customer location and contact details are disclosed only to the confirmed dispatched technician.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
-                  <p className="font-extrabold text-white">Fair Fixed Task Pricing</p>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-white border border-[#D0EEF9] shadow-xs">
+                  <p className="font-extrabold text-slate-900">Fair Fixed Task Pricing</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
                     All service jobs carry clearly stated task fees. Any additional materials are billed strictly with customer pre-approval.
                   </p>
                 </div>
@@ -669,14 +672,14 @@ export function ProfileDrawerModal({
           {activeSubView === 'login_phone' && (
             <form onSubmit={handleSendOtp} className="space-y-4 pt-1">
               <div>
-                <h4 className="text-sm font-black text-white">Enter Mobile Number</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-sm font-black text-slate-900">Enter Mobile Number</h4>
+                <p className="text-xs text-slate-600 mt-0.5">
                   We'll send an OTP to verify your account
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold text-slate-300">10-Digit Phone Number</label>
+                <label className="text-[11px] font-extrabold text-slate-700">10-Digit Phone Number</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400">+91</span>
                   <input
@@ -690,14 +693,14 @@ export function ProfileDrawerModal({
                       setAuthError('');
                     }}
                     placeholder="98765 00001"
-                    className="w-full pl-12 pr-4 py-2.5 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0]"
+                    className="w-full pl-12 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs"
                   />
                 </div>
-                <p className="text-[10px] text-slate-400">Strict 1 account per mobile number policy</p>
+                <p className="text-[10px] text-slate-500">Strict 1 account per mobile number policy</p>
               </div>
 
               {authError && (
-                <div className="p-2.5 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs font-bold">
+                <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold">
                   {authError}
                 </div>
               )}
@@ -712,14 +715,14 @@ export function ProfileDrawerModal({
               </button>
 
               {/* Quick Admin Test Helper */}
-              <div className="pt-2 border-t border-[#1E2E4E] text-center">
+              <div className="pt-2 border-t border-[#D0EEF9] text-center">
                 <button
                   type="button"
                   onClick={() => {
                     setPhoneInput('8289968045');
                     setAuthError('');
                   }}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 font-bold cursor-pointer"
+                  className="text-[11px] text-amber-600 hover:text-amber-700 font-bold cursor-pointer"
                 >
                   ⚡ Use Admin Phone (8289968045)
                 </button>
@@ -733,8 +736,8 @@ export function ProfileDrawerModal({
           {activeSubView === 'login_otp' && (
             <form onSubmit={handleVerifyOtp} className="space-y-4 pt-1">
               <div>
-                <h4 className="text-sm font-black text-white">Enter OTP Code</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-sm font-black text-slate-900">Enter OTP Code</h4>
+                <p className="text-xs text-slate-600 mt-0.5">
                   Code sent to +91 {phoneInput}
                 </p>
               </div>
@@ -748,15 +751,15 @@ export function ProfileDrawerModal({
                   value={otpInput}
                   onChange={(e) => setOtpInput(e.target.value)}
                   placeholder="123456"
-                  className="w-full text-center tracking-[8px] py-2.5 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-base font-black text-white focus:outline-none focus:border-[#0EA5E0]"
+                  className="w-full text-center tracking-[8px] py-2.5 bg-white border border-slate-200 rounded-xl text-base font-black text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs"
                 />
-                <div className="p-2 rounded-lg bg-[#162544] text-[11px] text-[#93C5FD] text-center font-bold">
+                <div className="p-2 rounded-xl bg-[#E0F7FA] text-[11px] text-[#00A3E0] text-center font-bold">
                   🔑 Mock OTP: Enter 123456 (or any code)
                 </div>
               </div>
 
               {authError && (
-                <div className="p-2.5 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs font-bold">
+                <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold">
                   {authError}
                 </div>
               )}
@@ -764,7 +767,7 @@ export function ProfileDrawerModal({
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs transition cursor-pointer active:scale-98"
+                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs transition cursor-pointer active:scale-98 shadow-md"
               >
                 {authLoading ? 'Verifying...' : 'Verify OTP & Enter'}
               </button>
@@ -772,7 +775,7 @@ export function ProfileDrawerModal({
               <button
                 type="button"
                 onClick={() => setActiveSubView('login_phone')}
-                className="w-full text-xs text-slate-400 hover:text-white font-semibold transition cursor-pointer"
+                className="w-full text-xs text-slate-500 hover:text-slate-800 font-semibold transition cursor-pointer"
               >
                 ← Change Phone Number
               </button>
@@ -785,14 +788,14 @@ export function ProfileDrawerModal({
           {activeSubView === 'login_name' && (
             <form onSubmit={handleFinishNewUser} className="space-y-4 pt-1">
               <div>
-                <h4 className="text-sm font-black text-white">What is your name?</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-sm font-black text-slate-900">What is your name?</h4>
+                <p className="text-xs text-slate-600 mt-0.5">
                   Set up your profile for service bookings
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold text-slate-300">Full Name</label>
+                <label className="text-[11px] font-extrabold text-slate-700">Full Name</label>
                 <input
                   type="text"
                   required
@@ -800,12 +803,12 @@ export function ProfileDrawerModal({
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   placeholder="e.g. Aman Gupta / Ferdin"
-                  className="w-full px-3 py-2.5 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0]"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs"
                 />
               </div>
 
               {authError && (
-                <div className="p-2.5 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs font-bold">
+                <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold">
                   {authError}
                 </div>
               )}
@@ -813,7 +816,7 @@ export function ProfileDrawerModal({
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs transition cursor-pointer active:scale-98"
+                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs transition cursor-pointer active:scale-98 shadow-md"
               >
                 {authLoading ? 'Creating Profile...' : 'Complete & Start Booking'}
               </button>
@@ -826,11 +829,11 @@ export function ProfileDrawerModal({
         {/* BOTTOM LOGOUT ACTION (PURE LOGOUT SYSTEM)                */}
         {/* ======================================================== */}
         {isLoggedIn && activeSubView === 'main' && (
-          <div className="p-4 bg-[#070D18] border-t border-[#1E2E4E] shrink-0">
+          <div className="p-4 bg-[#E9F8FD] border-t border-[#D0EEF9] shrink-0">
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full py-2.5 px-4 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              className="w-full py-2.5 px-4 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 shadow-2xs"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
