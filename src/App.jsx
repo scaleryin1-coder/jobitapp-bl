@@ -374,12 +374,16 @@ function MainLayout() {
           onClose={() => setIsProfileDrawerOpen(false)}
           onLogoutComplete={() => {
             setIsProfileDrawerOpen(false);
-            setCurrentScreen('splash');
+            setCurrentScreen('main');
             setActiveTab('home');
           }}
           onOpenWorkerOnboarding={() => {
             setIsProfileDrawerOpen(false);
             setIsWorkerOnboardingOpen(true);
+          }}
+          onOpenAuth={() => {
+            setIsProfileDrawerOpen(false);
+            setIsAuthModalOpen(true);
           }}
         />
 

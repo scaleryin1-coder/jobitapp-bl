@@ -6,316 +6,842 @@ import {
   Mail, 
   MapPin, 
   LogOut, 
-  Save, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Edit3,
+  Briefcase, 
+  ChevronRight,
+  Info,
+  Headphones,
+  FileText,
+  ShieldCheck,
+  Edit2,
+  Check,
+  ArrowLeft,
+  Lock,
+  ArrowRight,
   Sparkles,
-  Briefcase,
-  ChevronRight
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export function ProfileDrawerModal({ isOpen, onClose, onLogoutComplete, onOpenWorkerOnboarding }) {
-  const { currentUser, updateUserProfile, logout } = useAuth();
+export function ProfileDrawerModal({ 
+  isOpen, 
+  onClose, 
+  onLogoutComplete, 
+  onOpenWorkerOnboarding,
+  onOpenAuth 
+}) {
+  const { currentUser, updateUserProfile, logout, loginWithPhone, checkPhoneRegistered } = useAuth();
   
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Navigation inside drawer: 'main' | 'about' | 'contact' | 'terms' | 'login_phone' | 'login_otp' | 'login_name'
+  const [activeSubView, setActiveSubView] = useState('main');
 
-  // Sync state whenever drawer opens or user changes
+  // Edit profile state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Inline OTP Auth state for guest users
+  const [phoneInput, setPhoneInput] = useState('');
+  const [otpInput, setOtpInput] = useState('123456');
+  const [nameInput, setNameInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [existingUserFound, setExistingUserFound] = useState(null);
+
+  const isLoggedIn = Boolean(currentUser && currentUser.uid);
+
+  // Sync edit form fields whenever drawer opens or user changes
   useEffect(() => {
     if (isOpen) {
-      const defaultName = currentUser?.name || 'Ferdin';
-      const defaultPhone = currentUser?.phone || '+91 98765 43210';
-      const defaultAddress = currentUser?.city || currentUser?.address || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
-      const defaultEmail = currentUser?.email || `${defaultName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'ferdin'}@example.com`;
-
-      setName(defaultName);
-      setPhone(defaultPhone);
-      setAddress(defaultAddress);
-      setEmail(defaultEmail);
+      setActiveSubView('main');
       setIsEditing(false);
-      setIsSaved(false);
+      setSaveSuccess(false);
+      setAuthError('');
+      
+      if (isLoggedIn) {
+        setEditName(currentUser?.name || '');
+        setEditEmail(currentUser?.email || '');
+        setEditAddress(currentUser?.city || currentUser?.address || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
+      } else {
+        // Pure unauthenticated state: zero cached fake data
+        setEditName('');
+        setEditEmail('');
+        setEditAddress('');
+        setPhoneInput('');
+        setOtpInput('123456');
+        setNameInput('');
+        setExistingUserFound(null);
+      }
     }
-  }, [isOpen, currentUser]);
+  }, [isOpen, isLoggedIn, currentUser]);
 
   if (!isOpen) return null;
 
-  const handleSave = async (e) => {
-    e?.preventDefault?.();
-    setSaving(true);
-
+  // Pure Logout Action: Clears active user session & tokens, closes drawer instantly
+  const handleLogout = async () => {
     try {
-      await updateUserProfile({
-        name: name.trim() || 'Ferdin',
-        email: email.trim(),
-        city: address.trim(),
-        address: address.trim()
-      });
-
-      // Keep location in sync in local storage
-      if (address.trim()) {
-        localStorage.setItem('jobit_user_location', address.trim());
-      }
-
-      setIsSaved(true);
-      setIsEditing(false);
-      setTimeout(() => {
-        setIsSaved(false);
-      }, 2500);
+      await logout();
+      onClose();
+      onLogoutComplete?.();
     } catch (err) {
-      console.warn('Failed to update profile', err);
-    } finally {
-      setSaving(false);
+      console.warn('Logout error', err);
+      onClose();
+      onLogoutComplete?.();
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    onClose();
-    onLogoutComplete?.();
+  // Save profile updates
+  const handleSaveProfile = async (e) => {
+    e?.preventDefault?.();
+    if (!editName.trim()) return;
+    setSavingProfile(true);
+    try {
+      await updateUserProfile({
+        name: editName.trim(),
+        email: editEmail.trim(),
+        city: editAddress.trim(),
+        address: editAddress.trim()
+      });
+      if (editAddress.trim()) {
+        localStorage.setItem('jobit_user_location', editAddress.trim());
+      }
+      setIsEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err) {
+      console.warn('Failed to save profile', err);
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const displayName = name || currentUser?.name || 'Ferdin';
+  // Inline Mobile Number + OTP Flow
+  const handleSendOtp = async (e) => {
+    e?.preventDefault?.();
+    const cleanTen = phoneInput.replace(/\D/g, '').slice(-10);
+    if (!cleanTen || cleanTen.length < 10) {
+      setAuthError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      if (cleanTen === '8289968045') {
+        setExistingUserFound({ name: 'Master Admin', role: 'admin' });
+      } else {
+        const regStatus = await checkPhoneRegistered?.(cleanTen);
+        if (regStatus?.isRegistered && regStatus?.user) {
+          setExistingUserFound(regStatus.user);
+        } else {
+          setExistingUserFound(null);
+        }
+      }
+      setActiveSubView('login_otp');
+    } catch {
+      setActiveSubView('login_otp');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e?.preventDefault?.();
+    const cleanTen = phoneInput.replace(/\D/g, '').slice(-10);
+    if (!otpInput || otpInput.length < 4) {
+      setAuthError('Please enter verification code (Mock OTP: 123456)');
+      return;
+    }
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      // Admin phone check
+      if (cleanTen === '8289968045') {
+        await loginWithPhone('8289968045', otpInput, 'Master Admin', 'admin');
+        setActiveSubView('main');
+        return;
+      }
+
+      // Existing single account rule
+      if (existingUserFound) {
+        await loginWithPhone(cleanTen, otpInput, existingUserFound.name, existingUserFound.role || 'customer');
+        setActiveSubView('main');
+        return;
+      }
+
+      // Brand new user registration
+      setActiveSubView('login_name');
+    } catch (err) {
+      setAuthError(err.message || 'OTP verification failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleFinishNewUser = async (e) => {
+    e?.preventDefault?.();
+    const cleanTen = phoneInput.replace(/\D/g, '').slice(-10);
+    const finalName = nameInput.trim() || 'JOBit Customer';
+    setAuthLoading(true);
+    setAuthError('');
+
+    try {
+      await loginWithPhone(cleanTen, otpInput, finalName, 'customer');
+      setActiveSubView('main');
+    } catch (err) {
+      setAuthError(err.message || 'Registration failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const displayName = currentUser?.name || '';
+  const displayPhone = currentUser?.phone || '';
+  const displayEmail = currentUser?.email || '';
+  const displayAddress = currentUser?.city || currentUser?.address || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   const userPhoto = currentUser?.photo || currentUser?.avatar;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      {/* Floating Profile Card Modal */}
+    <div className="fixed inset-0 z-50 flex justify-start bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in select-none">
+      
+      {/* Primary Navy Blue Slide-out Drawer Panel (Docked to Left Edge) */}
       <div 
-        className="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative border border-slate-100 max-h-[92vh] overflow-y-auto animate-scale-up"
+        className="w-full max-w-[360px] sm:max-w-[380px] h-full bg-[#0B1528] text-slate-100 flex flex-col shadow-2xl relative border-r border-[#1E2E4E] overflow-hidden animate-slide-from-left z-10"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#F1F3F5] text-slate-600 flex items-center justify-center hover:bg-slate-200 transition cursor-pointer"
-          title="Close"
-        >
-          <X className="w-4 h-4 stroke-[2.5]" />
-        </button>
+        
+        {/* ======================================================== */}
+        {/* TOP NAVY BLUE BRANDED DRAWER HEADER                      */}
+        {/* ======================================================== */}
+        <div className="bg-gradient-to-b from-[#070D18] via-[#0B1528] to-[#101C33] px-6 pt-5 pb-5 border-b border-[#1E2E4E] shrink-0 relative">
+          
+          {/* Header Action Bar */}
+          <div className="flex items-center justify-between mb-4">
+            {activeSubView !== 'main' ? (
+              <button
+                type="button"
+                onClick={() => setActiveSubView('main')}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#0EA5E0] shadow-[0_0_10px_#0EA5E0]" />
+                <span className="text-xs font-black tracking-widest text-[#93C5FD] uppercase">JOBit Account</span>
+              </div>
+            )}
 
-        {/* Top Header & Avatar Profile Display */}
-        <div className="flex flex-col items-center text-center pt-2 pb-4 border-b border-slate-100">
-          <div className="relative mb-3">
-            <div className="w-20 h-20 rounded-full ring-4 ring-[#4B6EF5]/15 shadow-md overflow-hidden bg-gradient-to-br from-[#E0E7FF] to-[#D5E1FF] flex items-center justify-center">
-              {userPhoto ? (
-                <img
-                  src={userPhoto}
-                  alt={displayName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-2xl font-black text-[#4B6EF5]">
-                  {displayName.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 ring-2 ring-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs" title="Verified Customer">
-              <ShieldCheck className="w-3 h-3 text-white" />
-            </div>
+            {/* Close Drawer Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-[#16233B] hover:bg-[#1E3052] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              title="Close Drawer"
+            >
+              <X className="w-4 h-4 stroke-[2.5]" />
+            </button>
           </div>
 
-          <h3 className="text-lg font-black text-slate-900 tracking-tight">
-            {displayName}
-          </h3>
-          <p className="text-xs font-semibold text-slate-400 mt-0.5">
-            {phone}
-          </p>
+          {/* ======================================================== */}
+          {/* TOP PROFILE INFO (PLAIN LAYOUT - NO BANNERS)              */}
+          {/* ======================================================== */}
+          {isLoggedIn ? (
+            <div className="flex items-start gap-4">
+              {/* Profile Avatar with Navy Blue Ring */}
+              <div className="relative shrink-0">
+                <div className="w-16 h-16 rounded-2xl bg-[#16233B] ring-2 ring-[#1E3A8A] flex items-center justify-center overflow-hidden shadow-lg">
+                  {userPhoto ? (
+                    <img
+                      src={userPhoto}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl font-black text-white">
+                      {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 ring-2 ring-[#0B1528] w-5 h-5 rounded-full flex items-center justify-center shadow-xs" title="Verified Single Account">
+                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                </div>
+              </div>
 
-          <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAF0FF] text-[#4B6EF5] text-[11px] font-extrabold tracking-wide">
-            <Sparkles className="w-3 h-3 text-[#4B6EF5]" />
-            <span>JOBit Single Account</span>
-          </div>
+              {/* User Identity Details */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-extrabold text-white tracking-tight truncate">
+                  {displayName}
+                </h3>
+                <p className="text-xs font-medium text-slate-300 mt-0.5 truncate flex items-center gap-1">
+                  <Phone className="w-3 h-3 text-[#0EA5E0] shrink-0" />
+                  <span>{displayPhone}</span>
+                </p>
+                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#16233B] border border-[#1E3052] text-[#93C5FD] text-[10px] font-bold">
+                  <span>{currentUser?.role === 'admin' ? 'Admin Profile' : (currentUser?.role === 'worker' ? 'Verified Pro' : 'Customer Account')}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Unauthenticated Guest Header */
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#16233B] ring-2 ring-[#1E3A8A] flex items-center justify-center text-slate-400 shrink-0 shadow-lg">
+                <User className="w-7 h-7 text-[#93C5FD]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-extrabold text-white tracking-tight">
+                  Guest Account
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                  Sign in with your mobile number to view and manage service bookings.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Guest Login / Sign Up Trigger */}
+          {!isLoggedIn && activeSubView === 'main' && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => setActiveSubView('login_phone')}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#4B6EF5] hover:opacity-95 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Login / Sign Up</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Success Alert */}
-        {isSaved && (
-          <div className="mt-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Changes saved successfully!</span>
+        {/* ======================================================== */}
+        {/* SCROLLABLE DRAWER BODY CONTENT                           */}
+        {/* ======================================================== */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 no-scrollbar">
+
+          {/* MAIN VIEW: PROFILE DETAILS & 3 PLAIN LIST BUTTONS */}
+          {activeSubView === 'main' && (
+            <>
+              {/* Authenticated: Plain Layout Top Profile Information */}
+              {isLoggedIn && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      Personal Details
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(!isEditing)}
+                      className="text-xs font-bold text-[#0EA5E0] hover:text-[#38BDF8] flex items-center gap-1 cursor-pointer transition active:scale-95"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>{isEditing ? 'Cancel' : 'Edit'}</span>
+                    </button>
+                  </div>
+
+                  {saveSuccess && (
+                    <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Details saved successfully!</span>
+                    </div>
+                  )}
+
+                  {isEditing ? (
+                    <form onSubmit={handleSaveProfile} className="space-y-2.5 pt-1">
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 block mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full px-3 py-2 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0] transition"
+                          placeholder="Your Name"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 block mb-1">Email Address</label>
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="w-full px-3 py-2 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0] transition"
+                          placeholder="email@example.com"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 block mb-1">Primary Address / Location</label>
+                        <input
+                          type="text"
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          className="w-full px-3 py-2 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0] transition"
+                          placeholder="Melattur, Kerala"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={savingProfile}
+                        className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-extrabold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{savingProfile ? 'Saving...' : 'Save Profile Details'}</span>
+                      </button>
+                    </form>
+                  ) : (
+                    /* Plain text profile rows */
+                    <div className="space-y-2">
+                      {/* Name */}
+                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
+                          <User className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Name</p>
+                          <p className="text-xs font-extrabold text-white truncate">{displayName || 'Customer'}</p>
+                        </div>
+                      </div>
+
+                      {/* Mobile Number */}
+                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
+                          <Phone className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Mobile Number</p>
+                          <p className="text-xs font-extrabold text-white truncate">{displayPhone || 'Not set'}</p>
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
+                          <Mail className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Email Address</p>
+                          <p className="text-xs font-extrabold text-white truncate">{displayEmail || 'Not provided'}</p>
+                        </div>
+                      </div>
+
+                      {/* Address */}
+                      <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E] flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-[#1B2B4A] text-[#93C5FD] flex items-center justify-center shrink-0">
+                          <MapPin className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Primary Address</p>
+                          <p className="text-xs font-extrabold text-white truncate">{displayAddress}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 3 PLAIN TEXT BUTTON LINKS (VERTICAL LIST)                */}
+              {/* ======================================================== */}
+              <div className="space-y-1.5 pt-2 border-t border-[#1E2E4E]">
+                <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                  Explore & Support
+                </h4>
+
+                {/* 1. About Us */}
+                <button
+                  type="button"
+                  onClick={() => setActiveSubView('about')}
+                  className="w-full py-3 px-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] text-slate-200 hover:text-white transition flex items-center justify-between text-left cursor-pointer active:scale-98"
+                >
+                  <div className="flex items-center gap-3">
+                    <Info className="w-4 h-4 text-[#0EA5E0] shrink-0" />
+                    <div>
+                      <p className="text-xs font-extrabold text-white">About Us</p>
+                      <p className="text-[10px] text-slate-400 font-medium">App overview & Melattur service platform</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+
+                {/* 2. Contact Us */}
+                <button
+                  type="button"
+                  onClick={() => setActiveSubView('contact')}
+                  className="w-full py-3 px-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] text-slate-200 hover:text-white transition flex items-center justify-between text-left cursor-pointer active:scale-98"
+                >
+                  <div className="flex items-center gap-3">
+                    <Headphones className="w-4 h-4 text-[#0EA5E0] shrink-0" />
+                    <div>
+                      <p className="text-xs font-extrabold text-white">Contact Us</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Support desk, phone & WhatsApp help</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+
+                {/* 3. Privacy Policy & Terms */}
+                <button
+                  type="button"
+                  onClick={() => setActiveSubView('terms')}
+                  className="w-full py-3 px-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] text-slate-200 hover:text-white transition flex items-center justify-between text-left cursor-pointer active:scale-98"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-4 h-4 text-[#0EA5E0] shrink-0" />
+                    <div>
+                      <p className="text-xs font-extrabold text-white">Privacy Policy & Terms</p>
+                      <p className="text-[10px] text-slate-400 font-medium">App guidelines & policies</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+              </div>
+
+              {/* ======================================================== */}
+              {/* PROFESSIONAL / PRO SWITCH DEDICATED OPTION               */}
+              {/* ======================================================== */}
+              <div className="pt-2 border-t border-[#1E2E4E]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenWorkerOnboarding?.();
+                  }}
+                  className="w-full p-3.5 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-emerald-500/30 text-left transition cursor-pointer active:scale-98 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-white">Switch to Pro / Become a Professional</p>
+                      <p className="text-[10px] text-emerald-400 font-medium">Register as service worker & manage jobs</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-emerald-400" />
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ======================================================== */}
+          {/* SUB-VIEW: 1. ABOUT US                                    */}
+          {/* ======================================================== */}
+          {activeSubView === 'about' && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-black text-white">About JOBit Melattur</h4>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  JOBit is Melattur's premier on-demand hyperlocal home services platform. We bridge local households with thoroughly background-verified professionals across Malappuram district.
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="text-xs font-extrabold text-white">Flat ₹99 Advance Inspection</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    Transparent, fixed inspection advance booking with zero hidden platform markups.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="text-xs font-extrabold text-white">20+ Local Home Trades</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    Electricians, Plumbers, AC mechanics, Coconut Tree Climbers, Domestic Help, Cleaning, and more.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="text-xs font-extrabold text-white">Verified Local Technicians</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    Every registered technician is KYC-verified with localized dispatch and live phone support.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* SUB-VIEW: 2. CONTACT US                                  */}
+          {/* ======================================================== */}
+          {activeSubView === 'contact' && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-black text-white">Contact & Help Desk</h4>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Need assistance with your booking or technician dispatch? Reach our Melattur team anytime.
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                {/* Phone Call */}
+                <a
+                  href="tel:+919876543210"
+                  className="p-3 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] flex items-center justify-between text-left transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#0EA5E0]/20 text-[#0EA5E0] flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold text-white">Direct Phone Support</p>
+                      <p className="text-[11px] text-slate-300 font-bold">+91 98765 43210</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-[#0EA5E0] font-bold">Call Now</span>
+                </a>
+
+                {/* WhatsApp */}
+                <a
+                  href="https://wa.me/919876543210?text=Hello%20JOBit%20Support"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-3 rounded-xl bg-[#121E36] hover:bg-[#162544] border border-[#1E2E4E] flex items-center justify-between text-left transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                      <Headphones className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold text-white">WhatsApp Help Desk</p>
+                      <p className="text-[11px] text-slate-300 font-bold">+91 98765 43210</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-bold">Chat</span>
+                </a>
+
+                {/* Support Email */}
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="text-xs font-extrabold text-white">Email Desk</p>
+                  <p className="text-[11px] text-slate-300 font-semibold mt-0.5">support@jobit.in</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Operational Hours: 8:00 AM – 8:00 PM (Daily)</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* SUB-VIEW: 3. PRIVACY POLICY & TERMS                      */}
+          {/* ======================================================== */}
+          {activeSubView === 'terms' && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-black text-white">Guidelines & Terms</h4>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Our core policies protecting customers, service workers, and community trust.
+                </p>
+              </div>
+
+              <div className="space-y-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="font-extrabold text-white">1 Account Per Mobile Number</p>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    Strict phone-based single identity linkage prevents duplicate profiles and ensures reliable service history.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="font-extrabold text-white">Data Confidentiality</p>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    Customer location and contact details are disclosed only to the confirmed dispatched technician.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#121E36] border border-[#1E2E4E]">
+                  <p className="font-extrabold text-white">Fair Fixed Task Pricing</p>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    All service jobs carry clearly stated task fees. Any additional materials are billed strictly with customer pre-approval.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* INLINE OTP AUTH STEP 1: MOBILE NUMBER                    */}
+          {/* ======================================================== */}
+          {activeSubView === 'login_phone' && (
+            <form onSubmit={handleSendOtp} className="space-y-4 pt-1">
+              <div>
+                <h4 className="text-sm font-black text-white">Enter Mobile Number</h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  We'll send an OTP to verify your account
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold text-slate-300">10-Digit Phone Number</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400">+91</span>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    required
+                    autoFocus
+                    value={phoneInput}
+                    onChange={(e) => {
+                      setPhoneInput(e.target.value.replace(/\D/g, '').slice(-10));
+                      setAuthError('');
+                    }}
+                    placeholder="98765 00001"
+                    className="w-full pl-12 pr-4 py-2.5 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">Strict 1 account per mobile number policy</p>
+              </div>
+
+              {authError && (
+                <div className="p-2.5 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs font-bold">
+                  {authError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#4B6EF5] text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md active:scale-98"
+              >
+                <span>{authLoading ? 'Checking Number...' : 'Send OTP'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              {/* Quick Admin Test Helper */}
+              <div className="pt-2 border-t border-[#1E2E4E] text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhoneInput('8289968045');
+                    setAuthError('');
+                  }}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 font-bold cursor-pointer"
+                >
+                  ⚡ Use Admin Phone (8289968045)
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ======================================================== */}
+          {/* INLINE OTP AUTH STEP 2: VERIFY OTP                       */}
+          {/* ======================================================== */}
+          {activeSubView === 'login_otp' && (
+            <form onSubmit={handleVerifyOtp} className="space-y-4 pt-1">
+              <div>
+                <h4 className="text-sm font-black text-white">Enter OTP Code</h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Code sent to +91 {phoneInput}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value)}
+                  placeholder="123456"
+                  className="w-full text-center tracking-[8px] py-2.5 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-base font-black text-white focus:outline-none focus:border-[#0EA5E0]"
+                />
+                <div className="p-2 rounded-lg bg-[#162544] text-[11px] text-[#93C5FD] text-center font-bold">
+                  🔑 Mock OTP: Enter 123456 (or any code)
+                </div>
+              </div>
+
+              {authError && (
+                <div className="p-2.5 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs font-bold">
+                  {authError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs transition cursor-pointer active:scale-98"
+              >
+                {authLoading ? 'Verifying...' : 'Verify OTP & Enter'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSubView('login_phone')}
+                className="w-full text-xs text-slate-400 hover:text-white font-semibold transition cursor-pointer"
+              >
+                ← Change Phone Number
+              </button>
+            </form>
+          )}
+
+          {/* ======================================================== */}
+          {/* INLINE OTP AUTH STEP 3: NEW USER NAME                    */}
+          {/* ======================================================== */}
+          {activeSubView === 'login_name' && (
+            <form onSubmit={handleFinishNewUser} className="space-y-4 pt-1">
+              <div>
+                <h4 className="text-sm font-black text-white">What is your name?</h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Set up your profile for service bookings
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold text-slate-300">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="e.g. Aman Gupta / Ferdin"
+                  className="w-full px-3 py-2.5 bg-[#121E36] border border-[#1E2E4E] rounded-xl text-xs font-bold text-white focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+
+              {authError && (
+                <div className="p-2.5 rounded-xl bg-red-950/70 border border-red-500/40 text-red-200 text-xs font-bold">
+                  {authError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs transition cursor-pointer active:scale-98"
+              >
+                {authLoading ? 'Creating Profile...' : 'Complete & Start Booking'}
+              </button>
+            </form>
+          )}
+
+        </div>
+
+        {/* ======================================================== */}
+        {/* BOTTOM LOGOUT ACTION (PURE LOGOUT SYSTEM)                */}
+        {/* ======================================================== */}
+        {isLoggedIn && activeSubView === 'main' && (
+          <div className="p-4 bg-[#070D18] border-t border-[#1E2E4E] shrink-0">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full py-2.5 px-4 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
           </div>
         )}
 
-        {/* Profile Details & Form */}
-        <div className="mt-4 space-y-3.5">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
-              Account Information
-            </h4>
-            <button
-              type="button"
-              onClick={() => setIsEditing(!isEditing)}
-              className="text-xs font-bold text-[#4B6EF5] hover:text-[#3D5FE0] flex items-center gap-1 cursor-pointer transition active:scale-95"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>{isEditing ? 'Cancel' : 'Edit Details'}</span>
-            </button>
-          </div>
-
-          {isEditing ? (
-            <form onSubmit={handleSave} className="space-y-3 pt-1">
-              {/* Full Name */}
-              <div>
-                <label className="text-[11px] font-extrabold text-slate-600 block mb-1 flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                  <span>Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white transition"
-                  placeholder="e.g. Ferdin"
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="text-[11px] font-extrabold text-slate-600 block mb-1 flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                  <span>Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white transition"
-                  placeholder="e.g. ferdin@example.com"
-                />
-              </div>
-
-              {/* Mobile Number (Read-only / strict binding) */}
-              <div>
-                <label className="text-[11px] font-extrabold text-slate-600 block mb-1 flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                  <span>Linked Mobile Number</span>
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={phone}
-                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 cursor-not-allowed"
-                />
-                <p className="text-[10px] text-slate-400 mt-0.5">Strict single-account mobile linkage</p>
-              </div>
-
-              {/* Primary Address */}
-              <div>
-                <label className="text-[11px] font-extrabold text-slate-600 block mb-1 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                  <span>Primary Address</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white transition"
-                  placeholder="e.g. Melattur, Kerala"
-                />
-              </div>
-
-              {/* Save Changes Button */}
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full mt-2 py-3 rounded-full bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-extrabold text-xs shadow-[0_8px_20px_-4px_rgba(75,110,245,0.4)] flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saving ? 'Saving Changes...' : 'Save Changes'}</span>
-              </button>
-            </form>
-          ) : (
-            <div className="space-y-2.5 pt-1">
-              {/* Full Name Display */}
-              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white text-[#4B6EF5] flex items-center justify-center shadow-xs shrink-0">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Full Name</p>
-                  <p className="text-xs font-extrabold text-slate-800 truncate">{displayName}</p>
-                </div>
-              </div>
-
-              {/* Mobile Number Display */}
-              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white text-[#4B6EF5] flex items-center justify-center shadow-xs shrink-0">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Logged-in Mobile Number</p>
-                  <p className="text-xs font-extrabold text-slate-800 truncate">{phone}</p>
-                </div>
-              </div>
-
-              {/* Primary Address Display */}
-              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white text-[#4B6EF5] flex items-center justify-center shadow-xs shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Primary Address</p>
-                  <p className="text-xs font-extrabold text-slate-800 truncate">{address}</p>
-                </div>
-              </div>
-
-              {/* Email Display */}
-              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white text-[#4B6EF5] flex items-center justify-center shadow-xs shrink-0">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Email Address</p>
-                  <p className="text-xs font-extrabold text-slate-800 truncate">{email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Become a Professional Action */}
-        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-          {onOpenWorkerOnboarding && (
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenWorkerOnboarding();
-              }}
-              className="w-full p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/80 text-emerald-800 transition flex items-center justify-between text-left cursor-pointer active:scale-98 shadow-2xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                  <Briefcase className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-emerald-950">Become a Professional</p>
-                  <p className="text-[10px] text-emerald-700/80 font-bold">Auto-link account & start earning</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-emerald-600" />
-            </button>
-          )}
-
-          {/* Logout Action */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="w-full py-2.5 px-4 rounded-2xl bg-red-50 hover:bg-red-100/80 text-red-600 font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 border border-red-100"
-          >
-            <LogOut className="w-4 h-4 stroke-[2.2]" />
-            <span>Logout Session</span>
-          </button>
-        </div>
       </div>
+
+      {/* Click outside to close backdrop (on the right) */}
+      <div className="flex-1 cursor-pointer" onClick={onClose} />
     </div>
   );
 }
