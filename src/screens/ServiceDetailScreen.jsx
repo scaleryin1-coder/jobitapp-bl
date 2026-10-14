@@ -80,10 +80,10 @@ export function ServiceDetailScreen({ service, onBack, onBookNow, onOpenChat }) 
               <span>Flat ₹99</span>
             </div>
             <span className="text-[11px] font-bold text-slate-500 block mt-1 leading-tight">
-              Inspection & Service Booking
+              Visiting & Doorstep Inspection
             </span>
             <span className="text-[10px] font-semibold text-emerald-600 block mt-0.5">
-              (Fully adjustable from final bill)
+              (Technician assigned upon booking)
             </span>
           </div>
 

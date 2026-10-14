@@ -185,9 +185,8 @@ export function AdminScreen({ onBack, onLogout }) {
   }, []);
 
   // Metrics & Active Operations Progress Breakdown
-  const totalBookingsCount = bookings.length;
-  const unassignedJobs = bookings.filter(b => b.status === 'pending' || !b.workerId);
-  const assignedJobs = bookings.filter(b => b.status === 'accepted');
+  const unassignedJobs = bookings.filter(b => (b.status === 'pending' || b.status === 'confirmed') && !b.workerId);
+  const assignedJobs = bookings.filter(b => b.status === 'accepted' || (b.status === 'confirmed' && b.workerId));
   const inProgressJobs = bookings.filter(b => b.status === 'in_progress' || b.status === 'on_the_way');
   const completedJobs = bookings.filter(b => b.status === 'completed');
   const pendingPaymentJobs = bookings.filter(b => 
@@ -195,7 +194,7 @@ export function AdminScreen({ onBack, onLogout }) {
     (b.status === 'completed' && Number(b.remainingDue) > 0) ||
     b.paymentStatus === 'pending'
   );
-  const ongoingJobs = bookings.filter(b => ['accepted', 'on_the_way', 'in_progress'].includes(b.status));
+  const ongoingJobs = bookings.filter(b => ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status));
   const pendingJobs = bookings.filter(b => b.status === 'pending');
   const approvedWorkers = workers.filter(w => w.status === 'approved' || w.workerStatus === 'approved');
   const onlineWorkers = approvedWorkers.filter(w => w.isOnline);
@@ -408,7 +407,7 @@ export function AdminScreen({ onBack, onLogout }) {
       return b.status === 'pending' || !b.workerId;
     }
     if (dispatchFilter === 'assigned') {
-      return b.status === 'accepted';
+      return b.status === 'accepted' || (b.status === 'confirmed' && b.workerId);
     }
     if (dispatchFilter === 'in_progress') {
       return ['on_the_way', 'in_progress'].includes(b.status);
@@ -422,7 +421,7 @@ export function AdminScreen({ onBack, onLogout }) {
         b.paymentStatus === 'pending';
     }
     if (dispatchFilter === 'ongoing') {
-      return ['accepted', 'on_the_way', 'in_progress'].includes(b.status);
+      return ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status);
     }
     return true;
   });

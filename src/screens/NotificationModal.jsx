@@ -62,9 +62,9 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
             let message = `Status: ${b.status?.toUpperCase()}. Scheduled for ${b.dateTime || 'today'}.`;
             let badge = 'Dispatch';
 
-            if (b.status === 'pending') {
-              message = `Finding nearby verified technician for your request...`;
-              badge = 'Broadcast';
+            if (b.status === 'confirmed' || b.status === 'pending') {
+              message = `Booking Confirmed! Technician ${b.workerName || 'Rajesh Sharma'} assigned for your visit.`;
+              badge = 'Confirmed';
             } else if (b.status === 'accepted') {
               message = `Technician ${b.workerName || 'allocated'} accepted your job request.`;
               badge = 'Assigned';

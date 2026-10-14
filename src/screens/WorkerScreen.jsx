@@ -91,7 +91,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   // My accepted or ongoing jobs
   const myAssignedJobs = bookings.filter(b => 
     b.workerId === activeWorker.id && 
-    ['accepted', 'on_the_way', 'in_progress'].includes(b.status)
+    ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status)
   );
 
   // My completed jobs
@@ -116,7 +116,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
   // Step-by-step sequential progress updater
   const handleAdvanceStep = async (booking) => {
-    if (booking.status === 'accepted') {
+    if (booking.status === 'confirmed' || booking.status === 'accepted') {
       await updateBookingStatus(booking.id, 'on_the_way', {
         onTheWayAt: new Date().toISOString()
       });
@@ -546,7 +546,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       {job.categoryName || 'Home Service'}
                     </span>
                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${stepInfo.badge}`}>
-                      {job.status === 'accepted' ? 'ACCEPTED' : job.status === 'on_the_way' ? 'EN ROUTE' : 'IN PROGRESS'}
+                      {job.status === 'confirmed' ? 'ASSIGNED' : job.status === 'accepted' ? 'ACCEPTED' : job.status === 'on_the_way' ? 'EN ROUTE' : 'IN PROGRESS'}
                     </span>
                   </div>
 

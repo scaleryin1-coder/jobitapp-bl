@@ -40,7 +40,6 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   // Subscribe to real-time synchronized bookings
   useEffect(() => {
     const unsub = subscribeBookings((list) => {
-      // In customer view, show all if guest/test, or filter by customerId
       setBookings(list);
     });
     return () => unsub();
@@ -78,7 +77,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
 
   const filteredBookings = bookings.filter((b) => {
     if (filter === 'upcoming') {
-      return ['pending', 'accepted', 'on_the_way', 'in_progress'].includes(b.status);
+      return ['confirmed', 'pending', 'accepted', 'on_the_way', 'in_progress'].includes(b.status);
     }
     if (filter === 'completed') {
       return b.status === 'completed';
@@ -92,12 +91,21 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   // Helper to map status to step 1..5
   const getStepProgress = (status) => {
     switch (status) {
-      case 'pending': return { step: 1, text: 'Pending Assignment', color: 'text-amber-600', bg: 'bg-amber-500' };
-      case 'accepted': return { step: 2, text: 'Worker Accepted', color: 'text-[#0EA5E0]', bg: 'bg-[#0EA5E0]' };
-      case 'on_the_way': return { step: 3, text: 'On the Way', color: 'text-purple-600', bg: 'bg-purple-600' };
-      case 'in_progress': return { step: 4, text: 'Work Started', color: 'text-amber-600', bg: 'bg-amber-600' };
-      case 'completed': return { step: 5, text: 'Completed & Paid', color: 'text-emerald-600', bg: 'bg-emerald-600' };
-      default: return { step: 0, text: status, color: 'text-slate-500', bg: 'bg-slate-400' };
+      case 'confirmed':
+      case 'pending': 
+        return { step: 1, text: 'Booking Confirmed - Technician Assigned', color: 'text-emerald-600', bg: 'bg-emerald-500' };
+      case 'accepted': 
+        return { step: 2, text: 'Technician Assigned', color: 'text-[#0EA5E0]', bg: 'bg-[#0EA5E0]' };
+      case 'on_the_way': 
+        return { step: 3, text: 'Technician On the Way', color: 'text-purple-600', bg: 'bg-purple-600' };
+      case 'in_progress': 
+        return { step: 4, text: 'Inspection & Work Started', color: 'text-amber-600', bg: 'bg-amber-600' };
+      case 'completed': 
+        return { step: 5, text: 'Service Completed', color: 'text-emerald-600', bg: 'bg-emerald-600' };
+      case 'cancelled': 
+        return { step: 0, text: 'Cancelled', color: 'text-red-500', bg: 'bg-red-400' };
+      default: 
+        return { step: 1, text: 'Booking Confirmed - Technician Assigned', color: 'text-emerald-600', bg: 'bg-emerald-500' };
     }
   };
 
@@ -118,7 +126,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
       <div className="px-5 py-3">
         <div className="flex rounded-full bg-[#E9ECEF] p-1 text-xs font-bold">
           {[
-            { id: 'upcoming', label: `Active (${bookings.filter(b => ['pending','accepted','on_the_way','in_progress'].includes(b.status)).length})` },
+            { id: 'upcoming', label: `Active (${bookings.filter(b => ['confirmed', 'pending', 'accepted', 'on_the_way', 'in_progress'].includes(b.status)).length})` },
             { id: 'completed', label: `Completed (${bookings.filter(b => b.status === 'completed').length})` },
             { id: 'cancelled', label: `Cancelled (${bookings.filter(b => b.status === 'cancelled').length})` }
           ].map((tab) => (
@@ -158,29 +166,19 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                   </h3>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-black text-slate-900">₹{booking.totalServiceCharge || booking.price || 650}</span>
-                  <p className="text-[10px] text-slate-400 font-bold">Total Work Fee</p>
+                  <span className="text-sm font-black text-[#0EA5E0]">Flat ₹99</span>
+                  <p className="text-[10px] text-slate-400 font-bold">Visiting Fee Paid</p>
                 </div>
               </div>
 
-              {/* Transparent Customer Billing Breakdown - NEVER shows platform fee */}
-              <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/70 text-xs space-y-1.5">
-                <div className="flex items-center justify-between text-slate-600 font-medium">
-                  <span>Total Service Charge:</span>
-                  <span className="font-extrabold text-slate-900">₹{booking.totalServiceCharge || booking.price || 650}</span>
+              {/* Clean Customer Booking Summary - Strictly Flat ₹99 Visiting Fee Only */}
+              <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/70 text-xs space-y-1">
+                <div className="flex items-center justify-between text-slate-700 font-bold">
+                  <span>Visiting & Inspection Fee:</span>
+                  <span className="font-black text-emerald-600">Flat ₹99 (Paid Online)</span>
                 </div>
-                <div className="flex items-center justify-between text-emerald-600 font-medium">
-                  <span>Advance Paid (Inspection Fee):</span>
-                  <span className="font-bold">-₹{booking.advancePaid || 99}</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-900 font-black pt-1.5 border-t border-slate-200">
-                  <span>Remaining Amount Due:</span>
-                  <span className="text-sm font-black text-[#0EA5E0]">₹{booking.remainingDue || 551}</span>
-                </div>
-                <p className="text-[10px] text-slate-400 pt-0.5 font-semibold">
-                  {booking.status === 'completed' 
-                    ? '✓ Service completed & balance settled' 
-                    : '• Balance payable directly to JOBit Technician upon completion'}
+                <p className="text-[10px] text-slate-500 font-medium pt-0.5">
+                  • Covers technician doorstep visit and inspection. Additional service labor or spare parts (if any) will be quoted on-site after diagnosis.
                 </p>
               </div>
 
@@ -188,10 +186,10 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    {booking.status === 'pending' && (
+                    {(booking.status === 'confirmed' || booking.status === 'pending') && (
                       <span className="flex h-2.5 w-2.5 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                       </span>
                     )}
                     <p className={`text-xs font-black ${stepInfo.color}`}>
@@ -207,22 +205,23 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 <div className="w-full h-2 bg-slate-200/70 rounded-full overflow-hidden flex">
                   <div 
                     className={`h-full ${stepInfo.bg} transition-all duration-500 rounded-full`}
-                    style={{ width: `${(stepInfo.step / 5) * 100}%` }}
+                    style={{ width: `${Math.max(20, (stepInfo.step / 5) * 100)}%` }}
                   />
                 </div>
 
                 {/* 5 Sub-stages labels */}
                 <div className="grid grid-cols-5 text-[8px] font-black text-slate-400 text-center uppercase tracking-tighter pt-0.5">
-                  <span className={stepInfo.step >= 1 ? 'text-amber-600' : ''}>1. Pending</span>
-                  <span className={stepInfo.step >= 2 ? 'text-[#0EA5E0]' : ''}>2. Accepted</span>
-                  <span className={stepInfo.step >= 3 ? 'text-purple-600' : ''}>3. On Way</span>
-                  <span className={stepInfo.step >= 4 ? 'text-amber-600' : ''}>4. Started</span>
-                  <span className={stepInfo.step >= 5 ? 'text-emerald-600' : ''}>5. Done</span>
+                  <span className={stepInfo.step >= 1 ? 'text-emerald-600 font-black' : ''}>1. Confirmed</span>
+                  <span className={stepInfo.step >= 2 ? 'text-[#0EA5E0] font-black' : ''}>2. Assigned</span>
+                  <span className={stepInfo.step >= 3 ? 'text-purple-600 font-black' : ''}>3. On Way</span>
+                  <span className={stepInfo.step >= 4 ? 'text-amber-600 font-black' : ''}>4. Inspected</span>
+                  <span className={stepInfo.step >= 5 ? 'text-emerald-600 font-black' : ''}>5. Done</span>
                 </div>
 
-                {booking.status === 'pending' && (
-                  <p className="text-[11px] text-amber-700 font-semibold bg-amber-50/80 p-2 rounded-xl border border-amber-200/60 leading-tight">
-                    🚨 Request broadcasted! Nearby JOBit Verified Technicians are alerted. Will automatically advance when accepted.
+                {(booking.status === 'confirmed' || booking.status === 'pending') && (
+                  <p className="text-[11px] text-emerald-800 font-semibold bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/60 leading-tight flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Booking Confirmed! JOBit Verified Technician assigned for your visit.</span>
                   </p>
                 )}
               </div>
@@ -301,10 +300,10 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {booking.status === 'pending' && (
+                  {['confirmed', 'pending'].includes(booking.status) && (
                     <button
                       onClick={() => handleCancelBooking(booking.id)}
-                      className="px-3 py-1.5 rounded-full bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition cursor-pointer"
+                      className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 hover:text-red-600 hover:bg-red-50 text-xs font-bold transition cursor-pointer"
                     >
                       Cancel Booking
                     </button>
@@ -358,25 +357,25 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
               </div>
               <button
                 onClick={() => setReceiptModalBooking(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Receipt Summary Card */}
-            <div className="mt-4 space-y-3.5">
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+            {/* Receipt Content */}
+            <div className="py-4 space-y-4">
+              <div className="bg-[#F8FAFC] rounded-2xl p-4 space-y-2 text-xs border border-slate-100">
                 <div className="flex justify-between text-slate-500">
                   <span>Booking Reference:</span>
-                  <span className="font-mono font-bold text-slate-800">#{receiptModalBooking.id.slice(-8)}</span>
+                  <span className="font-extrabold text-slate-800">#{receiptModalBooking.id.slice(-8).toUpperCase()}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>Service:</span>
-                  <span className="font-bold text-slate-800">{receiptModalBooking.serviceTitle}</span>
+                  <span>Service Requested:</span>
+                  <span className="font-extrabold text-slate-800">{receiptModalBooking.serviceTitle}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>Appointment:</span>
+                  <span>Appointment Slot:</span>
                   <span className="font-medium text-slate-700">{receiptModalBooking.dateTime}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
@@ -391,25 +390,25 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 </div>
               </div>
 
-              {/* Transparent Customer Line Items */}
+              {/* Transparent Customer Line Items - Strictly Flat ₹99 Only */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
                   Billing Breakdown
                 </h4>
                 
                 <div className="flex justify-between text-xs text-slate-700 font-semibold">
-                  <span>Total Service Charge</span>
-                  <span className="font-black text-slate-900">₹{receiptModalBooking.totalServiceCharge || receiptModalBooking.price || 650}</span>
+                  <span>Visiting & Inspection Fee</span>
+                  <span className="font-black text-slate-900">₹99</span>
                 </div>
 
                 <div className="flex justify-between text-xs text-emerald-600 font-semibold">
-                  <span>Advance Paid (Inspection Fee)</span>
-                  <span className="font-black">-₹{receiptModalBooking.advancePaid || 99}</span>
+                  <span>Amount Paid Online</span>
+                  <span className="font-black text-emerald-600">₹99 (Paid)</span>
                 </div>
 
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
-                  <span>Remaining Amount Due</span>
-                  <span className="text-base text-[#0EA5E0]">₹{receiptModalBooking.remainingDue || 551}</span>
+                  <span>Remaining Visiting Balance</span>
+                  <span className="text-base text-emerald-600">₹0 (Settled)</span>
                 </div>
               </div>
 
@@ -417,7 +416,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
               <div className="p-3 rounded-2xl bg-sky-50/70 border border-sky-100 flex items-start gap-2.5 text-[11px] text-sky-900">
                 <ShieldCheck className="w-4 h-4 text-[#0EA5E0] shrink-0 mt-0.5" />
                 <p className="leading-tight font-medium">
-                  <strong>JOBit Staff Guarantee:</strong> All work is completed by official JOBit Verified Technicians. Pay remaining due upon job satisfaction. Zero hidden platform commissions.
+                  <strong>JOBit Staff Guarantee:</strong> All doorstep visits are conducted by official JOBit Verified Technicians. Zero hidden platform commissions.
                 </p>
               </div>
 
@@ -468,19 +467,19 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 placeholder="Share your experience (punctuality, clean work, etc.)..."
               />
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setRatingModalBooking(null)}
-                  className="flex-1 py-3 rounded-full bg-[#F1F3F5] text-slate-700 text-xs font-bold"
+                  className="flex-1 py-2.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-bold shadow-glow"
+                  className="flex-1 py-2.5 rounded-full bg-[#0EA5E0] text-white text-xs font-bold shadow-xs hover:bg-[#0284C7] transition"
                 >
-                  Submit Review
+                  Submit
                 </button>
               </div>
             </form>

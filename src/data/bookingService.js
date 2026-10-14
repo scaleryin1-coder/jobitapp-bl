@@ -98,15 +98,12 @@ export function getLocalBookings() {
           customerName: 'Aman Gupta',
           customerPhone: '98765 00001',
           dateTime: 'Today, 02:00 PM - 04:00 PM',
-          address: 'Flat 402, Sunshine Heights, Andheri West, Mumbai',
-          price: 650,
-          totalServiceCharge: 650,
-          totalWorkFee: 650,
-          workerCharge: 500,
-          platformFee: 150,
+          address: 'Main Road, Melattur, Kerala',
+          price: 99,
+          visitingFee: 99,
+          totalServiceCharge: 99,
           advancePaid: 99,
-          remainingDue: 551,
-          status: 'accepted',
+          status: 'confirmed',
           note: 'Kitchen tap dripping continuously and pipe fitting',
           createdAt: new Date(Date.now() - 3600000).toISOString()
         },
@@ -114,25 +111,22 @@ export function getLocalBookings() {
           id: 'bk_sample_2',
           serviceTitle: 'AC Repair & Jet Service',
           categoryName: 'AC Repair',
-          workerId: null,
-          workerName: null,
+          workerId: 'worker_rajesh',
+          workerName: 'Rajesh Sharma',
           workerTitle: 'JOBit Verified Technician',
-          workerPhone: null,
-          workerAvatar: null,
+          workerPhone: '98765 43210',
+          workerAvatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
           customerId: 'cust_priya',
           customerName: 'Priya Nair',
           customerPhone: '98765 00002',
           dateTime: 'Today, 04:30 PM - 06:30 PM',
-          address: 'Villa 18, Palm Meadows, Bandra West, Mumbai',
-          price: 650,
-          totalServiceCharge: 650,
-          totalWorkFee: 650,
-          workerCharge: 500,
-          platformFee: 150,
+          address: 'Town Center, Melattur, Kerala',
+          price: 99,
+          visitingFee: 99,
+          totalServiceCharge: 99,
           advancePaid: 99,
-          remainingDue: 551,
-          status: 'pending',
-          note: 'Cooling coil jet wash needed',
+          status: 'confirmed',
+          note: 'Cooling coil inspection & diagnostic',
           createdAt: new Date().toISOString()
         }
       ];
@@ -141,19 +135,29 @@ export function getLocalBookings() {
     }
     const parsed = JSON.parse(raw);
     list = Array.isArray(parsed) ? parsed : [];
-    // Ensure all stored bookings have computed billing attributes
+    // Ensure all stored bookings have Flat ₹99 visiting charge attributes and active confirmed status
     return list.filter(b => b && typeof b === 'object').map(b => {
-      const billing = calculateBillingDetails(b.totalServiceCharge || b.price || 650);
+      const workerName = b.workerName || 'Rajesh Sharma';
+      const workerTitle = b.workerTitle || 'JOBit Verified Technician';
+      const workerPhone = b.workerPhone || '98765 43210';
+      const workerAvatar = b.workerAvatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80';
+      // Normalize any pending or erroneously cancelled test bookings to confirmed
+      const status = (b.status === 'pending' || !b.status) ? 'confirmed' : b.status;
+
       return {
         ...b,
-        price: b.price || billing.totalServiceCharge,
-        totalServiceCharge: b.totalServiceCharge || billing.totalServiceCharge,
-        totalWorkFee: b.totalWorkFee || billing.totalServiceCharge,
-        workerCharge: b.workerCharge || billing.workerCharge,
-        platformFee: b.platformFee || billing.platformFee,
-        advancePaid: b.advancePaid !== undefined ? b.advancePaid : billing.advancePaid,
-        remainingDue: b.remainingDue !== undefined ? b.remainingDue : billing.remainingDue,
-        workerTitle: b.workerTitle || 'JOBit Verified Technician'
+        price: 99,
+        visitingFee: 99,
+        totalServiceCharge: 99,
+        totalWorkFee: 99,
+        advancePaid: 99,
+        remainingDue: 0,
+        workerName,
+        workerTitle,
+        workerPhone,
+        workerAvatar,
+        status,
+        paymentStatus: b.paymentStatus || 'paid_visiting_fee_99'
       };
     });
   } catch (err) {
@@ -279,28 +283,42 @@ export function subscribeWorkers(callback) {
   };
 }
 
-// Customer initiates booking -> broadcasts as 'pending'
+// Customer initiates booking -> confirmed with Flat ₹99 visiting fee and assigned technician
 export async function createBooking(payload) {
-  const billing = calculateBillingDetails(payload.price || payload.totalServiceCharge || 650);
+  const availableWorkers = getLocalWorkers();
+  const cat = (payload.categoryName || payload.serviceTitle || '').toLowerCase();
+  const assignedWorker = availableWorkers.find(w => 
+    (payload.preferredWorkerId && w.id === payload.preferredWorkerId) ||
+    (payload.workerId && w.id === payload.workerId) ||
+    (w.categoryId === payload.categoryId) ||
+    (cat && w.skill && w.skill.toLowerCase().includes(cat))
+  ) || availableWorkers[0] || {
+    id: 'worker_rajesh',
+    name: 'Rajesh Sharma',
+    phone: '98765 43210',
+    avatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
+    workerTitle: 'JOBit Verified Technician'
+  };
 
   const newBooking = {
     id: 'bk_' + Date.now(),
-    status: 'pending', // Pending Assignment
+    ...payload,
+    status: 'confirmed', // Active status: Booking Confirmed - Technician Assigned
     createdAt: new Date().toISOString(),
     broadcastedAt: new Date().toISOString(),
-    workerId: null,
-    workerName: null,
-    workerPhone: null,
-    workerAvatar: null,
-    workerTitle: 'JOBit Verified Technician',
-    ...payload,
-    price: billing.totalServiceCharge,
-    totalServiceCharge: billing.totalServiceCharge,
-    totalWorkFee: billing.totalServiceCharge,
-    workerCharge: billing.workerCharge,
-    platformFee: billing.platformFee,
-    advancePaid: billing.advancePaid,
-    remainingDue: billing.remainingDue
+    assignedAt: new Date().toISOString(),
+    workerId: payload.workerId || assignedWorker.id || 'worker_rajesh',
+    workerName: payload.workerName || assignedWorker.name || 'Rajesh Sharma',
+    workerPhone: payload.workerPhone || assignedWorker.phone || '98765 43210',
+    workerAvatar: payload.workerAvatar || assignedWorker.avatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
+    workerTitle: assignedWorker.workerTitle || 'JOBit Verified Technician',
+    price: 99,
+    visitingFee: 99,
+    totalServiceCharge: 99,
+    advancePaid: 99,
+    remainingDue: 0,
+    paymentStatus: 'paid_visiting_fee_99',
+    paymentId: payload.paymentId || ('pay_' + Date.now())
   };
 
   // 1. Immediately update local state & dispatch custom event for instant cross-component sync

@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, FileText, CheckCircle2, ShieldCheck, Sparkles, Check } from 'lucide-react';
+import { 
+  X, 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  FileText, 
+  CheckCircle2, 
+  ShieldCheck, 
+  Sparkles, 
+  Check, 
+  Phone, 
+  User, 
+  ChevronRight,
+  ArrowRight
+} from 'lucide-react';
 import { createBooking } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory } from '../data/categoriesData';
@@ -16,7 +30,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
   const [timeSlot, setTimeSlot] = useState('10:00 AM - 12:00 PM');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [confirmedBookingData, setConfirmedBookingData] = useState(null);
 
   // Derive sub-categories for this service/category
   const availableSubCategories = service
@@ -26,7 +40,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
     : [];
 
   const [selectedSubCategory, setSelectedSubCategory] = useState(
-    availableSubCategories[0] || 'Standard Service'
+    availableSubCategories[0] || 'Standard Inspection & Service'
   );
 
   useEffect(() => {
@@ -40,6 +54,14 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
     }
   }, [service]);
 
+  // Clean state when modal opens or closes
+  useEffect(() => {
+    if (!isOpen) {
+      setConfirmedBookingData(null);
+      setLoading(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen || !service) return null;
 
   const handleConfirm = async (e) => {
@@ -51,40 +73,47 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
       customerId: currentUser?.uid || 'guest_user',
       customerName: currentUser?.name || 'Valued Customer',
       customerPhone: currentUser?.phone || '9876543210',
-      workerId: null, // Unallocated -> Instant broadcast to available workers
-      workerName: null,
-      preferredWorkerId: service.workerId || null,
-      preferredWorkerName: service.workerName || null,
+      workerId: service.workerId || 'worker_rajesh',
+      workerName: service.workerName || 'Rajesh Sharma',
+      workerTitle: 'JOBit Verified Technician',
+      workerPhone: service.workerPhone || '98765 43210',
+      workerAvatar: service.workerAvatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
       serviceId: service.id,
       serviceTitle: `${service.title} (${selectedSubCategory})`,
       subCategory: selectedSubCategory,
       categoryName: service.categoryName || service.title,
-      price: service.price || 650,
+      price: 99,
+      visitingFee: 99,
+      totalServiceCharge: 99,
+      totalWorkFee: 99,
       advancePaid: 99,
-      remainingDue: Math.max(0, (service.price || 650) - 99),
+      remainingDue: 0,
       address,
       dateTime: `${date} at ${timeSlot}`,
       note: note.trim() 
         ? `Issue: ${selectedSubCategory}. Note: ${note.trim()}`
         : `Issue: ${selectedSubCategory}`,
-      status: 'pending' // Pending Assignment
+      status: 'confirmed', // Active Status: Booking Confirmed - Technician Assigned
+      paymentStatus: 'paid_visiting_fee_99',
+      paymentId: 'pay_' + Date.now()
     };
 
+    let result = null;
     try {
-      await createBooking(bookingPayload);
+      result = await createBooking(bookingPayload);
     } catch (err) {
       console.warn('Booking create fallback', err);
+      result = { ...bookingPayload, id: 'bk_' + Date.now() };
     }
 
     setLoading(false);
-    setIsSuccess(true);
+    setConfirmedBookingData(result || bookingPayload);
+  };
 
-    // Smooth redirect within 1 second (800ms) to 'Booking Success' / 'My Bookings' tab
-    setTimeout(() => {
-      setIsSuccess(false);
-      onSuccess?.();
-      onClose();
-    }, 800);
+  const handleFinish = () => {
+    setConfirmedBookingData(null);
+    onSuccess?.();
+    onClose();
   };
 
   return (
@@ -95,10 +124,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
           <div>
             <h3 className="text-lg font-black text-[#111827] tracking-tight">
-              Book {service.title}
+              {confirmedBookingData ? 'Booking Confirmation' : `Book ${service.title}`}
             </h3>
             <p className="text-xs text-[#0EA5E0] font-bold mt-0.5">
-              Flat ₹99 Inspection & Service Booking • Adjustable in bill
+              {confirmedBookingData ? 'Status: Confirmed' : 'Flat ₹99 Visiting Charge • Doorstep Inspection'}
             </p>
           </div>
           <button
@@ -109,20 +138,85 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
           </button>
         </div>
 
-        {isSuccess ? (
-          <div className="py-12 text-center animate-scale-up">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 mx-auto flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-10 h-10" />
+        {confirmedBookingData ? (
+          /* ========================================================= */
+          /* BOOKING CONFIRMED - TECHNICIAN ASSIGNED SUCCESS SCREEN    */
+          /* ========================================================= */
+          <div className="py-6 space-y-4 animate-scale-up text-left">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center ring-8 ring-emerald-50/50">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black tracking-wide uppercase">
+                Booking Confirmed - Technician Assigned
+              </span>
+              <h4 className="text-xl font-black text-slate-900">
+                {confirmedBookingData.serviceTitle || service.title}
+              </h4>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Flat ₹99 Visiting Charge confirmed. Your technician has been dispatched and assigned.
+              </p>
             </div>
-            <h4 className="text-xl font-black text-slate-900">Booking Confirmed!</h4>
-            <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto">
-              Your request for <strong className="text-slate-800">{selectedSubCategory}</strong> has been placed at Flat ₹99 advance inspection rate. A JOBit Verified Technician has been notified.
-            </p>
+
+            {/* Assigned Technician Card */}
+            <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={confirmedBookingData.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                  alt={confirmedBookingData.workerName || 'Rajesh Sharma'}
+                  className="w-11 h-11 rounded-xl object-cover ring-2 ring-white shadow-xs"
+                />
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned Expert</p>
+                  <p className="text-sm font-black text-slate-900">{confirmedBookingData.workerName || 'Rajesh Sharma'}</p>
+                  <p className="text-[11px] text-[#0EA5E0] font-bold flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                    <span>JOBit Verified Technician</span>
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`tel:${confirmedBookingData.workerPhone || '9876543210'}`}
+                className="w-9 h-9 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow-xs hover:bg-emerald-50 transition"
+                title="Call Technician"
+              >
+                <Phone className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Summary Details */}
+            <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium">Scheduled Time:</span>
+                <span className="font-bold text-slate-900">{confirmedBookingData.dateTime}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium">Visiting Charge:</span>
+                <span className="font-black text-emerald-600">Flat ₹99 (Paid Online)</span>
+              </div>
+              <div className="flex justify-between items-start text-slate-600 pt-1 border-t border-slate-200/60">
+                <span className="font-medium">Address:</span>
+                <span className="font-semibold text-slate-800 text-right truncate max-w-[200px]">{confirmedBookingData.address}</span>
+              </div>
+            </div>
+
+            {/* Redirect / Finish Button */}
+            <button
+              type="button"
+              onClick={handleFinish}
+              className="w-full py-4 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-sm shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>View in My Bookings</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         ) : (
+          /* ========================================================= */
+          /* BOOKING FORM - ONLY FLAT ₹99 VISITING FEE                 */
+          /* ========================================================= */
           <form onSubmit={handleConfirm} className="space-y-4 pt-4">
             
-            {/* IN-PAGE SUB-CATEGORY / ISSUE SELECTOR (No extra pages needed) */}
+            {/* Issue / Sub-Category Selector */}
             {availableSubCategories.length > 0 && (
               <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5">
                 <div className="flex items-center justify-between mb-2.5">
@@ -233,26 +327,14 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
               />
             </div>
 
-            {/* Transparent Customer Pricing Summary */}
+            {/* Transparent Customer Pricing Summary - Strictly Flat ₹99 Visiting Charge */}
             <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-2 text-xs">
-              <div className="flex justify-between items-center bg-amber-50 border border-amber-200/70 rounded-xl p-2.5">
+              <div className="flex justify-between items-center bg-[#EAF7FD] border border-[#BCE7F8] rounded-xl p-3">
                 <div>
-                  <span className="text-xs font-black text-slate-900 block">Advance Inspection Fee:</span>
-                  <span className="text-[10px] text-slate-600 font-bold">Payable to confirm booking</span>
+                  <span className="text-xs font-black text-slate-900 block">Visiting & Inspection Charge:</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Flat fee for doorstep visit by JOBit Verified Technician</span>
                 </div>
-                <span className="text-sm font-black text-[#0EA5E0]">Flat ₹99</span>
-              </div>
-              <div className="flex justify-between text-slate-600 font-medium pt-0.5">
-                <span>Estimated Total Service Charge:</span>
-                <span className="font-extrabold text-slate-900">₹{service.price || 650}</span>
-              </div>
-              <div className="flex justify-between text-emerald-600 font-medium">
-                <span>Advance Deducted from Final Bill:</span>
-                <span className="font-bold">-₹99</span>
-              </div>
-              <div className="pt-1.5 border-t border-slate-200 flex justify-between font-black text-slate-900">
-                <span>Remaining Balance Due After Work:</span>
-                <span className="text-sm font-black text-[#0EA5E0]">₹{Math.max(0, (service.price || 650) - 99)}</span>
+                <span className="text-base font-black text-[#0EA5E0]">Flat ₹99</span>
               </div>
             </div>
 
@@ -260,7 +342,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
             <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3 flex items-center gap-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
               <div className="text-[11px] text-emerald-800 font-semibold leading-tight">
-                JOBit Staff Guarantee: Flat ₹99 advance is 100% adjustable from final invoice. Pay balance directly to your JOBit Verified Technician upon complete satisfaction.
+                JOBit Guarantee: Verified Technician will inspect on-site. Any additional service labor or replacement parts will be quoted transparently before starting work.
               </div>
             </div>
 
@@ -270,7 +352,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
               disabled={loading}
               className="w-full py-4 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-extrabold text-sm shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] transition cursor-pointer"
             >
-              {loading ? 'Confirming...' : `Confirm Booking • Pay Flat ₹99 Advance`}
+              {loading ? 'Confirming...' : 'Confirm Booking • Pay Flat ₹99'}
             </button>
           </form>
         )}
