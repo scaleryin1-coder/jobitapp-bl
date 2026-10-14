@@ -192,24 +192,25 @@ export function AdminScreen({ onBack, onLogout }) {
   }, []);
 
   // Metrics & Active Operations Progress Breakdown
-  const unassignedJobs = bookings.filter(b => (b.status === 'pending' || b.status === 'confirmed') && !b.workerId);
-  const assignedJobs = bookings.filter(b => b.status === 'accepted' || (b.status === 'confirmed' && b.workerId));
-  const inProgressJobs = bookings.filter(b => b.status === 'in_progress' || b.status === 'on_the_way');
-  const completedJobs = bookings.filter(b => b.status === 'completed');
-  const pendingPaymentJobs = bookings.filter(b => 
+  const totalBookingsCount = Array.isArray(bookings) ? bookings.length : (bookings?.length || 0);
+  const unassignedJobs = (bookings || []).filter(b => (b.status === 'pending' || b.status === 'confirmed') && !b.workerId);
+  const assignedJobs = (bookings || []).filter(b => b.status === 'accepted' || (b.status === 'confirmed' && b.workerId));
+  const inProgressJobs = (bookings || []).filter(b => b.status === 'in_progress' || b.status === 'on_the_way');
+  const completedJobs = (bookings || []).filter(b => b.status === 'completed');
+  const pendingPaymentJobs = (bookings || []).filter(b => 
     b.status === 'pending_payment' || 
     (b.status === 'completed' && Number(b.remainingDue) > 0) ||
     b.paymentStatus === 'pending'
   );
-  const ongoingJobs = bookings.filter(b => ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status));
-  const pendingJobs = bookings.filter(b => b.status === 'pending');
-  const approvedWorkers = workers.filter(w => w.status === 'approved' || w.workerStatus === 'approved');
+  const ongoingJobs = (bookings || []).filter(b => ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status));
+  const pendingJobs = (bookings || []).filter(b => b.status === 'pending');
+  const approvedWorkers = (workers || []).filter(w => w.status === 'approved' || w.workerStatus === 'approved');
   const onlineWorkers = approvedWorkers.filter(w => w.isOnline);
-  const pendingRegistrations = pendingWorkers.filter(p => p.status === 'pending' || p.status === 'pending_verification' || !p.status);
+  const pendingRegistrations = (pendingWorkers || []).filter(p => p.status === 'pending' || p.status === 'pending_verification' || !p.status);
 
-  const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.totalServiceCharge || b.price) || 650), 0);
-  const platformRevenue = bookings.reduce((sum, b) => sum + (Number(b.platformFee) || 150), 0);
-  const workerRevenue = bookings.reduce((sum, b) => sum + (Number(b.workerCharge) || 500), 0);
+  const totalRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.totalServiceCharge || b.price) || 650), 0);
+  const platformRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.platformFee) || 150), 0);
+  const workerRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.workerCharge) || 500), 0);
   const totalPendingPaymentAmount = pendingPaymentJobs.reduce((sum, b) => sum + (Number(b.remainingDue) || 0), 0);
 
   // ==========================================
@@ -519,7 +520,7 @@ export function AdminScreen({ onBack, onLogout }) {
             </span>
             <span>•</span>
             <span>
-              <strong className="text-slate-900 font-black">{totalBookingsCount}</strong> Bookings
+              <strong className="text-slate-900 font-black">{totalBookingsCount || 0}</strong> Bookings
             </span>
           </div>
         </div>
