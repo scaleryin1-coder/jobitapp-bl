@@ -146,7 +146,11 @@ export function ChatAuditModal({ booking, onClose }) {
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-sky-50 text-[#0EA5E0] flex items-center justify-center shadow-2xs">
-              <MessageCircle className="w-4 h-4" />
+              {typeof MessageCircle !== 'undefined' && MessageCircle ? (
+                <MessageCircle className="w-4 h-4" />
+              ) : (
+                <span className="text-xs">💬</span>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">

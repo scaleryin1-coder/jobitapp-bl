@@ -38,7 +38,9 @@ import {
   Camera,
   ZoomIn,
   ZoomOut,
-  Maximize2
+  Maximize2,
+  Building2,
+  MessageCircle
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -720,7 +722,11 @@ export function AdminScreen({ onBack, onLogout }) {
                 tab === 'chat_logs' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <MessageCircle className="w-3.5 h-3.5" />
+              {typeof MessageCircle !== 'undefined' && MessageCircle ? (
+                <MessageCircle className="w-3.5 h-3.5" />
+              ) : (
+                <span className="w-3.5 h-3.5 text-xs">💬</span>
+              )}
               <span>Safety & Chat Logs</span>
             </button>
           </div>
@@ -1608,7 +1614,11 @@ export function AdminScreen({ onBack, onLogout }) {
                           className="px-2.5 py-1.5 bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-[#0EA5E0] rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1 border border-slate-200"
                           title="Audit In-App Chat Log (Firestore)"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                          {typeof MessageCircle !== 'undefined' && MessageCircle ? (
+                            <MessageCircle className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                          ) : (
+                            <span className="w-3.5 h-3.5 text-xs text-[#0EA5E0]">💬</span>
+                          )}
                           <span>Chat Log</span>
                         </button>
 
@@ -1974,7 +1984,11 @@ export function AdminScreen({ onBack, onLogout }) {
                 >
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded-2xl bg-sky-50 text-[#0EA5E0] flex items-center justify-center shrink-0 mt-0.5">
-                      <MessageCircle className="w-5 h-5" />
+                      {typeof MessageCircle !== 'undefined' && MessageCircle ? (
+                        <MessageCircle className="w-5 h-5" />
+                      ) : (
+                        <span className="text-base">💬</span>
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
