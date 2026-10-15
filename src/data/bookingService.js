@@ -30,6 +30,86 @@ const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
 const EVENT_DAILY_GIGS_CHANGED = 'jobit_daily_gigs_changed';
 const EVENT_PORTFOLIOS_CHANGED = 'jobit_portfolios_changed';
 
+export const ROLLOUT_LOCATIONS = [
+  'Melattur, Kerala',
+  'Pattikkad, Kerala',
+  'Pandikkad, Kerala'
+];
+
+export function normalizeLocation(loc) {
+  if (!loc) return '';
+  return String(loc).split(',')[0].trim().toLowerCase();
+}
+
+export function isLocationInRollout(loc) {
+  const norm = normalizeLocation(loc);
+  return ['melattur', 'pattikkad', 'pandikkad'].includes(norm);
+}
+
+/**
+ * Mask telephone number for privacy in Customer and Worker panels
+ */
+export function maskPhoneNumber(phone) {
+  if (!phone) return 'Protected • In-App Call Only';
+  const clean = String(phone).replace(/\D/g, '');
+  if (clean.length < 6) return 'Protected • In-App Call Only';
+  return `+91 ${clean.slice(0, 2)}••• ••${clean.slice(-2)} (In-App Only)`;
+}
+
+/**
+ * Find all approved workers registered for a specific category in an area
+ */
+export function getWorkersForCategoryInLocation(category, location, workersList) {
+  const workers = workersList || getLocalWorkers();
+  const normLoc = normalizeLocation(location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
+  
+  const catName = (typeof category === 'string' ? category : (category?.name || category?.title || '')).toLowerCase().trim();
+  const catId = (typeof category === 'object' ? (category?.id || category?.categoryId || '') : '').toLowerCase().trim();
+
+  return (workers || []).filter((w) => {
+    if (!w) return false;
+    const isApproved = w.status === 'approved' || w.workerStatus === 'approved';
+    if (!isApproved) return false;
+
+    // Location matching: worker's city / address must match current location
+    const workerLoc = normalizeLocation(w.city || w.address || '');
+    const locMatch = !normLoc || !workerLoc || workerLoc.includes(normLoc) || normLoc.includes(workerLoc);
+    if (!locMatch) return false;
+
+    // Category / Skill matching
+    const wSkill = (w.skill || '').toLowerCase().trim();
+    const wCatName = (w.categoryName || '').toLowerCase().trim();
+    const wCatId = (w.categoryId || '').toLowerCase().trim();
+
+    const matchesCat = (
+      (catId && wCatId && (catId === wCatId || catId.includes(wCatId) || wCatId.includes(catId))) ||
+      (catName && wCatName && (catName === wCatName || catName.includes(wCatName) || wCatName.includes(catName))) ||
+      (catName && wSkill && (catName.includes(wSkill) || wSkill.includes(catName))) ||
+      (catName.includes('ac') && (wSkill.includes('ac') || wCatName.includes('ac'))) ||
+      (catName.includes('plumb') && (wSkill.includes('plumb') || wCatName.includes('plumb'))) ||
+      (catName.includes('elect') && (wSkill.includes('elect') || wCatName.includes('elect'))) ||
+      (catName.includes('carp') && (wSkill.includes('carp') || wCatName.includes('carp'))) ||
+      (catName.includes('paint') && (wSkill.includes('paint') || wCatName.includes('paint'))) ||
+      (catName.includes('clean') && (wSkill.includes('clean') || wCatName.includes('clean'))) ||
+      (catName.includes('beauty') && (wSkill.includes('beauty') || wCatName.includes('beauty'))) ||
+      (catName.includes('mehndi') && (wSkill.includes('mehndi') || wCatName.includes('mehndi') || wSkill.includes('henna'))) ||
+      ((catName.includes('tree') || catName.includes('coconut')) && (wSkill.includes('tree') || wSkill.includes('coconut') || wSkill.includes('തെങ്ങ്')))
+    );
+
+    return matchesCat;
+  });
+}
+
+/**
+ * Check if at least ONE active, approved worker is registered for this category in this location.
+ * Dynamic category-level availability rule per location!
+ */
+export function isCategoryAvailableInLocation(category, location, workersList) {
+  const workers = workersList || getLocalWorkers();
+  const matched = getWorkersForCategoryInLocation(category, location, workers);
+  return matched.length > 0;
+}
+
 // Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
 export const safeDbPromise = (promise, timeoutMs = 2500) => {
   return Promise.race([
@@ -851,6 +931,40 @@ export const initialPendingWorkers = [
     status: 'pending',
     workerStatus: 'pending',
     appliedAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    id: 'app_worker_kabeer_pattikkad',
+    name: 'Kabeer Ali',
+    phone: '98473 77889',
+    altPhone: '98473 00112',
+    email: 'kabeer.electrician@gmail.com',
+    gender: 'Male',
+    dob: '1992-06-18',
+    avatar: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=400&q=80',
+    selfieUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=600&q=80',
+    address: 'Near Pattikkad Hospital Junction, Perinthalmanna Road',
+    city: 'Pattikkad, Kerala',
+    pincode: '679325',
+    serviceRadius: '20',
+    categoryName: 'Electrician',
+    categoryId: 'cat_electrician',
+    subSkills: ['Wiring Diagnosis', 'MCB Switch Tripping', 'Inverter & Battery Wiring', 'Fan & Light Fittings'],
+    experience: '8',
+    baseRate: 350,
+    aadhaarNumber: '7612 9901 2341',
+    aadhaarDocUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+    drivingLicenseNumber: 'KL-53-2018-0044123',
+    drivingLicenseDocUrl: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
+    idProofUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
+    idProofType: 'Aadhaar Card Front & Back',
+    bankName: 'Federal Bank',
+    accountHolderName: 'Kabeer Ali',
+    accountNumber: '1520010088921',
+    ifscCode: 'FDRL0001520',
+    upiId: 'kabeer@federal',
+    status: 'pending',
+    workerStatus: 'pending',
+    appliedAt: new Date(Date.now() - 1800000).toISOString()
   }
 ];
 

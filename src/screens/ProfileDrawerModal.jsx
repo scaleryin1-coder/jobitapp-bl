@@ -449,7 +449,7 @@ export function ProfileDrawerModal({
                     </div>
                     <div>
                       <p className="text-xs font-extrabold text-slate-900">About Us</p>
-                      <p className="text-[10px] text-slate-500 font-medium">App overview & Melattur service platform</p>
+                      <p className="text-[10px] text-slate-500 font-medium">App overview & verified home services</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -530,12 +530,12 @@ export function ProfileDrawerModal({
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-slate-900 leading-tight">About JOBit Melattur</h4>
+                    <h4 className="text-sm font-black text-slate-900 leading-tight">About JOBit</h4>
                     <p className="text-[10px] text-[#0EA5E0] font-bold">Hyperlocal Home Services Platform</p>
                   </div>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed font-medium pt-1">
-                  JOBit is Melattur's premier on-demand hyperlocal home services platform. We bridge local households with thoroughly background-verified professionals across Malappuram district with transparent, fixed pricing.
+                  JOBit is your premier on-demand hyperlocal home services platform. We bridge local households with thoroughly background-verified professionals with transparent, fixed pricing.
                 </p>
               </div>
 

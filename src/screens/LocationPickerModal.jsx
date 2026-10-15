@@ -8,17 +8,23 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
 
   if (!isOpen) return null;
 
-  const popularCities = [
-    { name: 'Melattur, Kerala', area: 'Town Center, Railway Station Road, Malappuram' },
+  // Initial Rollout Areas
+  const rolloutAreas = [
+    { name: 'Melattur, Kerala', short: 'Melattur', area: 'Town Center, Railway Station Road, Malappuram', isRollout: true },
+    { name: 'Pattikkad, Kerala', short: 'Pattikkad', area: 'Pattikkad Junction, Perinthalmanna Road, Malappuram', isRollout: true },
+    { name: 'Pandikkad, Kerala', short: 'Pandikkad', area: 'Pandikkad Town, Nilambur Road, Malappuram', isRollout: true }
+  ];
+
+  const otherCities = [
     { name: 'Perinthalmanna, Kerala', area: 'Bypass Road, Angadippuram, Malappuram' },
     { name: 'Manjeri, Kerala', area: 'Court Road, Pandikkad Road, Malappuram' },
     { name: 'Malappuram, Kerala', area: 'Kottakkunnu, Up Hill, Down Hill' },
     { name: 'Kozhikode, Kerala', area: 'Mavoor Road, Beach, Palayam' },
     { name: 'Kochi, Kerala', area: 'Edappally, Kakkanad, Fort Kochi' },
-    { name: 'Bengaluru, Karnataka', area: 'Koramangala, Indiranagar, HSR' },
-    { name: 'Mumbai, Maharashtra', area: 'Bandra, Andheri, Colaba' },
-    { name: 'Delhi NCR', area: 'Connaught Place, Noida, Gurugram' }
+    { name: 'Bengaluru, Karnataka', area: 'Koramangala, Indiranagar, HSR' }
   ];
+
+  const popularCities = [...rolloutAreas, ...otherCities];
 
   const handleTriggerLiveGPS = () => {
     if (!navigator.geolocation) {
@@ -176,7 +182,14 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
                     <MapPin className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold leading-tight">{city.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-bold leading-tight">{city.name}</p>
+                      {city.isRollout && (
+                        <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded-md">
+                          Rollout Zone
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-slate-400">{city.area}</p>
                   </div>
                 </div>

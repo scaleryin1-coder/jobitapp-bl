@@ -27,7 +27,10 @@ import { PartnerLoginModal } from './screens/PartnerLoginModal';
 import { WorkerOnboardingModal } from './screens/WorkerOnboardingModal';
 import { ProfileDrawerModal } from './screens/ProfileDrawerModal';
 import { SkilledProfessionalSelectionScreen } from './screens/SkilledProfessionalSelectionScreen';
+import { LocationPickerModal } from './screens/LocationPickerModal';
+import { ComingSoonCategoryModal } from './components/common/ComingSoonCategoryModal';
 import { isPortfolioCategory } from './data/categoriesData';
+import { subscribeWorkers, isCategoryAvailableInLocation } from './data/bookingService';
 import { BottomNav } from './components/BottomNav';
 
 function MainLayout() {
@@ -50,11 +53,21 @@ function MainLayout() {
   const [isWorkerOnboardingOpen, setIsWorkerOnboardingOpen] = useState(false);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
+  const [comingSoonCategory, setComingSoonCategory] = useState(null);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [workers, setWorkers] = useState([]);
   const [currentCity, setCurrentCity] = useState(() => {
     return localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   });
+
+  // Subscribe to real-time workers to dynamically unlock categories per location
+  useEffect(() => {
+    const unsub = subscribeWorkers((list) => {
+      setWorkers(list || []);
+    });
+    return () => unsub();
+  }, []);
 
   // Check URL hash for direct partner/staff login route or worker onboarding
   useEffect(() => {
@@ -219,8 +232,17 @@ function MainLayout() {
                     setCurrentScreen('service-list');
                   }}
                   onOpenProfileDrawer={() => setIsProfileDrawerOpen(true)}
-                  onSelectCategory={(cat) => {
+                  onSelectCategory={(cat, isLive) => {
                     const catName = cat?.name || 'Home Service';
+                    const available = isLive !== undefined 
+                      ? isLive 
+                      : isCategoryAvailableInLocation(cat, currentCity, workers);
+
+                    if (!available) {
+                      setComingSoonCategory(cat);
+                      return;
+                    }
+
                     if (isPortfolioCategory(cat || catName)) {
                       setSelectedPortfolioCategory(cat);
                       setCurrentScreen('portfolio-selection');
@@ -237,6 +259,10 @@ function MainLayout() {
                     setIsBookingModalOpen(true);
                   }}
                   onSelectService={(serv) => {
+                    if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
+                      setComingSoonCategory(serv);
+                      return;
+                    }
                     if (isPortfolioCategory(serv)) {
                       setSelectedPortfolioCategory(serv);
                       setCurrentScreen('portfolio-selection');
@@ -246,6 +272,10 @@ function MainLayout() {
                     setCurrentScreen('detail');
                   }}
                   onBookService={(serv) => {
+                    if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
+                      setComingSoonCategory(serv);
+                      return;
+                    }
                     if (isPortfolioCategory(serv)) {
                       setSelectedPortfolioCategory(serv);
                       setCurrentScreen('portfolio-selection');
@@ -297,8 +327,14 @@ function MainLayout() {
             <ServiceListScreen
               initialCategory={selectedCategoryName}
               initialSearch={searchQuery}
+              currentCity={currentCity}
+              workers={workers}
               onBack={() => setCurrentScreen('main')}
               onSelectService={(serv) => {
+                if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
+                  setComingSoonCategory(serv);
+                  return;
+                }
                 if (isPortfolioCategory(serv)) {
                   setSelectedPortfolioCategory(serv);
                   setCurrentScreen('portfolio-selection');
@@ -308,6 +344,10 @@ function MainLayout() {
                 setCurrentScreen('detail');
               }}
               onBookService={(serv) => {
+                if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
+                  setComingSoonCategory(serv);
+                  return;
+                }
                 if (isPortfolioCategory(serv)) {
                   setSelectedPortfolioCategory(serv);
                   setCurrentScreen('portfolio-selection');
@@ -322,6 +362,7 @@ function MainLayout() {
           {currentScreen === 'portfolio-selection' && (
             <SkilledProfessionalSelectionScreen
               category={selectedPortfolioCategory}
+              currentCity={currentCity}
               onBack={() => setCurrentScreen('main')}
               onSelectWorkerToBook={(worker, album) => {
                 const catName = selectedPortfolioCategory?.name || selectedPortfolioCategory?.title || worker.skill || 'Skilled Pro';
@@ -382,6 +423,8 @@ function MainLayout() {
         {/* Booking Bottom Sheet */}
         <BookingModal
           service={selectedService}
+          currentCity={currentCity}
+          workers={workers}
           isOpen={isBookingModalOpen}
           onClose={() => setIsBookingModalOpen(false)}
           onSuccess={() => {
@@ -455,45 +498,32 @@ function MainLayout() {
           }}
         />
 
-        {/* City Location Picker Dialog */}
-        {cityPickerOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-extrabold text-slate-900">Select City</h4>
-                <button onClick={() => setCityPickerOpen(false)} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-                  <X className="w-4 h-4 text-slate-500" />
-                </button>
-              </div>
+        {/* Real Dynamic Location Picker Dialog (Rollout Zones: Melattur, Pattikkad, Pandikkad) */}
+        <LocationPickerModal
+          isOpen={cityPickerOpen}
+          onClose={() => setCityPickerOpen(false)}
+          currentCity={currentCity}
+          onSelectLocation={(newCity) => {
+            setCurrentCity(newCity);
+            localStorage.setItem('jobit_user_location', newCity);
+          }}
+        />
 
-              <button
-                onClick={requestBrowserLocation}
-                className="w-full py-2.5 px-3 mb-3 rounded-2xl bg-sky-50 text-[#0EA5E0] text-xs font-bold flex items-center justify-center gap-1.5"
-              >
-                <MapPin className="w-4 h-4" />
-                Use Current Location (GPS)
-              </button>
-
-              <div className="space-y-1">
-                {['Mumbai, Maharashtra', 'Bengaluru, Karnataka', 'Delhi NCR', 'Hyderabad, Telangana', 'Pune, Maharashtra', 'Chennai, Tamil Nadu'].map((city) => (
-                  <button
-                    key={city}
-                    onClick={() => {
-                      setCurrentCity(city);
-                      localStorage.setItem('jobit_user_location', city);
-                      setCityPickerOpen(false);
-                    }}
-                    className={`w-full py-2.5 px-3 rounded-xl text-left text-xs font-semibold transition ${
-                      currentCity === city ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {city}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Dynamic Category Availability: Coming Soon to Your Area Modal */}
+        <ComingSoonCategoryModal
+          isOpen={Boolean(comingSoonCategory)}
+          category={comingSoonCategory}
+          currentLocation={currentCity}
+          onClose={() => setComingSoonCategory(null)}
+          onSwitchLocation={(newLoc) => {
+            setCurrentCity(newLoc);
+            localStorage.setItem('jobit_user_location', newLoc);
+          }}
+          onOpenWorkerOnboarding={(loc, trade) => {
+            setComingSoonCategory(null);
+            setIsWorkerOnboardingOpen(true);
+          }}
+        />
 
         {/* Search Modal */}
         {searchModalOpen && (

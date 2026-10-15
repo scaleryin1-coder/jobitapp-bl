@@ -2,11 +2,14 @@ import React from 'react';
 import { LayoutGrid } from 'lucide-react';
 import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 import { isPortfolioCategory } from '../../data/categoriesData';
+import { isCategoryAvailableInLocation } from '../../data/bookingService';
 
 export function CategoryRow({
   categories = [],
   onSelectCategory,
-  onOpenAll
+  onOpenAll,
+  currentLocation = 'Melattur, Kerala',
+  workers = []
 }) {
   return (
     <div className="px-5 pt-3 pb-2">
@@ -27,15 +30,23 @@ export function CategoryRow({
       <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-5 px-5 py-1">
         {categories.map((cat) => {
           const isPortfolio = isPortfolioCategory(cat);
+          const isLive = isCategoryAvailableInLocation(cat, currentLocation, workers);
+
           return (
             <button
               key={cat.id || cat.name}
-              onClick={() => onSelectCategory?.(cat)}
+              onClick={() => onSelectCategory?.(cat, isLive)}
               className="relative w-[74px] h-[82px] sm:w-[78px] sm:h-[86px] rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-white hover:border-[#4B6EF5]/30 hover:shadow-md active:scale-95 transition-all flex flex-col items-center justify-center p-2 shrink-0 cursor-pointer group"
             >
               {isPortfolio && (
                 <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-sky-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-2xs leading-none">
                   PORTFOLIO
+                </span>
+              )}
+
+              {!isLive && (
+                <span className="absolute -top-1 -left-1 bg-amber-500 text-white text-[7.5px] font-black px-1.5 py-0.5 rounded-full shadow-2xs leading-none">
+                  SOON
                 </span>
               )}
 

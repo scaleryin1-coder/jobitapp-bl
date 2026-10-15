@@ -14,14 +14,16 @@ import {
   ChevronRight,
   ArrowRight
 } from 'lucide-react';
-import { createBooking } from '../data/bookingService';
+import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory } from '../data/categoriesData';
+import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 
-export function BookingModal({ service, isOpen, onClose, onSuccess }) {
+export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity, workers = [] }) {
   const { currentUser } = useAuth() || {};
-  const userLoc = localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
-  const [address, setAddress] = useState(`Main Road, Town Center, ${userLoc}`);
+  const effectiveCity = currentCity || localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
+  const cleanCity = effectiveCity.split(',')[0].trim();
+  const [address, setAddress] = useState(`Main Road, ${effectiveCity}`);
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -31,6 +33,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
+  const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
 
   // Derive sub-categories for this service/category
   const availableSubCategories = service
@@ -43,6 +46,18 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
     availableSubCategories[0] || 'Standard Inspection & Service'
   );
 
+  // Dynamically resolve the local approved technician registered in this area
+  const matchedLocalWorkers = getWorkersForCategoryInLocation(service, effectiveCity, workers);
+  const localAssignedWorker = service?.workerId 
+    ? {
+        id: service.workerId,
+        name: service.workerName,
+        phone: service.workerPhone,
+        avatar: service.workerAvatar,
+        city: effectiveCity
+      }
+    : (matchedLocalWorkers.length > 0 ? matchedLocalWorkers[0] : null);
+
   useEffect(() => {
     if (service) {
       const list = service.subCategories && service.subCategories.length > 0
@@ -53,6 +68,12 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
       }
     }
   }, [service]);
+
+  useEffect(() => {
+    if (effectiveCity) {
+      setAddress(`Main Road, ${effectiveCity}`);
+    }
+  }, [effectiveCity]);
 
   // Clean state when modal opens or closes
   useEffect(() => {
@@ -69,15 +90,20 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
     if (loading) return;
     setLoading(true);
 
+    const workerId = localAssignedWorker?.id || service.workerId || 'worker_rajesh';
+    const workerName = localAssignedWorker?.name || service.workerName || 'Rajesh Sharma';
+    const workerPhone = localAssignedWorker?.phone || service.workerPhone || '98765 43210';
+    const workerAvatar = localAssignedWorker?.avatar || service.workerAvatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80';
+
     const bookingPayload = {
       customerId: currentUser?.uid || 'guest_user',
       customerName: currentUser?.name || 'Valued Customer',
       customerPhone: currentUser?.phone || '9876543210',
-      workerId: service.workerId || 'worker_rajesh',
-      workerName: service.workerName || 'Rajesh Sharma',
+      workerId,
+      workerName,
       workerTitle: 'JOBit Verified Technician',
-      workerPhone: service.workerPhone || '98765 43210',
-      workerAvatar: service.workerAvatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
+      workerPhone,
+      workerAvatar,
       serviceId: service.id,
       serviceTitle: `${service.title} (${selectedSubCategory})`,
       subCategory: selectedSubCategory,
@@ -175,13 +201,21 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
                   </p>
                 </div>
               </div>
-              <a
-                href={`tel:${confirmedBookingData.workerPhone || '9876543210'}`}
-                className="w-9 h-9 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow-xs hover:bg-emerald-50 transition"
-                title="Call Technician"
+              <button
+                type="button"
+                onClick={() => setIsVoiceCallOpen(true)}
+                className="px-3 py-1.5 rounded-full bg-white text-emerald-600 border border-emerald-200 flex items-center gap-1.5 font-black text-xs shadow-xs hover:bg-emerald-50 active:scale-95 transition cursor-pointer"
+                title="In-App Voice Call (Agora.io - Phone number protected)"
               >
-                <Phone className="w-4 h-4" />
-              </a>
+                <Phone className="w-3.5 h-3.5 fill-emerald-600" />
+                <span>In-App Call</span>
+              </button>
+            </div>
+
+            {/* Privacy Shield Notice */}
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Phone numbers protected. Voice calls are routed privately inside JOBit.</span>
             </div>
 
             {/* Summary Details */}
@@ -216,20 +250,22 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
           /* ========================================================= */
           <form onSubmit={handleConfirm} className="space-y-4 pt-4">
             
-            {/* Selected Skilled Professional Indicator (for Portfolio-based bookings) */}
-            {service.workerId && service.workerName && (
+            {/* Assigned Local Professional Indicator */}
+            {localAssignedWorker && (
               <div className="p-3 bg-gradient-to-r from-sky-50 to-indigo-50/40 rounded-2xl border border-sky-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <img
-                    src={service.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
-                    alt={service.workerName}
+                    src={localAssignedWorker.avatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                    alt={localAssignedWorker.name}
                     className="w-10 h-10 rounded-xl object-cover ring-2 ring-white shadow-2xs"
                   />
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0EA5E0] block">
-                      Dedicated Skilled Professional
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0EA5E0] block flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-[#0EA5E0]" />
+                      <span>Assigned Verified Pro • {cleanCity}</span>
                     </span>
-                    <p className="text-xs font-black text-slate-900">{service.workerName}</p>
+                    <p className="text-xs font-black text-slate-900">{localAssignedWorker.name}</p>
+                    <p className="text-[10px] text-slate-500 font-semibold">{maskPhoneNumber(localAssignedWorker.phone)}</p>
                   </div>
                 </div>
                 <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -378,6 +414,16 @@ export function BookingModal({ service, isOpen, onClose, onSuccess }) {
               {loading ? 'Confirming...' : 'Confirm Booking • Pay Flat ₹99'}
             </button>
           </form>
+        )}
+
+        {/* Agora In-App Voice Call Modal */}
+        {confirmedBookingData && (
+          <VoiceCallModal
+            isOpen={isVoiceCallOpen}
+            onClose={() => setIsVoiceCallOpen(false)}
+            booking={confirmedBookingData}
+            currentUserRole="customer"
+          />
         )}
       </div>
     </div>

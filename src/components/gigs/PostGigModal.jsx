@@ -116,7 +116,7 @@ export function PostGigModal({ isOpen, onClose, currentCity = 'Melattur, Kerala'
                 Post Daily Gig & Shift Work
               </h3>
               <p className="text-xs text-amber-900/80 font-bold mt-0.5">
-                Instant hiring for shops & businesses in Melattur
+                Instant hiring for shops & local businesses
               </p>
             </div>
           </div>
@@ -139,7 +139,7 @@ export function PostGigModal({ isOpen, onClose, currentCity = 'Melattur, Kerala'
               </div>
               <h4 className="text-lg font-black text-slate-900">Vacancy Published Live!</h4>
               <p className="text-xs text-slate-600 max-w-xs">
-                Your daily gig is now visible to active workers in Melattur. Applicants can call or WhatsApp you directly.
+                Your daily gig is now visible to active workers in your area. Applicants can connect directly.
               </p>
             </div>
           ) : (

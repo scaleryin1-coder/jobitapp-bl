@@ -218,7 +218,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
             <div className="flex flex-col items-center text-center pb-1">
               <JobitLogo variant="horizontal" showTagline={false} className="mb-1" />
               <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                Hyperlocal home services marketplace • Melattur
+                Hyperlocal home services marketplace
               </p>
             </div>
 

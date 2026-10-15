@@ -44,7 +44,7 @@ export function JobitLogo({
       >
         <img
           src="/apple-touch-icon.png?v=2"
-          alt="JOBit - Reliable Local Services | Melattur"
+          alt="JOBit - Reliable Local Services"
           className="w-full h-full object-contain p-1"
           referrerPolicy="no-referrer"
           onError={(e) => {
@@ -92,7 +92,7 @@ export function JobitLogo({
           </div>
           {showTagline && (
             <span className="text-[9px] font-bold text-[#0B172E] tracking-tight mt-0.5 opacity-90">
-              Melattur Services
+              Reliable Local Services
             </span>
           )}
         </div>
@@ -112,7 +112,7 @@ export function JobitLogo({
       <svg 
         viewBox="0 0 500 500" 
         className="w-full h-auto drop-shadow-xs"
-        aria-label="JOBit - Reliable Local Services | Melattur"
+        aria-label="JOBit - Reliable Local Services"
       >
         {/* Crisp Solid White Canvas Background */}
         <rect width="500" height="500" fill="#FFFFFF" rx="28" />
@@ -195,7 +195,7 @@ export function JobitLogo({
           </text>
         </g>
 
-        {/* 4. DETAIL TEXT: 'Reliable Local Services | Melattur' */}
+        {/* 4. DETAIL TEXT: 'Reliable Local Services' */}
         {showTagline && (
           <g id="tagline-typography" transform="translate(250, 435)">
             <text 
@@ -206,7 +206,7 @@ export function JobitLogo({
               fill="#0B172E" 
               letterSpacing="0.4"
             >
-              Reliable Local Services | Melattur
+              Reliable Local Services
             </text>
           </g>
         )}

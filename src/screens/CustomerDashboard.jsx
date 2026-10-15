@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { initialCategories, initialBanners, initialServices } from '../data/seedData';
-import { subscribeServices, subscribeCategories } from '../data/bookingService';
+import { subscribeServices, subscribeCategories, subscribeWorkers } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchSection } from '../components/home/HomeSearchSection';
@@ -37,6 +37,7 @@ export function CustomerDashboard({
   const [categories, setCategories] = useState(initialCategories || []);
   const [banners, setBanners] = useState(initialBanners || []);
   const [services, setServices] = useState(initialServices || []);
+  const [workers, setWorkers] = useState([]);
 
   // Location State
   const [locationName, setLocationName] = useState(() => {
@@ -82,6 +83,12 @@ export function CustomerDashboard({
       }
     });
 
+    const unsubWorkers = subscribeWorkers((items) => {
+      if (items && Array.isArray(items)) {
+        setWorkers(items);
+      }
+    });
+
     let unsubBanners = () => {};
     if (isFirebaseConfigured && db) {
       try {
@@ -98,6 +105,7 @@ export function CustomerDashboard({
     return () => {
       unsubServices();
       unsubCategories();
+      unsubWorkers();
       unsubBanners();
     };
   }, []);
@@ -218,7 +226,9 @@ export function CustomerDashboard({
       {/* Section 2: Service Categories Grid / Icons */}
       <CategoryRow
         categories={categories}
-        onSelectCategory={(cat) => onSelectCategory?.(cat)}
+        currentLocation={locationName}
+        workers={workers}
+        onSelectCategory={(cat, isLive) => onSelectCategory?.(cat, isLive)}
         onOpenAll={() => setIsAllCategoriesOpen(true)}
       />
 
@@ -247,7 +257,9 @@ export function CustomerDashboard({
       <AllCategoriesModal
         isOpen={isAllCategoriesOpen}
         onClose={() => setIsAllCategoriesOpen(false)}
-        onSelectCategory={(cat) => onSelectCategory?.(cat)}
+        currentLocation={locationName}
+        workers={workers}
+        onSelectCategory={(cat, isLive) => onSelectCategory?.(cat, isLive)}
       />
 
       {/* Filter Menu Modal (Opened via Filter icon next to Search bar) */}

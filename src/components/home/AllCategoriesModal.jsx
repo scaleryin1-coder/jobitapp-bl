@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { X, Search, ChevronRight, Sparkles } from 'lucide-react';
 import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from '../../data/categoriesData';
+import { isCategoryAvailableInLocation } from '../../data/bookingService';
 import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 
 export function AllCategoriesModal({
   isOpen,
   onClose,
-  onSelectCategory
+  onSelectCategory,
+  currentLocation = 'Melattur, Kerala',
+  workers = []
 }) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -67,14 +70,20 @@ export function AllCategoriesModal({
           <div className="grid grid-cols-2 gap-2.5">
             {filteredCategories.map((cat) => {
               const isPortfolio = isPortfolioCategory(cat);
+              const isLive = isCategoryAvailableInLocation(cat, currentLocation, workers);
+
               return (
                 <div
                   key={cat.id}
                   onClick={() => {
-                    onSelectCategory(cat);
+                    onSelectCategory(cat, isLive);
                     onClose();
                   }}
-                  className="bg-[#F8FAFC] hover:bg-[#EAF0FF] border border-slate-200/70 hover:border-[#4B6EF5] rounded-2xl p-3 cursor-pointer transition active:scale-98 group flex flex-col justify-between relative"
+                  className={`border rounded-2xl p-3 cursor-pointer transition active:scale-98 group flex flex-col justify-between relative ${
+                    isLive 
+                      ? 'bg-[#F8FAFC] hover:bg-[#EAF0FF] border-slate-200/70 hover:border-[#4B6EF5]' 
+                      : 'bg-slate-50/70 border-slate-200/60 hover:border-amber-400'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="group-hover:scale-105 transition-transform">
@@ -84,8 +93,15 @@ export function AllCategoriesModal({
                       <span className="text-[9px] bg-sky-100 text-[#0EA5E0] font-black px-1.5 py-0.5 rounded-full">
                         Pro Albums
                       </span>
+                    ) : isLive ? (
+                      <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-black px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>Live</span>
+                      </span>
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#4B6EF5] group-hover:translate-x-0.5 transition-all" />
+                      <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 font-black px-1.5 py-0.5 rounded-full">
+                        Soon
+                      </span>
                     )}
                   </div>
 
@@ -97,9 +113,13 @@ export function AllCategoriesModal({
                       <p className="text-[10px] text-slate-400 font-bold">
                         Starts ₹{cat.basePrice}
                       </p>
-                      {isPortfolio && (
+                      {isLive ? (
                         <span className="text-[10px] text-[#0EA5E0] font-bold">
-                          View Pros ➔
+                          Book ➔
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-600 font-bold">
+                          Notify ➔
                         </span>
                       )}
                     </div>

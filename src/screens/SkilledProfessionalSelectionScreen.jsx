@@ -23,7 +23,8 @@ import { subscribeWorkers, subscribePortfolios } from '../data/bookingService';
 export function SkilledProfessionalSelectionScreen({ 
   category, 
   onBack, 
-  onSelectWorkerToBook 
+  onSelectWorkerToBook,
+  currentCity = 'Melattur, Kerala'
 }) {
   const [allWorkers, setAllWorkers] = useState([]);
   const [allPortfolios, setAllPortfolios] = useState([]);
@@ -34,6 +35,7 @@ export function SkilledProfessionalSelectionScreen({
   const categoryName = typeof category === 'object' ? (category?.name || category?.title || 'Skilled Services') : String(category || 'Skilled Services');
   const categoryId = typeof category === 'object' ? (category?.id || category?.categoryId || '') : '';
   const categoryIcon = typeof category === 'object' ? (category?.icon || '✨') : '✨';
+  const cleanCity = (currentCity || 'your area').split(',')[0].trim();
 
   // Subscribe to real-time workers and portfolios
   useEffect(() => {
@@ -50,9 +52,18 @@ export function SkilledProfessionalSelectionScreen({
     };
   }, []);
 
-  // Filter workers relevant to this specialized category
+  // Filter workers relevant to this specialized category and current location
   const relevantWorkers = allWorkers.filter((worker) => {
     if (!worker) return false;
+    const isApproved = worker.status === 'approved' || worker.workerStatus === 'approved';
+    if (!isApproved) return false;
+
+    // Location check
+    const normCity = cleanCity.toLowerCase();
+    const wCity = (worker.city || worker.address || '').toLowerCase();
+    const matchCity = !normCity || wCity.includes(normCity) || normCity.includes(wCity);
+    if (!matchCity) return false;
+
     const catLower = categoryName.toLowerCase();
     const wSkill = (worker.skill || '').toLowerCase();
     const wCatId = (worker.categoryId || '').toLowerCase();
@@ -191,7 +202,31 @@ export function SkilledProfessionalSelectionScreen({
 
       {/* 4. Workers & Work Albums Grid */}
       <div className="px-5 py-3 space-y-4">
-        {filteredWorkers.length === 0 ? (
+        {relevantWorkers.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 text-center border border-amber-200/80 shadow-xs space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl">
+              {categoryIcon}
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black uppercase mb-1.5">
+                <MapPin className="w-3 h-3 text-[#0EA5E0]" />
+                <span>{cleanCity}</span>
+              </div>
+              <h3 className="font-black text-slate-900 text-base">
+                Coming Soon to Your Area!
+              </h3>
+              <p className="text-xs text-slate-600 mt-1 max-w-xs mx-auto">
+                We are onboarding top local professionals in <strong>{cleanCity}</strong> soon.
+              </p>
+            </div>
+            <button
+              onClick={onBack}
+              className="px-4 py-2 bg-[#0EA5E0] text-white rounded-xl text-xs font-bold hover:bg-[#0284C7] transition cursor-pointer"
+            >
+              Explore Other Services
+            </button>
+          </div>
+        ) : filteredWorkers.length === 0 ? (
           <div className="bg-white rounded-3xl p-8 text-center border border-slate-200/80 shadow-xs space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-sky-50 text-[#0EA5E0] flex items-center justify-center mx-auto">
               <User className="w-6 h-6" />

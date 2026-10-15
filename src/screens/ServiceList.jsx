@@ -7,11 +7,13 @@ import {
   Star, 
   Eye, 
   Calendar,
-  X
+  X,
+  Clock,
+  MapPin
 } from 'lucide-react';
 import { initialCategories, initialServices } from '../data/seedData';
 import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from '../data/categoriesData';
-import { subscribeServices } from '../data/bookingService';
+import { subscribeServices, isCategoryAvailableInLocation } from '../data/bookingService';
 import { matchesStrictPrefix, highlightPrefix, getMatchedSnippet } from '../utils/searchUtils';
 
 export function ServiceListScreen({ 
@@ -19,7 +21,9 @@ export function ServiceListScreen({
   onSelectService, 
   onBookService,
   initialCategory = 'All',
-  initialSearch = ''
+  initialSearch = '',
+  currentCity = 'Melattur, Kerala',
+  workers = []
 }) {
   const [services, setServices] = useState(initialServices || []);
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
@@ -28,6 +32,9 @@ export function ServiceListScreen({
   const [minRating, setMinRating] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+
+  const cleanCity = (currentCity || 'your area').split(',')[0].trim();
+  const isCategoryLive = activeCategory === 'All' || isCategoryAvailableInLocation(activeCategory, currentCity, workers);
 
   // Sync initialCategory & initialSearch if changed from parent
   useEffect(() => {
@@ -430,9 +437,26 @@ export function ServiceListScreen({
           )}
         </div>
 
+        {/* Category-Level Availability Banner for selected location */}
+        {!isCategoryLive && activeCategory !== 'All' && (
+          <div className="bg-amber-50/90 border border-amber-200/90 rounded-3xl p-4 text-center shadow-xs">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase mb-2">
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
+              <span>Coming Soon to {cleanCity}</span>
+            </div>
+            <h3 className="text-base font-black text-slate-900 tracking-tight">
+              Coming Soon to Your Area!
+            </h3>
+            <p className="text-xs text-slate-600 font-semibold mt-1 max-w-xs mx-auto leading-relaxed">
+              We are onboarding top local professionals in <strong className="text-slate-900">{cleanCity}</strong> soon.
+            </p>
+          </div>
+        )}
+
         {/* Individual Service Cards strictly matching image_6.png */}
         {filteredServices.map((service) => {
           const badgeInfo = getCategoryBadgeInfo(service);
+          const isServiceLive = isCategoryAvailableInLocation(service, currentCity, workers);
           
           return (
             <div
@@ -514,13 +538,21 @@ export function ServiceListScreen({
                   <span>View Details</span>
                 </button>
 
-                {/* Solid blue style button for 'Book Now' / 'Select Pro' (with calendar icon) */}
+                {/* Solid blue style button for 'Book Now' / 'Select Pro' or 'Notify When Live' */}
                 <button
                   onClick={() => onBookService?.(service)}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-[#00A3E0] hover:bg-[#0284C7] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-sm shadow-sky-400/25"
+                  className={`w-full py-2.5 px-3 rounded-2xl text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-sm ${
+                    isServiceLive
+                      ? 'bg-[#00A3E0] hover:bg-[#0284C7] shadow-sky-400/25'
+                      : 'bg-amber-500 hover:bg-amber-600 shadow-amber-400/25'
+                  }`}
                 >
                   <Calendar className="w-3.5 h-3.5 text-white stroke-[2.4]" />
-                  <span>{isPortfolioCategory(service) ? 'Select Pro ➔' : 'Book Now'}</span>
+                  <span>
+                    {!isServiceLive 
+                      ? 'Notify When Live' 
+                      : (isPortfolioCategory(service) ? 'Select Pro ➔' : 'Book Now')}
+                  </span>
                 </button>
               </div>
 
