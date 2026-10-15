@@ -39,10 +39,12 @@ import {
   subscribePortfolios,
   addWorkerPortfolio,
   deleteWorkerPortfolio,
-  DUMMY_WORKER_IDS
+  DUMMY_WORKER_IDS,
+  calculateJobBilling
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
+import { PaymentQRModal } from '../components/billing/PaymentQRModal';
 import { compressImage } from '../utils/imageUtils';
 
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
@@ -54,6 +56,8 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [completedJobSummary, setCompletedJobSummary] = useState(null);
+  const [billingJob, setBillingJob] = useState(null); // Active job for Customer Billing & Payment QR
+  const [congratulationsData, setCongratulationsData] = useState(null); // "Job done! Congratulations 👏" modal
   
   // Portfolio / Work Albums State
   const [portfolios, setPortfolios] = useState([]);
@@ -148,9 +152,19 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   );
 
   // Total earnings calculation (Worker's Net Share)
+  // Rule 2: Deduct 10% from the Service Charge as platform commission for worker earnings.
+  // Worker Final Earning for the job = (Service Charge * 0.90) + Spare Price.
   const totalEarnings = myCompletedJobs.reduce((sum, b) => {
-    const workerShare = Number(b.workerCharge) || (Number(b.price) ? Math.max(0, Number(b.price) - (Number(b.platformFee) || 150)) : 500);
-    return sum + workerShare;
+    if (b.workerFinalEarning !== undefined && b.workerFinalEarning !== null) {
+      return sum + Number(b.workerFinalEarning);
+    }
+    if (b.workerNetEarning !== undefined && b.workerNetEarning !== null) {
+      return sum + Number(b.workerNetEarning);
+    }
+    const labor = Number(b.serviceCharge || b.workerCharge || b.price || 300);
+    const spares = Number(b.sparePrice || 0);
+    const workerFinal = (labor * 0.90) + spares;
+    return sum + workerFinal;
   }, 0);
 
   const handleAcceptJob = async (booking) => {
@@ -173,13 +187,43 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         workStartedAt: new Date().toISOString()
       });
     } else if (booking.status === 'in_progress') {
-      await updateBookingStatus(booking.id, 'completed', {
-        completedAt: new Date().toISOString(),
-        paymentStatus: 'paid_cash'
-      });
-      // Requirement: Show final billing/payment summary to the worker strictly after/at the time of marking the job as "Completed"
-      setCompletedJobSummary(booking);
+      // Open the Customer Billing & Payment QR modal
+      setBillingJob(booking);
     }
+  };
+
+  // Completion Flow: Upon confirming payment ("Paid by Cash" / QR success),
+  // update the job status to "Completed", update worker earnings, and display: "Job done! Congratulations 👏"
+  const handleConfirmJobPayment = async (paymentDetails) => {
+    if (!billingJob) return;
+    const currentJob = billingJob;
+    const completedAt = new Date().toISOString();
+
+    const updatePayload = {
+      completedAt,
+      paymentStatus: 'paid',
+      paymentMethod: paymentDetails.paymentMethod,
+      serviceCharge: paymentDetails.serviceCharge,
+      sparePrice: paymentDetails.sparePrice,
+      customerPlatformFee: paymentDetails.customerPlatformFee,
+      totalCustomerPayable: paymentDetails.totalCustomerPayable,
+      totalPayable: paymentDetails.totalCustomerPayable,
+      totalServiceCharge: paymentDetails.totalCustomerPayable,
+      workerCommission: paymentDetails.workerCommission,
+      workerLaborShare: paymentDetails.workerLaborShare,
+      workerFinalEarning: paymentDetails.workerFinalEarning,
+      workerNetEarning: paymentDetails.workerFinalEarning,
+      workerCharge: paymentDetails.workerFinalEarning,
+      platformFee: paymentDetails.customerPlatformFee
+    };
+
+    await updateBookingStatus(currentJob.id, 'completed', updatePayload);
+
+    setBillingJob(null);
+    setCongratulationsData({
+      booking: { ...currentJob, status: 'completed', ...updatePayload },
+      billing: paymentDetails
+    });
   };
 
   // Filter albums belonging to the active worker
@@ -729,8 +773,8 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 in_progress: {
                   label: 'Step 3: Work in Progress',
                   badge: 'bg-amber-50 text-amber-600',
-                  nextAction: '✅ Complete & Collect Payment',
-                  nextHint: 'Tap once service is successfully delivered'
+                  nextAction: '💳 Customer Bill & Payment QR',
+                  nextHint: 'Generate transparent bill (5% fee) & collect payment via QR / Cash'
                 }
               }[job.status] || {
                 label: job.status,
@@ -952,46 +996,72 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         {/* History Tab */}
         {activeTab === 'history' && (
           <div className="space-y-3">
-            {myCompletedJobs.map((job) => (
-              <div key={job.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>COMPLETED & PAID</span>
-                  </span>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-emerald-600">+₹{job.workerCharge || 500}</p>
-                    <p className="text-[10px] text-slate-400 font-semibold">Net Credited</p>
-                  </div>
-                </div>
+            {myCompletedJobs.map((job) => {
+              const labor = Number(job.serviceCharge || job.price || 300);
+              const spares = Number(job.sparePrice || 0);
+              const workerEarning = job.workerFinalEarning !== undefined 
+                ? Number(job.workerFinalEarning) 
+                : (job.workerNetEarning !== undefined 
+                    ? Number(job.workerNetEarning) 
+                    : Math.round(((labor * 0.90) + spares) * 100) / 100);
+              const customerPlatformFee = job.customerPlatformFee !== undefined 
+                ? Number(job.customerPlatformFee) 
+                : Math.round(labor * 0.05 * 100) / 100;
+              const customerTotalBill = job.totalCustomerPayable !== undefined 
+                ? Number(job.totalCustomerPayable) 
+                : Math.round((labor + spares + customerPlatformFee) * 100) / 100;
 
-                <div>
-                  <h4 className="text-xs font-extrabold text-slate-900">{job.serviceTitle}</h4>
-                  <p className="text-[11px] text-slate-500 font-medium">{job.customerName} • {job.address}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{job.dateTime}</p>
-                </div>
+              return (
+                <div key={job.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>COMPLETED & PAID</span>
+                    </span>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-emerald-600">+₹{workerEarning}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold">Net Credited</p>
+                    </div>
+                  </div>
 
-                {/* Final Billing & Payment Summary shown strictly upon completion */}
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Customer Total Bill:</span>
-                    <span className="font-bold text-slate-900">₹{job.totalServiceCharge || job.price || 650}</span>
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900">{job.serviceTitle}</h4>
+                    <p className="text-[11px] text-slate-500 font-medium">{job.customerName} • {job.address}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{job.dateTime}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Advance Collected Online:</span>
-                    <span className="font-semibold text-emerald-600">-₹{job.advancePaid || 99}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Platform Commission (JOBit):</span>
-                    <span className="font-semibold text-amber-700">-₹{job.platformFee || 150}</span>
-                  </div>
-                  <div className="flex justify-between pt-1 border-t border-slate-200 font-bold text-slate-900">
-                    <span>Cash Collected at Doorstep:</span>
-                    <span className="text-[#0EA5E0]">₹{job.remainingDue || 551}</span>
+
+                  {/* Worker Net Earnings Breakdown (Rule 2: 10% deduction from Service Charge + 100% Spares) */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Service Charge (Labor):</span>
+                      <span className="font-bold text-slate-900">₹{labor}</span>
+                    </div>
+                    <div className="flex justify-between text-amber-700">
+                      <span>Platform Commission (10%):</span>
+                      <span className="font-semibold">-₹{Math.round(labor * 0.10 * 100) / 100}</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-700">
+                      <span>Net Labor Share (90%):</span>
+                      <span className="font-semibold">₹{Math.round(labor * 0.90 * 100) / 100}</span>
+                    </div>
+                    {spares > 0 && (
+                      <div className="flex justify-between text-slate-800">
+                        <span>Spare Price (Reimbursed):</span>
+                        <span className="font-bold">+₹{spares}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-1 border-t border-slate-200 font-extrabold text-slate-900">
+                      <span>Worker Final Earning:</span>
+                      <span className="text-emerald-600 font-black text-xs">₹{workerEarning}</span>
+                    </div>
+                    <div className="flex justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100">
+                      <span>Customer Bill: ₹{customerTotalBill} (5% fee incl.)</span>
+                      <span className="font-semibold text-slate-600">{job.paymentMethod || 'Paid by Cash / QR'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {myCompletedJobs.length === 0 && (
               <div className="py-10 text-center bg-white rounded-3xl border border-slate-100 p-6">
@@ -1399,55 +1469,70 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         </div>
       )}
 
-      {/* Final Billing / Payment Summary Modal (Strictly shown at the time of marking the job as Completed) */}
-      {completedJobSummary && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl space-y-4 border border-slate-100 animate-scale-up">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center ring-8 ring-emerald-50/50">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
+      {/* Customer Billing & Payment QR Modal */}
+      <PaymentQRModal
+        isOpen={Boolean(billingJob)}
+        onClose={() => setBillingJob(null)}
+        booking={billingJob}
+        userRole="worker"
+        onConfirmPayment={handleConfirmJobPayment}
+      />
+
+      {/* Requirement 4: Completion Flow celebration strictly displaying "Job done! Congratulations 👏" */}
+      {congratulationsData && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in select-none">
+          <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl space-y-4 border border-slate-100 text-center animate-scale-up">
+            
+            <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center ring-8 ring-emerald-100/60 shadow-xs">
+              <span className="text-3xl">👏</span>
+            </div>
+
+            <div className="space-y-1">
               <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
-                Job Completed Successfully
+                Payment Settled & Job Completed
               </span>
-              <h3 className="text-lg font-black text-slate-900 leading-tight">
-                Final Billing Summary
+              <h3 className="text-xl font-black text-slate-900 leading-tight pt-1">
+                Job done! Congratulations 👏
               </h3>
-              <p className="text-xs text-slate-500 font-medium truncate">
-                {completedJobSummary.serviceTitle}
+              <p className="text-xs text-slate-500 font-medium">
+                {congratulationsData.booking?.serviceTitle}
               </p>
             </div>
 
-            {/* Final Billing & Payment Breakdown */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-xs space-y-2">
-              <div className="flex justify-between items-center text-slate-600 font-medium">
-                <span>Customer Total Bill:</span>
-                <span className="font-bold text-slate-900">₹{completedJobSummary.totalServiceCharge || completedJobSummary.price || 650}</span>
+            {/* Earnings Credited Summary */}
+            <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200/80 text-xs space-y-2 text-left">
+              <div className="flex justify-between items-center text-emerald-900 font-bold">
+                <span>Net Earnings Credited:</span>
+                <span className="text-lg font-black text-emerald-700">
+                  +₹{congratulationsData.billing?.workerFinalEarning ?? congratulationsData.booking?.workerFinalEarning}
+                </span>
               </div>
-              <div className="flex justify-between items-center text-slate-600 font-medium">
-                <span>Advance Collected Online:</span>
-                <span className="font-bold text-emerald-600">-₹{completedJobSummary.advancePaid || 99}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600 font-medium">
-                <span>Platform Fee (JOBit Share):</span>
-                <span className="font-bold text-amber-700">-₹{completedJobSummary.platformFee || 150}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-800 font-bold pt-1.5 border-t border-slate-200">
-                <span>Cash Collected at Doorstep:</span>
-                <span className="font-black text-[#0EA5E0]">₹{completedJobSummary.remainingDue || 551}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-slate-200 text-sm">
-                <span className="font-black text-emerald-800">Your Net Share Credited:</span>
-                <span className="font-black text-emerald-600 text-base">₹{completedJobSummary.workerCharge || 500}</span>
+              <div className="pt-1.5 border-t border-emerald-200/60 text-[11px] text-emerald-800 space-y-1">
+                <div className="flex justify-between">
+                  <span>Net Labor (90%):</span>
+                  <span>₹{congratulationsData.billing?.workerLaborShare ?? Math.round((congratulationsData.billing?.serviceCharge || 300) * 0.90)}</span>
+                </div>
+                {Number(congratulationsData.billing?.sparePrice) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Spare Parts (100%):</span>
+                    <span>+₹{congratulationsData.billing.sparePrice}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-600 pt-1 border-t border-emerald-200/40">
+                  <span>Customer Total Bill:</span>
+                  <span className="font-bold text-slate-800">
+                    ₹{congratulationsData.billing?.totalCustomerPayable} ({congratulationsData.billing?.paymentMethod})
+                  </span>
+                </div>
               </div>
             </div>
 
             <button
               onClick={() => {
-                setCompletedJobSummary(null);
+                setCongratulationsData(null);
                 setActiveTab('history');
               }}
-              className="w-full py-3.5 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span>Done • View in History</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />

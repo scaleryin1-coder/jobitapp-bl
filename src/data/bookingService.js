@@ -270,6 +270,37 @@ export const safeDbPromise = (promise, timeoutMs = 2500) => {
  *    - Advance Deduction: -₹99
  *    - Balance Payable by Customer: ₹551
  */
+export function calculateJobBilling({ serviceCharge = 300, sparePrice = 0 } = {}) {
+  const labor = Math.max(0, Number(serviceCharge) || 0);
+  const spares = Math.max(0, Number(sparePrice) || 0);
+
+  // 1. Customer Platform Fee = 5% of Service Charge (Labor)
+  const customerPlatformFee = Math.round(labor * 0.05 * 100) / 100;
+
+  // 2. Total Customer Payable Amount = Service Charge + Spare Price (if any) + (Service Charge * 0.05)
+  const totalCustomerPayable = Math.round((labor + spares + customerPlatformFee) * 100) / 100;
+
+  // 3. Worker Earnings: Deduct 10% from the Service Charge as platform commission
+  const workerCommission = Math.round(labor * 0.10 * 100) / 100;
+  const workerLaborShare = Math.round(labor * 0.90 * 100) / 100;
+
+  // 4. Worker Final Earning for the job = (Service Charge * 0.90) + Spare Price
+  const workerFinalEarning = Math.round((workerLaborShare + spares) * 100) / 100;
+
+  return {
+    serviceCharge: labor,
+    sparePrice: spares,
+    customerPlatformFee,
+    totalCustomerPayable,
+    totalPayable: totalCustomerPayable,
+    workerCommission,
+    workerLaborShare,
+    workerFinalEarning,
+    workerNetEarning: workerFinalEarning,
+    workerCharge: workerFinalEarning
+  };
+}
+
 export function calculateBillingDetails(rawPrice) {
   const num = typeof rawPrice === 'number' ? rawPrice : Number(String(rawPrice || '').replace(/[^0-9.]/g, ''));
   const total = Number.isFinite(num) && num > 0 ? num : 650;

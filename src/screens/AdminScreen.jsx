@@ -226,9 +226,18 @@ export function AdminScreen({ onBack, onLogout }) {
   const onlineWorkers = approvedWorkers.filter(w => w.isOnline);
   const pendingRegistrations = (pendingWorkers || []).filter(p => p.status === 'pending' || p.status === 'pending_verification' || !p.status);
 
-  const totalRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.totalServiceCharge || b.price) || 650), 0);
-  const platformRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.platformFee) || 150), 0);
-  const workerRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.workerCharge) || 500), 0);
+  const totalRevenue = (bookings || []).reduce((sum, b) => sum + (Number(b.totalCustomerPayable || b.totalPayable || b.totalServiceCharge || b.price) || 650), 0);
+  const platformRevenue = (bookings || []).reduce((sum, b) => {
+    if (b.customerPlatformFee !== undefined) {
+      return sum + Number(b.customerPlatformFee) + Number(b.workerCommission || 0);
+    }
+    return sum + (Number(b.platformFee) || 150);
+  }, 0);
+  const workerRevenue = (bookings || []).reduce((sum, b) => {
+    if (b.workerFinalEarning !== undefined) return sum + Number(b.workerFinalEarning);
+    if (b.workerNetEarning !== undefined) return sum + Number(b.workerNetEarning);
+    return sum + (Number(b.workerCharge) || 500);
+  }, 0);
   const totalPendingPaymentAmount = pendingPaymentJobs.reduce((sum, b) => sum + (Number(b.remainingDue) || 0), 0);
 
   // ==========================================

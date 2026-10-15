@@ -18,7 +18,8 @@ import {
   FileText,
   X,
   Sparkles,
-  Download
+  Download,
+  QrCode
 } from 'lucide-react';
 import { 
   subscribeBookings, 
@@ -28,6 +29,7 @@ import { useAuth } from '../context/AuthContext';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
+import { PaymentQRModal } from '../components/billing/PaymentQRModal';
 
 export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   const { currentUser } = useAuth();
@@ -35,6 +37,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   const [bookings, setBookings] = useState([]);
   const [ratingModalBooking, setRatingModalBooking] = useState(null);
   const [receiptModalBooking, setReceiptModalBooking] = useState(null);
+  const [paymentQRBooking, setPaymentQRBooking] = useState(null);
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -332,6 +335,17 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {(booking.status === 'in_progress' || booking.status === 'completed') && (
+                    <button
+                      onClick={() => setPaymentQRBooking(booking)}
+                      className="px-2.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-black transition cursor-pointer flex items-center gap-1 border border-emerald-200"
+                      title="View Bill & Payment QR"
+                    >
+                      <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{booking.status === 'completed' ? 'Bill & QR' : 'Pay via QR'}</span>
+                    </button>
+                  )}
+
                   {['confirmed', 'pending'].includes(booking.status) && (
                     <button
                       onClick={() => handleCancelBooking(booking.id)}
@@ -422,26 +436,71 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 </div>
               </div>
 
-              {/* Transparent Customer Line Items - Strictly Flat ₹99 Only */}
+              {/* Customer Billing Breakdown */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  Billing Breakdown
+                  Customer Billing Breakdown
                 </h4>
                 
-                <div className="flex justify-between text-xs text-slate-700 font-semibold">
-                  <span>Visiting & Inspection Fee</span>
-                  <span className="font-black text-slate-900">₹99</span>
-                </div>
+                {receiptModalBooking.status === 'completed' || receiptModalBooking.serviceCharge ? (
+                  <>
+                    <div className="flex justify-between text-xs text-slate-700 font-semibold">
+                      <span>Service Charge (Labor)</span>
+                      <span className="font-black text-slate-900">₹{receiptModalBooking.serviceCharge || 300}</span>
+                    </div>
 
-                <div className="flex justify-between text-xs text-emerald-600 font-semibold">
-                  <span>Amount Paid Online</span>
-                  <span className="font-black text-emerald-600">₹99 (Paid)</span>
-                </div>
+                    {Number(receiptModalBooking.sparePrice) > 0 && (
+                      <div className="flex justify-between text-xs text-slate-700 font-semibold">
+                        <span>Spare Price</span>
+                        <span className="font-black text-slate-900">₹{receiptModalBooking.sparePrice}</span>
+                      </div>
+                    )}
 
-                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
-                  <span>Remaining Visiting Balance</span>
-                  <span className="text-base text-emerald-600">₹0 (Settled)</span>
-                </div>
+                    <div className="flex justify-between text-xs text-slate-700 font-semibold">
+                      <span className="flex items-center gap-1">
+                        <span>Customer Platform Fee (5%)</span>
+                        <span className="text-[10px] text-sky-600 font-bold bg-sky-50 px-1.5 py-0.2 rounded">5%</span>
+                      </span>
+                      <span className="font-black text-[#0EA5E0]">
+                        ₹{receiptModalBooking.customerPlatformFee !== undefined 
+                            ? receiptModalBooking.customerPlatformFee 
+                            : Math.round((Number(receiptModalBooking.serviceCharge || 300) * 0.05) * 100) / 100}
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t-2 border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
+                      <span>Total Amount Paid</span>
+                      <span className="text-base text-emerald-600">
+                        ₹{receiptModalBooking.totalCustomerPayable || receiptModalBooking.totalPayable || (
+                          Number(receiptModalBooking.serviceCharge || 300) + 
+                          Number(receiptModalBooking.sparePrice || 0) + 
+                          Math.round((Number(receiptModalBooking.serviceCharge || 300) * 0.05) * 100) / 100
+                        )} (Paid)
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-slate-400 font-medium pt-0.5">
+                      Payment Mode: {receiptModalBooking.paymentMethod || 'Paid by Cash / QR'} • Settled & Verified
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-xs text-slate-700 font-semibold">
+                      <span>Visiting & Inspection Fee</span>
+                      <span className="font-black text-slate-900">₹99</span>
+                    </div>
+
+                    <div className="flex justify-between text-xs text-emerald-600 font-semibold">
+                      <span>Amount Paid Online</span>
+                      <span className="font-black text-emerald-600">₹99 (Paid)</span>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
+                      <span>Remaining Visiting Balance</span>
+                      <span className="text-base text-emerald-600">₹0 (Settled)</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Assurance Seal */}
@@ -518,6 +577,23 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
           </div>
         </div>
       )}
+
+      {/* Customer Payment QR Modal */}
+      <PaymentQRModal
+        isOpen={Boolean(paymentQRBooking)}
+        onClose={() => setPaymentQRBooking(null)}
+        booking={paymentQRBooking}
+        userRole="customer"
+        onConfirmPayment={async (details) => {
+          await updateBookingStatus(paymentQRBooking.id, 'completed', {
+            ...details,
+            completedAt: new Date().toISOString(),
+            paymentStatus: 'paid'
+          });
+          setPaymentQRBooking(null);
+          alert('Payment confirmed! Job completed successfully.');
+        }}
+      />
 
       {/* Agora.io Voice Call Modal */}
       <VoiceCallModal
