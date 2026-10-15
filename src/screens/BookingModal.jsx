@@ -90,10 +90,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     if (loading) return;
     setLoading(true);
 
-    const workerId = localAssignedWorker?.id || service.workerId || 'worker_rajesh';
-    const workerName = localAssignedWorker?.name || service.workerName || 'Rajesh Sharma';
-    const workerPhone = localAssignedWorker?.phone || service.workerPhone || '98765 43210';
-    const workerAvatar = localAssignedWorker?.avatar || service.workerAvatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80';
+    const workerId = localAssignedWorker?.id || service.workerId || null;
+    const workerName = localAssignedWorker?.name || service.workerName || 'Dispatch Assignment Pending';
+    const workerPhone = localAssignedWorker?.phone || service.workerPhone || '';
+    const workerAvatar = localAssignedWorker?.avatar || service.workerAvatar || '';
 
     const bookingPayload = {
       customerId: currentUser?.uid || 'guest_user',
@@ -188,13 +188,13 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
             <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img 
-                  src={confirmedBookingData.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
-                  alt={confirmedBookingData.workerName || 'Rajesh Sharma'}
+                  src={confirmedBookingData.workerAvatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
+                  alt={confirmedBookingData.workerName || 'JOBit Technician'}
                   className="w-11 h-11 rounded-xl object-cover ring-2 ring-white shadow-xs"
                 />
                 <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned Expert</p>
-                  <p className="text-sm font-black text-slate-900">{confirmedBookingData.workerName || 'Rajesh Sharma'}</p>
+                  <p className="text-sm font-black text-slate-900">{confirmedBookingData.workerName || 'JOBit Verified Technician'}</p>
                   <p className="text-[11px] text-[#0EA5E0] font-bold flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-[#0EA5E0]" />
                     <span>JOBit Verified Technician</span>

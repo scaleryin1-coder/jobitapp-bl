@@ -30,6 +30,27 @@ const EVENT_CATEGORIES_CHANGED = 'jobit_categories_changed';
 const EVENT_DAILY_GIGS_CHANGED = 'jobit_daily_gigs_changed';
 const EVENT_PORTFOLIOS_CHANGED = 'jobit_portfolios_changed';
 
+export const DUMMY_WORKER_IDS = new Set([
+  'worker_rajesh',
+  'worker_amit',
+  'worker_sunita',
+  'worker_vikram',
+  'worker_musthafa_pattikkad',
+  'worker_shameer_pattikkad',
+  'worker_deepak_pandikkad',
+  'worker_ramesh',
+  'worker_zara',
+  'worker_fatima',
+  'worker_ananya',
+  'worker_manoj',
+  'worker_karthik',
+  'worker_suresh',
+  'app_worker_anil',
+  'app_worker_fathima',
+  'app_worker_zaf',
+  'app_worker_kabeer_pattikkad'
+]);
+
 export const ROLLOUT_LOCATIONS = [
   'Melattur, Kerala',
   'Pattikkad, Kerala',
@@ -166,84 +187,28 @@ export function calculateBillingDetails(rawPrice) {
 export function getLocalBookings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_BOOKINGS);
-    let list = [];
     if (!raw) {
-      list = [
-        {
-          id: 'bk_sample_1',
-          serviceTitle: 'Plumbing Inspection & Repair',
-          categoryName: 'Plumbing',
-          workerId: 'worker_rajesh',
-          workerName: 'Rajesh Sharma',
-          workerTitle: 'JOBit Verified Technician',
-          workerPhone: '98765 43210',
-          workerAvatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
-          customerId: 'guest_user',
-          customerName: 'Aman Gupta',
-          customerPhone: '98765 00001',
-          dateTime: 'Today, 02:00 PM - 04:00 PM',
-          address: 'Main Road, Melattur, Kerala',
-          price: 99,
-          visitingFee: 99,
-          totalServiceCharge: 99,
-          advancePaid: 99,
-          status: 'confirmed',
-          note: 'Kitchen tap dripping continuously and pipe fitting',
-          createdAt: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: 'bk_sample_2',
-          serviceTitle: 'AC Repair & Jet Service',
-          categoryName: 'AC Repair',
-          workerId: 'worker_rajesh',
-          workerName: 'Rajesh Sharma',
-          workerTitle: 'JOBit Verified Technician',
-          workerPhone: '98765 43210',
-          workerAvatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
-          customerId: 'cust_priya',
-          customerName: 'Priya Nair',
-          customerPhone: '98765 00002',
-          dateTime: 'Today, 04:30 PM - 06:30 PM',
-          address: 'Town Center, Melattur, Kerala',
-          price: 99,
-          visitingFee: 99,
-          totalServiceCharge: 99,
-          advancePaid: 99,
-          status: 'confirmed',
-          note: 'Cooling coil inspection & diagnostic',
-          createdAt: new Date().toISOString()
-        }
-      ];
-      localStorage.setItem(STORAGE_KEY_BOOKINGS, JSON.stringify(list));
-      return list;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    list = Array.isArray(parsed) ? parsed : [];
-    // Ensure all stored bookings have Flat ₹99 visiting charge attributes and active confirmed status
-    return list.filter(b => b && typeof b === 'object').map(b => {
-      const workerName = b.workerName || 'Rajesh Sharma';
-      const workerTitle = b.workerTitle || 'JOBit Verified Technician';
-      const workerPhone = b.workerPhone || '98765 43210';
-      const workerAvatar = b.workerAvatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80';
-      // Normalize any pending or erroneously cancelled test bookings to confirmed
-      const status = (b.status === 'pending' || !b.status) ? 'confirmed' : b.status;
-
-      return {
-        ...b,
-        price: 99,
-        visitingFee: 99,
-        totalServiceCharge: 99,
-        totalWorkFee: 99,
-        advancePaid: 99,
-        remainingDue: 0,
-        workerName,
-        workerTitle,
-        workerPhone,
-        workerAvatar,
-        status,
-        paymentStatus: b.paymentStatus || 'paid_visiting_fee_99'
-      };
-    });
+    const list = Array.isArray(parsed) ? parsed : [];
+    // Filter out dummy sample bookings and invalid items
+    return list
+      .filter(b => b && typeof b === 'object' && b.id !== 'bk_sample_1' && b.id !== 'bk_sample_2')
+      .map(b => {
+        const status = (b.status === 'pending' || !b.status) ? 'confirmed' : b.status;
+        return {
+          ...b,
+          price: b.price || 99,
+          visitingFee: b.visitingFee || 99,
+          totalServiceCharge: b.totalServiceCharge || 99,
+          totalWorkFee: b.totalWorkFee || 99,
+          advancePaid: b.advancePaid || 99,
+          remainingDue: b.remainingDue || 0,
+          status,
+          paymentStatus: b.paymentStatus || 'paid_visiting_fee_99'
+        };
+      });
   } catch (err) {
     console.warn('Fallback reading local bookings:', err);
     return [];
@@ -263,27 +228,27 @@ export function getLocalWorkers() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_WORKERS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(initialWorkers));
-      return initialWorkers;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    const existingList = Array.isArray(parsed) ? parsed : [];
-    const missing = initialWorkers.filter(iw => !existingList.some(w => w.id === iw.id));
-    if (missing.length > 0) {
-      const merged = [...existingList, ...missing];
-      localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(merged));
-      return merged;
+    const list = Array.isArray(parsed) ? parsed : [];
+    // Strictly filter out any hardcoded dummy worker profiles
+    const cleanList = list.filter(w => w && w.id && !DUMMY_WORKER_IDS.has(w.id));
+    if (cleanList.length !== list.length) {
+      localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(cleanList));
     }
-    return existingList;
+    return cleanList;
   } catch {
-    return initialWorkers;
+    return [];
   }
 }
 
 export function saveLocalWorkers(workers) {
   try {
-    localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(workers));
-    window.dispatchEvent(new CustomEvent(EVENT_WORKERS_CHANGED, { detail: workers }));
+    // Ensure no dummy workers are saved
+    const cleanList = (workers || []).filter(w => w && w.id && !DUMMY_WORKER_IDS.has(w.id));
+    localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(cleanList));
+    window.dispatchEvent(new CustomEvent(EVENT_WORKERS_CHANGED, { detail: cleanList }));
   } catch (err) {
     console.warn('Failed to save local workers', err);
   }
@@ -307,19 +272,13 @@ export function subscribeBookings(callback) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'bookings'), (snap) => {
         if (!snap.empty) {
-          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const list = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(b => b.id !== 'bk_sample_1' && b.id !== 'bk_sample_2');
           // Sort by creation time descending
           list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
           saveLocalBookings(list);
           callback(list);
-        } else {
-          // If Firestore collection is empty, push initial local data to Firestore
-          const initial = getLocalBookings();
-          initial.forEach(async (b) => {
-            try {
-              await setDoc(doc(db, 'bookings', b.id), b);
-            } catch {}
-          });
         }
       }, () => {
         // Fallback silently to local state when backend is offline
@@ -352,17 +311,13 @@ export function subscribeWorkers(callback) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'workers'), (snap) => {
         if (!snap.empty) {
-          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const list = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(w => w && w.id && !DUMMY_WORKER_IDS.has(w.id));
           saveLocalWorkers(list);
           callback(list);
         } else {
-          // Seed initial workers to Firestore
-          const initial = getLocalWorkers();
-          initial.forEach(async (w) => {
-            try {
-              await setDoc(doc(db, 'workers', w.id), w);
-            } catch {}
-          });
+          callback([]);
         }
       }, () => {});
     } catch {}
@@ -377,20 +332,14 @@ export function subscribeWorkers(callback) {
 
 // Customer initiates booking -> confirmed with Flat ₹99 visiting fee and assigned technician
 export async function createBooking(payload) {
-  const availableWorkers = getLocalWorkers();
+  const availableWorkers = getLocalWorkers().filter(w => w.status === 'approved' || w.workerStatus === 'approved');
   const cat = (payload.categoryName || payload.serviceTitle || '').toLowerCase();
   const assignedWorker = availableWorkers.find(w => 
     (payload.preferredWorkerId && w.id === payload.preferredWorkerId) ||
     (payload.workerId && w.id === payload.workerId) ||
     (w.categoryId === payload.categoryId) ||
     (cat && w.skill && w.skill.toLowerCase().includes(cat))
-  ) || availableWorkers[0] || {
-    id: 'worker_rajesh',
-    name: 'Rajesh Sharma',
-    phone: '98765 43210',
-    avatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
-    workerTitle: 'JOBit Verified Technician'
-  };
+  ) || null;
 
   const newBooking = {
     id: 'bk_' + Date.now(),
@@ -398,12 +347,12 @@ export async function createBooking(payload) {
     status: 'confirmed', // Active status: Booking Confirmed - Technician Assigned
     createdAt: new Date().toISOString(),
     broadcastedAt: new Date().toISOString(),
-    assignedAt: new Date().toISOString(),
-    workerId: payload.workerId || assignedWorker.id || 'worker_rajesh',
-    workerName: payload.workerName || assignedWorker.name || 'Rajesh Sharma',
-    workerPhone: payload.workerPhone || assignedWorker.phone || '98765 43210',
-    workerAvatar: payload.workerAvatar || assignedWorker.avatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
-    workerTitle: assignedWorker.workerTitle || 'JOBit Verified Technician',
+    assignedAt: assignedWorker ? new Date().toISOString() : null,
+    workerId: payload.workerId || assignedWorker?.id || null,
+    workerName: payload.workerName || assignedWorker?.name || (assignedWorker ? 'JOBit Verified Technician' : 'Pending Assignment'),
+    workerPhone: payload.workerPhone || assignedWorker?.phone || '',
+    workerAvatar: payload.workerAvatar || assignedWorker?.avatar || '',
+    workerTitle: assignedWorker?.workerTitle || (assignedWorker ? 'JOBit Verified Technician' : 'Pending Assignment'),
     price: 99,
     visitingFee: 99,
     totalServiceCharge: 99,
@@ -829,168 +778,27 @@ export async function adminDeleteCategory(catId) {
 // PENDING WORKER ONBOARDING & APPROVALS
 // ==========================================
 
-export const initialPendingWorkers = [
-  {
-    id: 'app_worker_anil',
-    name: 'Anil Kumar',
-    phone: '98471 23456',
-    altPhone: '98471 99880',
-    email: 'anil.electric@gmail.com',
-    gender: 'Male',
-    dob: '1992-06-15',
-    avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
-    selfieUrl: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=600&q=80',
-    address: 'Near Old Bus Stand, Market Road, Melattur',
-    city: 'Melattur, Kerala',
-    pincode: '679326',
-    serviceRadius: '25',
-    categoryName: 'Electrician',
-    categoryId: 'cat_electrician',
-    subSkills: ['House Wiring', 'Distribution Board Repair', 'Inverter Installation', 'Switchboard Repair', 'Appliance Earthing'],
-    experience: '7',
-    baseRate: 350,
-    aadhaarNumber: '7845 2319 8812',
-    aadhaarDocUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    drivingLicenseNumber: 'KL-10-2018-0045129',
-    drivingLicenseDocUrl: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
-    idProofUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    idProofType: 'Aadhaar Card Front & Back',
-    bankName: 'State Bank of India',
-    accountHolderName: 'Anil Kumar K',
-    accountNumber: '38291048291',
-    ifscCode: 'SBIN0008421',
-    upiId: 'anilkumar@oksbi',
-    status: 'pending',
-    workerStatus: 'pending',
-    appliedAt: new Date(Date.now() - 7200000).toISOString()
-  },
-  {
-    id: 'app_worker_fathima',
-    name: 'Fathima Beevi',
-    phone: '98472 88771',
-    altPhone: '98472 55443',
-    email: 'fathima.cleanpro@gmail.com',
-    gender: 'Female',
-    dob: '1995-11-20',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
-    selfieUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
-    address: 'Opposite Community Health Center, Perinthalmanna',
-    city: 'Perinthalmanna, Kerala',
-    pincode: '679322',
-    serviceRadius: '15',
-    categoryName: 'Cleaning',
-    categoryId: 'cat_cleaning',
-    subSkills: ['Deep Home Cleaning', 'Kitchen Degreasing', 'Bathroom Sanitization', 'Sofa Shampooing'],
-    experience: '5',
-    baseRate: 400,
-    aadhaarNumber: '8912 4432 1029',
-    aadhaarDocUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
-    drivingLicenseNumber: 'KL-53-2020-0081290',
-    drivingLicenseDocUrl: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
-    idProofUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
-    idProofType: 'Government Voter ID',
-    bankName: 'Federal Bank',
-    accountHolderName: 'Fathima Beevi T',
-    accountNumber: '1420010049281',
-    ifscCode: 'FDRL0001420',
-    upiId: 'fathimabeevi@federal',
-    status: 'pending',
-    workerStatus: 'pending',
-    appliedAt: new Date(Date.now() - 14400000).toISOString()
-  },
-  {
-    id: 'app_worker_zaf',
-    name: 'Zaf',
-    phone: '98473 11223',
-    altPhone: '98473 44556',
-    email: 'zaf.acservice@gmail.com',
-    gender: 'Male',
-    dob: '1994-03-12',
-    avatar: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80',
-    selfieUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
-    address: 'Near Town Mosque, Main Road, Melattur',
-    city: 'Melattur, Kerala',
-    pincode: '679326',
-    serviceRadius: '20',
-    categoryName: 'AC Service',
-    categoryId: 'cat_ac_repair',
-    subSkills: ['AC Jet Wash', 'Gas Charging', 'Compressor Diagnosis', 'Split AC Installation'],
-    experience: '6',
-    baseRate: 450,
-    aadhaarNumber: '6543 9812 3456',
-    aadhaarDocUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    drivingLicenseNumber: 'KL-10-2019-0098712',
-    drivingLicenseDocUrl: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
-    idProofUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    idProofType: 'Aadhaar Card Front & Back',
-    bankName: 'Canara Bank',
-    accountHolderName: 'Zafiq Rahman',
-    accountNumber: '0834101038291',
-    ifscCode: 'CNRB0000834',
-    upiId: 'zaf@okcanara',
-    status: 'pending',
-    workerStatus: 'pending',
-    appliedAt: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: 'app_worker_kabeer_pattikkad',
-    name: 'Kabeer Ali',
-    phone: '98473 77889',
-    altPhone: '98473 00112',
-    email: 'kabeer.electrician@gmail.com',
-    gender: 'Male',
-    dob: '1992-06-18',
-    avatar: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=400&q=80',
-    selfieUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=600&q=80',
-    address: 'Near Pattikkad Hospital Junction, Perinthalmanna Road',
-    city: 'Pattikkad, Kerala',
-    pincode: '679325',
-    serviceRadius: '20',
-    categoryName: 'Electrician',
-    categoryId: 'cat_electrician',
-    subSkills: ['Wiring Diagnosis', 'MCB Switch Tripping', 'Inverter & Battery Wiring', 'Fan & Light Fittings'],
-    experience: '8',
-    baseRate: 350,
-    aadhaarNumber: '7612 9901 2341',
-    aadhaarDocUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    drivingLicenseNumber: 'KL-53-2018-0044123',
-    drivingLicenseDocUrl: 'https://images.unsplash.com/photo-1618042164219-62c820f10723?auto=format&fit=crop&w=600&q=80',
-    idProofUrl: 'https://images.unsplash.com/photo-1554415707-9e4901f4c7d0?auto=format&fit=crop&w=600&q=80',
-    idProofType: 'Aadhaar Card Front & Back',
-    bankName: 'Federal Bank',
-    accountHolderName: 'Kabeer Ali',
-    accountNumber: '1520010088921',
-    ifscCode: 'FDRL0001520',
-    upiId: 'kabeer@federal',
-    status: 'pending',
-    workerStatus: 'pending',
-    appliedAt: new Date(Date.now() - 1800000).toISOString()
-  }
-];
+export const initialPendingWorkers = [];
 
 export function getPendingWorkers() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PENDING_WORKERS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(initialPendingWorkers));
-      return initialPendingWorkers;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    let list = Array.isArray(parsed) ? parsed : initialPendingWorkers;
-    // If Zaf isn't in the list and hasn't been approved/rejected, ensure our 3 default candidates are available
-    if (!list.some(p => p.id === 'app_worker_zaf' || p.name === 'Zaf')) {
-      const zaf = initialPendingWorkers.find(p => p.id === 'app_worker_zaf');
-      if (zaf) {
-        list = [...list, zaf];
-        localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(list));
-      }
+    const list = Array.isArray(parsed) ? parsed : [];
+    // Strictly filter out any dummy applicants
+    const cleanList = list.filter(p => p && p.id && !DUMMY_WORKER_IDS.has(p.id));
+    if (cleanList.length !== list.length) {
+      localStorage.setItem(STORAGE_KEY_PENDING_WORKERS, JSON.stringify(cleanList));
     }
-    return list.map(item => ({
+    return cleanList.map(item => ({
       ...item,
-      selfieUrl: item.selfieUrl || item.avatar || item.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80'
+      selfieUrl: item.selfieUrl || item.avatar || item.photo || ''
     }));
   } catch {
-    return initialPendingWorkers;
+    return [];
   }
 }
 
@@ -1019,9 +827,13 @@ export function subscribePendingWorkers(callback) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'pending_workers'), (snap) => {
         if (!snap.empty) {
-          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const list = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(p => p && p.id && !DUMMY_WORKER_IDS.has(p.id));
           savePendingWorkers(list);
           callback(list);
+        } else {
+          callback([]);
         }
       }, () => {});
     } catch {}

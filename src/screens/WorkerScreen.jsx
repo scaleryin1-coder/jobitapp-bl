@@ -38,7 +38,8 @@ import {
   toggleWorkerDuty,
   subscribePortfolios,
   addWorkerPortfolio,
-  deleteWorkerPortfolio
+  deleteWorkerPortfolio,
+  DUMMY_WORKER_IDS
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
@@ -46,7 +47,7 @@ import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const { currentUser } = useAuth();
   const [workers, setWorkers] = useState([]);
-  const [selectedWorkerId, setSelectedWorkerId] = useState(() => currentUser?.workerId || currentUser?.uid || 'worker_rajesh');
+  const [selectedWorkerId, setSelectedWorkerId] = useState(() => currentUser?.workerId || currentUser?.uid || '');
   const [bookings, setBookings] = useState([]);
   const [declinedJobIds, setDeclinedJobIds] = useState([]);
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
@@ -70,10 +71,11 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     }
   }, [currentUser]);
 
-  // Subscribe to real-time workers
+  // Subscribe to real-time workers (only real approved workers are passed down)
   useEffect(() => {
     const unsub = subscribeWorkers((list) => {
-      setWorkers(list);
+      const realOnly = (list || []).filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
+      setWorkers(realOnly);
     });
     return () => unsub();
   }, []);
@@ -81,7 +83,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   // Subscribe to real-time bookings
   useEffect(() => {
     const unsub = subscribeBookings((list) => {
-      setBookings(list);
+      setBookings(list || []);
     });
     return () => unsub();
   }, []);
@@ -94,17 +96,28 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     return () => unsub();
   }, []);
 
-  // Identify active worker
-  const activeWorker = workers.find(w => w.id === selectedWorkerId) || workers[0] || {
-    id: 'worker_rajesh',
-    name: 'Rajesh Sharma',
-    skill: 'Plumbing',
-    phone: '98765 43210',
-    rating: 4.9,
-    jobsCompleted: 745,
-    isOnline: true,
-    avatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80'
-  };
+  // Filter approved real workers
+  const approvedRealWorkers = workers.filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
+
+  // If a user logs in, they only see their own real profile and registered account details
+  const myRegisteredProfile = (currentUser?.role === 'worker' || currentUser?.workerId)
+    ? (approvedRealWorkers.find(w => w.id === currentUser.workerId || w.id === currentUser.uid || (w.phone && currentUser.phone && w.phone.replace(/\D/g, '').slice(-10) === currentUser.phone.replace(/\D/g, '').slice(-10))) || (currentUser?.role === 'worker' ? {
+        id: currentUser.workerId || currentUser.uid,
+        name: currentUser.name || 'Verified Partner',
+        skill: currentUser.skill || currentUser.categoryName || 'Specialist',
+        phone: currentUser.phone || '',
+        rating: currentUser.rating || 5.0,
+        jobsCompleted: currentUser.jobsCompleted || 0,
+        isOnline: currentUser.isOnline ?? true,
+        avatar: currentUser.avatar || currentUser.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+        vehicle: currentUser.vehicle || 'Bike',
+        status: currentUser.status || 'approved',
+        workerStatus: currentUser.workerStatus || 'approved'
+      } : null))
+    : null;
+
+  // Identify active worker: user's own profile, or explicitly selected real approved worker, or first real approved worker
+  const activeWorker = myRegisteredProfile || approvedRealWorkers.find(w => w.id === selectedWorkerId) || approvedRealWorkers[0] || null;
 
   const isOnline = Boolean(activeWorker?.isOnline);
 
@@ -389,6 +402,57 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     );
   }
 
+  // Guard if no approved real worker exists
+  if (!activeWorker) {
+    return (
+      <div className="w-full min-h-screen bg-slate-50 p-6 flex flex-col justify-between text-slate-900 select-none animate-fade-in">
+        <div>
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 leading-tight">Partner Portal</h3>
+                <p className="text-[11px] text-slate-500 font-bold">Authorized Technicians Only</p>
+              </div>
+            </div>
+
+            <button
+              onClick={onLogout || onBack}
+              className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="mt-10 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-md text-center space-y-4">
+            <div className="w-16 h-16 bg-sky-50 rounded-3xl border-2 border-sky-200 flex items-center justify-center mx-auto text-[#0EA5E0] shadow-xs">
+              <User className="w-8 h-8" />
+            </div>
+
+            <div>
+              <h4 className="text-lg font-black text-slate-900">No Approved Technician Found</h4>
+              <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
+                Only real registered and approved technicians can access the Worker Dashboard. Please register as a verified partner or log in with your registered phone number.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 space-y-2">
+          <button
+            onClick={onLogout || onBack}
+            className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition cursor-pointer shadow-sm"
+          >
+            Back to Customer Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
@@ -397,7 +461,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img 
-              src={activeWorker.avatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80"} 
+              src={activeWorker.avatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80"} 
               alt={activeWorker.name}
               className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 shadow-xs"
             />
@@ -411,25 +475,18 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
-                <span>★ {activeWorker.rating || 4.9}</span>
+                <span>★ {activeWorker.rating || 5.0}</span>
                 <span>• {activeWorker.vehicle || 'Bike'}</span>
               </p>
             </div>
           </div>
 
-          {/* Quick Worker Persona Switcher & Exit Button */}
+          {/* Real Worker Profile Status & Exit Button */}
           <div className="flex items-center gap-1.5">
-            <select
-              value={selectedWorkerId}
-              onChange={(e) => setSelectedWorkerId(e.target.value)}
-              className="text-[11px] font-bold bg-[#F1F3F5] text-slate-700 rounded-full px-2.5 py-1.5 border border-slate-200 outline-none cursor-pointer"
-            >
-              {workers.map(w => (
-                <option key={w.id} value={w.id}>
-                  {w.name} ({w.skill})
-                </option>
-              ))}
-            </select>
+            <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Verified Pro</span>
+            </span>
 
             <button
               onClick={onLogout || onBack}

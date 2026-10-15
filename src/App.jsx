@@ -295,7 +295,7 @@ function MainLayout() {
                 <ChatScreen
                   booking={activeChatBooking || {
                     id: 'bk_default',
-                    workerName: 'Rajesh Sharma',
+                    workerName: 'Assigned Technician',
                     serviceTitle: 'Plumbing Service'
                   }}
                   onBack={() => setActiveTab('home')}
@@ -403,7 +403,7 @@ function MainLayout() {
             <ChatScreen
               booking={activeChatBooking || {
                 id: 'bk_default',
-                workerName: 'Rajesh Sharma',
+                workerName: 'Assigned Technician',
                 serviceTitle: 'Home Service'
               }}
               onBack={() => setCurrentScreen('main')}

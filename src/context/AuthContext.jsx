@@ -217,21 +217,21 @@ export function AuthProvider({ children }) {
   };
 
   const loginAsWorker = async (worker = {}) => {
-    const wId = worker.id || worker.workerId || 'worker_rajesh';
+    const wId = worker.id || worker.workerId || ('worker_' + Date.now());
     const profile = {
       uid: wId,
       workerId: wId,
-      email: worker.email || 'worker@jobit.com',
-      name: worker.name || 'Rajesh Sharma',
-      phone: worker.phone || '98765 43210',
+      email: worker.email || '',
+      name: worker.name || 'Verified Technician',
+      phone: worker.phone || '',
       role: 'worker',
-      skill: worker.skill || 'Plumbing Specialist',
-      avatar: worker.avatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80',
-      vehicle: worker.vehicle || 'Honda Activa (MH-02-CD-4321)',
-      rating: worker.rating || 4.9,
+      skill: worker.skill || worker.categoryName || 'Home Services Pro',
+      avatar: worker.avatar || worker.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+      vehicle: worker.vehicle || 'Bike',
+      rating: worker.rating || 5.0,
       status: worker.status || 'approved',
       workerStatus: worker.workerStatus || worker.status || 'approved',
-      city: worker.city || localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra'
+      city: worker.city || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala'
     };
 
     if (isFirebaseConfigured && db) {

@@ -100,254 +100,15 @@ export const initialBanners = [
   }
 ];
 
-export const initialWorkers = [
-  {
-    id: "worker_rajesh",
-    name: "Rajesh Sharma",
-    phone: "98765 43210",
-    skill: "Plumbing",
-    categoryId: "cat_plumbing",
-    categoryName: "Plumber",
-    rating: 4.9,
-    reviewCount: 699,
-    jobsCompleted: 745,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Bike • KL-53-AB-1234",
-    experience: "8 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_amit",
-    name: "Amit Verma",
-    phone: "98765 11223",
-    skill: "AC Repair",
-    categoryId: "cat_ac",
-    categoryName: "AC Repair",
-    rating: 4.9,
-    reviewCount: 520,
-    jobsCompleted: 610,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Scooter • KL-53-EF-5678",
-    experience: "7 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_sunita",
-    name: "Sunita Sen",
-    phone: "98765 99887",
-    skill: "Cleaning",
-    categoryId: "cat_cleaning",
-    categoryName: "Cleaning",
-    rating: 4.8,
-    reviewCount: 412,
-    jobsCompleted: 489,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Van • KL-53-GH-9012",
-    experience: "5 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_vikram",
-    name: "Vikram Sen",
-    phone: "98765 33445",
-    skill: "Electrician",
-    categoryId: "cat_electrician",
-    categoryName: "Electrician",
-    rating: 4.9,
-    reviewCount: 388,
-    jobsCompleted: 430,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Bike • KL-53-JK-3456",
-    experience: "6 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_musthafa_pattikkad",
-    name: "Musthafa K",
-    phone: "98473 55667",
-    skill: "Plumber",
-    categoryId: "cat_plumbing",
-    categoryName: "Plumber",
-    rating: 4.9,
-    reviewCount: 210,
-    jobsCompleted: 310,
-    isOnline: true,
-    city: "Pattikkad, Kerala",
-    avatar: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Bike • KL-53-PL-9921",
-    experience: "7 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_shameer_pattikkad",
-    name: "Shameer V",
-    phone: "98473 33445",
-    skill: "AC Service & Repair",
-    categoryId: "cat_ac",
-    categoryName: "AC Repair",
-    rating: 4.8,
-    reviewCount: 175,
-    jobsCompleted: 240,
-    isOnline: true,
-    city: "Pattikkad, Kerala",
-    avatar: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Scooter • KL-53-AC-4412",
-    experience: "6 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_deepak_pandikkad",
-    name: "Deepak Kumar",
-    phone: "98473 22110",
-    skill: "Electrician",
-    categoryId: "cat_electrician",
-    categoryName: "Electrician",
-    rating: 4.9,
-    reviewCount: 315,
-    jobsCompleted: 420,
-    isOnline: true,
-    city: "Pandikkad, Kerala",
-    avatar: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Bike • KL-53-EL-8831",
-    experience: "9 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_ramesh",
-    name: "Ramesh Kumar",
-    phone: "98765 77665",
-    skill: "Carpenter",
-    categoryId: "cat_carpenter",
-    rating: 4.7,
-    reviewCount: 295,
-    jobsCompleted: 340,
-    isOnline: true,
-    city: "Mumbai, Maharashtra",
-    avatar: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=300&q=80",
-    vehicle: "Bike • DL-05-MN-7890",
-    experience: "9 years",
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_zara",
-    name: "Zara Siddiqui",
-    phone: "98765 88990",
-    skill: "Mehndi Artist",
-    categoryId: "cat_mehndi",
-    categoryName: "Mehndi Artist",
-    rating: 5.0,
-    reviewCount: 420,
-    jobsCompleted: 610,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
-    experience: "7 years",
-    bio: "Celebrity bridal henna specialist. 100% organic natural henna, intricate Marwari figures, and bespoke Arabic lace designs.",
-    startingPrice: 599,
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_fatima",
-    name: "Fatima Noor",
-    phone: "98765 44332",
-    skill: "Mehndi Artist",
-    categoryId: "cat_mehndi",
-    categoryName: "Mehndi Artist",
-    rating: 4.8,
-    reviewCount: 260,
-    jobsCompleted: 380,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80",
-    experience: "5 years",
-    bio: "Specializing in fast contemporary floral henna for sangeet, engagement, and wedding guest events.",
-    startingPrice: 499,
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_ananya",
-    name: "Ananya Roy",
-    phone: "98765 22119",
-    skill: "Makeup & Beauty",
-    categoryId: "cat_beauty",
-    categoryName: "Beauty & Personal Care",
-    rating: 4.9,
-    reviewCount: 380,
-    jobsCompleted: 520,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
-    experience: "6 years",
-    bio: "Certified bridal esthetician & makeup artist. High-definition camera-ready finishing, hair artistry, and luxury saree draping.",
-    startingPrice: 499,
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_manoj",
-    name: "Manoj Nambiar",
-    phone: "98765 66778",
-    skill: "Wall Painting & Wallpaper",
-    categoryId: "cat_painting",
-    categoryName: "Painting & Wall Work",
-    rating: 4.9,
-    reviewCount: 310,
-    jobsCompleted: 440,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
-    experience: "10 years",
-    bio: "Specialist in luxury stencil wall art, Italian texture stucco finishes, weatherproof exterior coating, and designer wallpaper.",
-    startingPrice: 499,
-    status: "approved",
-    workerStatus: "approved"
-  },
-  {
-    id: "worker_karthik",
-    name: "Karthik Acharya",
-    phone: "98765 99001",
-    skill: "Custom Carpentry & Modular Kitchen",
-    categoryId: "cat_carpenter",
-    categoryName: "Carpenter",
-    rating: 4.9,
-    reviewCount: 340,
-    jobsCompleted: 480,
-    isOnline: true,
-    city: "Melattur, Kerala",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
-    experience: "12 years",
-    bio: "Master bespoke carpenter specializing in customized modular kitchens, walk-in sliding wardrobes, and acoustic wooden wall paneling.",
-    startingPrice: 350,
-    status: "approved",
-    workerStatus: "approved"
-  }
-];
+export const initialWorkers = [];
 
 export const initialServices = [
   {
     id: "serv_coconut_tree_climbing",
-    workerId: "worker_suresh",
+    workerId: null,
     categoryId: "cat_coconut_tree",
     categoryName: "Coconut Tree Climbing",
-    workerName: "Suresh Madhavan",
+    workerName: null,
     title: "Coconut Tree Climbing & Cleaning",
     badge: "Verified Machine Climber",
     about: "Expert mechanical coconut tree climbing, plucking, and palm crown cleaning. Specializes in safe machine climbing, rhinoceros beetle treatment, frond trimming, and coconut harvesting.",
@@ -386,10 +147,10 @@ export const initialServices = [
   },
   {
     id: "serv_plumbing_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_plumbing",
     categoryName: "Plumbing",
-    workerName: "Rajesh Sharma",
+    workerName: null,
     title: "Plumber Service",
     badge: "Skilled & Reliable Plumbing Expert",
     about: "I'm a professional plumber with years of experience in residential and commercial services. I specialize in repairs, installations, and maintenance. My goal is to provide reliable, efficient, and long-lasting solutions. Customer satisfaction is always my top priority.",
@@ -420,10 +181,10 @@ export const initialServices = [
   },
   {
     id: "serv_ac_1",
-    workerId: "worker_amit",
+    workerId: null,
     categoryId: "cat_ac",
     categoryName: "AC Repair",
-    workerName: "Amit Verma",
+    workerName: null,
     title: "AC Technician",
     badge: "Certified HVAC Specialist",
     about: "Expert air conditioner technician with 8+ years experience handling split, window, and inverter AC systems. Equipped with professional high-pressure jet pumps and gas gauges.",
@@ -451,10 +212,10 @@ export const initialServices = [
   },
   {
     id: "serv_cleaning_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_cleaning",
     categoryName: "Cleaning",
-    workerName: "Sunita & Team",
+    workerName: null,
     title: "Home Cleaning",
     badge: "Eco-Friendly Deep Sanitization",
     about: "Thorough sanitization team trained in residential kitchen, bathroom, and living room revitalization using hospital-grade non-toxic disinfectants.",
@@ -481,10 +242,10 @@ export const initialServices = [
   },
   {
     id: "serv_electrician_1",
-    workerId: "worker_vikram",
+    workerId: null,
     categoryId: "cat_electrician",
     categoryName: "Electrician",
-    workerName: "Vikram Sen",
+    workerName: null,
     title: "Electrician",
     badge: "Licensed Electrician",
     about: "Specialist in short-circuit detection, appliance installation, MCB trip troubleshooting, and modern home automation switches.",
@@ -517,10 +278,10 @@ export const initialServices = [
   },
   {
     id: "serv_painting_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_painting",
     categoryName: "Painting",
-    workerName: "Ramesh Pawar",
+    workerName: null,
     title: "Furniture Painting",
     badge: "Precision Wood & Wall Finishing",
     about: "Expert wood, wardrobe and wall furniture painting with eco-friendly smooth matte and gloss coats.",
@@ -546,10 +307,10 @@ export const initialServices = [
   },
   {
     id: "serv_carpenter_1",
-    workerId: "worker_ramesh",
+    workerId: null,
     categoryId: "cat_carpenter",
     categoryName: "Carpenter",
-    workerName: "Ramesh Kumar",
+    workerName: null,
     title: "Carpentry & Woodwork",
     badge: "Master Craftsman",
     about: "Professional woodwork repair, custom shelving, hinge realignment, door latch repair, and modular assembly.",
@@ -566,7 +327,7 @@ export const initialServices = [
   },
   {
     id: "serv_construction_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_construction",
     categoryName: "Construction",
     workerName: "Sanjay Builders",
@@ -586,7 +347,7 @@ export const initialServices = [
   },
   {
     id: "serv_welding_1",
-    workerId: "worker_amit",
+    workerId: null,
     categoryId: "cat_welding",
     categoryName: "Welding",
     workerName: "Arun Metalworks",
@@ -606,7 +367,7 @@ export const initialServices = [
   },
   {
     id: "serv_aluminium_1",
-    workerId: "worker_ramesh",
+    workerId: null,
     categoryId: "cat_aluminium",
     categoryName: "Aluminium Fabrication",
     workerName: "Deepak Fabricators",
@@ -626,7 +387,7 @@ export const initialServices = [
   },
   {
     id: "serv_garden_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_garden",
     categoryName: "Garden & Outdoor Work",
     workerName: "Green Thumb Care",
@@ -646,7 +407,7 @@ export const initialServices = [
   },
   {
     id: "serv_pest_1",
-    workerId: "worker_amit",
+    workerId: null,
     categoryId: "cat_pest",
     categoryName: "Pest Control",
     workerName: "SafeShield Pest Tech",
@@ -666,7 +427,7 @@ export const initialServices = [
   },
   {
     id: "serv_bike_1",
-    workerId: "worker_vikram",
+    workerId: null,
     categoryId: "cat_bike",
     categoryName: "Bike Service",
     workerName: "Speedy Two-Wheeler Tech",
@@ -686,7 +447,7 @@ export const initialServices = [
   },
   {
     id: "serv_driver_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_driver",
     categoryName: "Driver",
     workerName: "Vikram Executive Chauffeur",
@@ -713,7 +474,7 @@ export const initialServices = [
   },
   {
     id: "serv_drain_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_drainage",
     categoryName: "Drain Cleaning",
     workerName: "AquaFlow Drain Specialists",
@@ -745,7 +506,7 @@ export const initialServices = [
   },
   {
     id: "serv_car_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_car",
     categoryName: "Car Mechanic",
     workerName: "AutoPro Car Hub",
@@ -765,7 +526,7 @@ export const initialServices = [
   },
   {
     id: "serv_moving_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_moving",
     categoryName: "Moving & Labour",
     workerName: "Swift Movers & Labour",
@@ -785,7 +546,7 @@ export const initialServices = [
   },
   {
     id: "serv_security_1",
-    workerId: "worker_vikram",
+    workerId: null,
     categoryId: "cat_security",
     categoryName: "Security & Smart Home",
     workerName: "SmartSafe Technologies",
@@ -805,7 +566,7 @@ export const initialServices = [
   },
   {
     id: "serv_electronics_1",
-    workerId: "worker_amit",
+    workerId: null,
     categoryId: "cat_electronics",
     categoryName: "Electronics Service",
     workerName: "VoltFix Electronics",
@@ -825,7 +586,7 @@ export const initialServices = [
   },
   {
     id: "serv_laundry_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_laundry",
     categoryName: "Laundry",
     workerName: "FreshPress Laundry",
@@ -845,7 +606,7 @@ export const initialServices = [
   },
   {
     id: "serv_homesupport_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_home_support",
     categoryName: "Home Support",
     workerName: "Elderly & Domestic Care",
@@ -865,7 +626,7 @@ export const initialServices = [
   },
   {
     id: "serv_beauty_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_beauty",
     categoryName: "Beauty & Personal Care",
     workerName: "Glow Salon At Home",
@@ -885,7 +646,7 @@ export const initialServices = [
   },
   {
     id: "serv_mehndi_1",
-    workerId: "worker_sunita",
+    workerId: null,
     categoryId: "cat_mehndi",
     categoryName: "Mehndi Artist",
     workerName: "Zara Henna Artistry",
@@ -917,7 +678,7 @@ export const initialServices = [
   },
   {
     id: "serv_watertank_1",
-    workerId: "worker_rajesh",
+    workerId: null,
     categoryId: "cat_water_tank",
     categoryName: "Water Tank & Waste Service",
     workerName: "AquaClean Tank Services",
@@ -1051,120 +812,6 @@ export const initialDailyGigs = [
   }
 ];
 
-// Initial Worker Portfolios (Photo albums for specialized artisans and skilled pros)
-export const initialPortfolios = [
-  {
-    id: "port_mehndi_1",
-    worker_id: "worker_zara",
-    category_id: "cat_mehndi",
-    title: "Bridal Dulhan Full Hands & Feet",
-    description: "Intricate traditional bridal henna with Radha-Krishna motifs, delicate peacock lace, and deep rich organic stain guaranteed.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString()
-  },
-  {
-    id: "port_mehndi_2",
-    worker_id: "worker_zara",
-    category_id: "cat_mehndi",
-    title: "Arabic Floral Wrist & Glove Patterns",
-    description: "Flowing shading techniques with bold floral outlines and contemporary lattice wristbands.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-  },
-  {
-    id: "port_mehndi_3",
-    worker_id: "worker_fatima",
-    category_id: "cat_mehndi",
-    title: "Sangeet & Party Guest Henna Collection",
-    description: "Speed-applied modern mandala palms and delicate finger bands tailored for wedding party guests and bridesmaid clusters.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
-  },
-  {
-    id: "port_beauty_1",
-    worker_id: "worker_ananya",
-    category_id: "cat_beauty",
-    title: "HD Bridal Makeup & Saree Draping",
-    description: "High-definition camera-ready makeup, subtle smoky eyes, natural contour, and silk saree box pleating.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 7).toISOString()
-  },
-  {
-    id: "port_beauty_2",
-    worker_id: "worker_ananya",
-    category_id: "cat_beauty",
-    title: "Dewy Glow Party Makeover & Hairstyling",
-    description: "Soft glam for evening receptions, textured crown braid, and hydrating skin glow treatment.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 4).toISOString()
-  },
-  {
-    id: "port_painting_1",
-    worker_id: "worker_manoj",
-    category_id: "cat_painting",
-    title: "Living Room Luxury Texture & Stencil Wall",
-    description: "Metallic bronze stucco texture with geometric stencil highlights and dust-resistant clear glaze.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 8).toISOString()
-  },
-  {
-    id: "port_painting_2",
-    worker_id: "worker_manoj",
-    category_id: "cat_painting",
-    title: "Designer 3D Embossed Wallpaper Setup",
-    description: "Laser-aligned textured vinyl wallpaper installation with moisture-barrier adhesive.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 4).toISOString()
-  },
-  {
-    id: "port_carpenter_1",
-    worker_id: "worker_karthik",
-    category_id: "cat_carpenter",
-    title: "Modular Kitchen with Soft-Close Baskets",
-    description: "Marine-grade plywood modular kitchen with acrylic finish shutters, tandem pull-outs, and quartz countertop fitment.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1556909212-d5b604d0c90d?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 10).toISOString()
-  },
-  {
-    id: "port_carpenter_2",
-    worker_id: "worker_karthik",
-    category_id: "cat_carpenter",
-    title: "Custom Teakwood Wardrobe & TV Unit",
-    description: "Floor-to-ceiling 3-door sliding wardrobe with concealed LED lighting and fluted acoustic wooden paneling.",
-    image_urls: [
-      "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=800&q=80"
-    ],
-    created_at: new Date(Date.now() - 86400000 * 6).toISOString()
-  }
-];
+export const initialPortfolios = [];
 
 

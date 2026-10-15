@@ -13,7 +13,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getLocalWorkers } from '../data/bookingService';
+import { getLocalWorkers, DUMMY_WORKER_IDS } from '../data/bookingService';
 
 export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }) {
   const { loginAsWorker, loginAsAdmin, loginWithPhone } = useAuth();
@@ -24,7 +24,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
   const [workerLoginMethod, setWorkerLoginMethod] = useState('credentials'); // 'credentials' | 'profile'
   const [workerEmail, setWorkerEmail] = useState('worker@jobit.com');
   const [workerPassword, setWorkerPassword] = useState('worker123');
-  const [selectedWorkerId, setSelectedWorkerId] = useState('worker_rajesh');
+  const [selectedWorkerId, setSelectedWorkerId] = useState('');
   const [workerPin, setWorkerPin] = useState('1234');
   
   // Admin state
@@ -40,8 +40,13 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
   useEffect(() => {
     if (isOpen) {
       const allWorkers = getLocalWorkers();
-      const approvedOnly = allWorkers.filter(w => w.status === 'approved' || w.workerStatus === 'approved');
+      const approvedOnly = allWorkers.filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
       setWorkers(approvedOnly);
+      if (approvedOnly.length > 0) {
+        setSelectedWorkerId(approvedOnly[0].id);
+      } else {
+        setSelectedWorkerId('');
+      }
       setError('');
     }
   }, [isOpen]);
@@ -53,21 +58,20 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
     setLoading(true);
     setError('');
 
-    if (workerEmail.trim().toLowerCase() !== 'worker@jobit.com' || (workerPassword !== 'worker123' && workerPassword !== '1234')) {
-      setError('Invalid worker credentials. Demo email: worker@jobit.com / worker123');
+    if (workers.length === 0) {
+      setError('No registered & approved technicians found in the database. Please register as a new partner first.');
       setLoading(false);
       return;
     }
 
     try {
-      const defaultWorker = workers.find(w => w.id === 'worker_rajesh') || workers[0] || {
-        id: 'worker_rajesh',
-        name: 'Rajesh Sharma',
-        skill: 'Plumbing Specialist',
-        phone: '98765 43210',
-        email: 'worker@jobit.com'
-      };
-      await loginAsWorker(defaultWorker);
+      const targetWorker = workers.find(w => w.email && w.email.toLowerCase() === workerEmail.trim().toLowerCase()) || workers[0];
+      if (!targetWorker) {
+        setError('Technician record not found.');
+        setLoading(false);
+        return;
+      }
+      await loginAsWorker(targetWorker);
       onSuccess?.('worker');
       onClose();
     } catch (err) {
@@ -84,7 +88,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
 
     const targetWorker = workers.find(w => w.id === selectedWorkerId);
     if (!targetWorker) {
-      setError('Please select a valid technician profile');
+      setError('Please select a valid registered technician profile');
       setLoading(false);
       return;
     }
@@ -153,17 +157,16 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
   };
 
   const handleQuickWorkerLogin = () => {
-    setWorkerEmail('worker@jobit.com');
-    setWorkerPassword('worker123');
-    const defaultWorker = workers.find(w => w.id === 'worker_rajesh') || workers[0] || {
-      id: 'worker_rajesh',
-      name: 'Rajesh Sharma',
-      skill: 'Plumbing Specialist',
-      phone: '98765 43210'
-    };
-    loginAsWorker(defaultWorker).then(() => {
+    if (workers.length === 0) {
+      setError('No registered & approved technicians in database. Please register as a new partner.');
+      return;
+    }
+    const target = workers[0];
+    loginAsWorker(target).then(() => {
       onSuccess?.('worker');
       onClose();
+    }).catch(err => {
+      setError('Failed to log in: ' + (err.message || 'Error'));
     });
   };
 
@@ -243,20 +246,28 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black text-sky-900 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                  <span>Verified Pro Shortcut</span>
+                  <span>Verified Pro Access</span>
                 </span>
-                <span className="text-[10px] bg-sky-200/60 text-sky-800 px-2 py-0.5 rounded-full font-bold">
-                  Rajesh Sharma
-                </span>
+                {workers.length > 0 && (
+                  <span className="text-[10px] bg-sky-200/60 text-sky-800 px-2 py-0.5 rounded-full font-bold">
+                    {workers[0].name}
+                  </span>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={handleQuickWorkerLogin}
-                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <span>⚡ Instant Verified Pro Login</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              {workers.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleQuickWorkerLogin}
+                  className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <span>⚡ Instant Verified Pro Login ({workers[0].name})</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <p className="text-[11px] text-slate-500 font-medium">
+                  No verified technicians registered yet. Complete onboarding below to register your account.
+                </p>
+              )}
 
               {/* Onboard New Worker Button */}
               <button
@@ -340,46 +351,57 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               </form>
             ) : (
               <form onSubmit={handleWorkerProfileSubmit} className="space-y-3">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    Select Technician Identity
-                  </label>
-                  <select
-                    value={selectedWorkerId}
-                    onChange={(e) => setSelectedWorkerId(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#0EA5E0]"
-                  >
-                    {workers.map(w => (
-                      <option key={w.id} value={w.id}>
-                        {w.name} ({w.skill}) • +91 {w.phone}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {workers.length > 0 ? (
+                  <>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Select Technician Identity
+                      </label>
+                      <select
+                        value={selectedWorkerId}
+                        onChange={(e) => setSelectedWorkerId(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#0EA5E0]"
+                      >
+                        {workers.map(w => (
+                          <option key={w.id} value={w.id}>
+                            {w.name} ({w.skill}) • +91 {w.phone}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    Technician Security PIN
-                  </label>
-                  <input
-                    type="password"
-                    maxLength="4"
-                    value={workerPin}
-                    onChange={(e) => setWorkerPin(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 tracking-widest text-center focus:border-[#0EA5E0] outline-none"
-                    placeholder="1234"
-                  />
-                  <p className="text-[10px] text-slate-400 text-center mt-1">Default PIN: 1234</p>
-                </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Technician Security PIN
+                      </label>
+                      <input
+                        type="password"
+                        maxLength="4"
+                        value={workerPin}
+                        onChange={(e) => setWorkerPin(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 tracking-widest text-center focus:border-[#0EA5E0] outline-none"
+                        placeholder="1234"
+                      />
+                      <p className="text-[10px] text-slate-400 text-center mt-1">Default PIN: 1234</p>
+                    </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 rounded-full bg-slate-900 text-white font-black text-xs hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span>{loading ? 'Authenticating...' : 'Login with Selected Identity'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-3 rounded-full bg-slate-900 text-white font-black text-xs hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <span>{loading ? 'Authenticating...' : 'Login with Selected Identity'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <div className="p-4 bg-slate-50 rounded-2xl text-center space-y-2 border border-slate-200/60">
+                    <p className="text-xs font-bold text-slate-700">No Approved Technicians Registered Yet</p>
+                    <p className="text-[11px] text-slate-500">
+                      Please submit a partner application using the registration form above to create your profile.
+                    </p>
+                  </div>
+                )}
               </form>
             )}
           </div>

@@ -39,7 +39,7 @@ export function ChatScreen({ booking, onBack }) {
   // Remote party details
   const remoteName = isWorker 
     ? (booking?.customerName || 'Customer')
-    : (booking?.workerName || 'Rajesh Sharma (JOBit Expert)');
+    : (booking?.workerName || 'JOBit Expert');
   const remoteRole = isWorker ? 'Customer' : 'JOBit Verified Technician';
   const remoteAvatar = isWorker
     ? (booking?.customerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80')
