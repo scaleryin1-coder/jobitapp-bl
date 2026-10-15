@@ -38,7 +38,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
       onSuccess?.('admin');
       onClose();
     } catch (err) {
-      setError(err.message || 'Admin login failed');
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -154,62 +154,46 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
           <X className="w-4 h-4" />
         </button>
 
-        {/* 1-Tap Quick Dev Logins Header */}
+        {/* 1-Tap Quick Demo Logins Header */}
         <div className="mb-4 pb-3 border-b border-slate-100">
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
-            ⚡ Quick 1-Tap Fast Testing Access
+            ⚡ Quick Demo Access
           </p>
-          <div className="flex flex-col gap-1.5">
-            {/* ADMIN BUTTON (Critical Requirement) */}
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
-              onClick={triggerAdminLogin}
-              className="w-full py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-xs flex items-center justify-between transition cursor-pointer"
+              onClick={async () => {
+                setLoading(true);
+                await loginWithPhone('9876500001', '1234', 'Aman Gupta', 'customer');
+                setLoading(false);
+                onSuccess?.('customer');
+                onClose();
+              }}
+              className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
             >
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-amber-100" />
-                <span>👑 Admin Login (8289968045)</span>
-              </div>
-              <span className="text-[10px] bg-white/25 px-2 py-0.5 rounded-full font-bold">Direct Admin</span>
+              <User className="w-3.5 h-3.5 text-slate-500" />
+              <span>Customer Demo</span>
             </button>
 
-            {/* CUSTOMER & WORKER SHORTCUTS */}
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoading(true);
-                  await loginWithPhone('9876500001', '1234', 'Aman Gupta', 'customer');
-                  setLoading(false);
-                  onSuccess?.('customer');
-                  onClose();
-                }}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
-              >
-                <User className="w-3.5 h-3.5 text-slate-500" />
-                <span>Customer Demo</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoading(true);
-                  await loginAsWorker({
-                    id: 'worker_rajesh',
-                    name: 'Rajesh Sharma',
-                    skill: 'Plumbing Specialist',
-                    phone: '98765 43210'
-                  });
-                  setLoading(false);
-                  onSuccess?.('worker');
-                  onClose();
-                }}
-                className="py-1.5 px-2 bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
-              >
-                <Briefcase className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                <span>Verified Pro</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                await loginAsWorker({
+                  id: 'worker_rajesh',
+                  name: 'Rajesh Sharma',
+                  skill: 'Plumbing Specialist',
+                  phone: '98765 43210'
+                });
+                setLoading(false);
+                onSuccess?.('worker');
+                onClose();
+              }}
+              className="py-1.5 px-2 bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-[#0EA5E0]" />
+              <span>Verified Pro</span>
+            </button>
           </div>
         </div>
 
@@ -259,7 +243,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
             <div className="space-y-1">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-slate-700">Mobile Number</label>
-                <span className="text-[10px] text-amber-600 font-bold">Admin: 8289968045</span>
               </div>
               <div className="relative">
                 <span className="absolute left-3.5 top-3 text-xs font-black text-slate-400">+91</span>
@@ -270,7 +253,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                   value={phone}
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                  placeholder="8289968045 or your phone"
+                  placeholder="Enter 10-digit mobile number"
                   autoFocus
                 />
               </div>
@@ -324,10 +307,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
               </p>
             </div>
 
-            {existingUserFound && (
+            {existingUserFound && existingUserFound.role !== 'admin' && (
               <div className="bg-sky-50 border border-sky-100 rounded-2xl p-2.5 text-xs text-sky-900 flex items-center gap-2 font-semibold">
                 <CheckCircle2 className="w-4 h-4 text-[#0EA5E0] shrink-0" />
-                <span>Welcome back, <strong>{existingUserFound.name}</strong> ({existingUserFound.role})!</span>
+                <span>Welcome back, <strong>{existingUserFound.name}</strong>!</span>
               </div>
             )}
 

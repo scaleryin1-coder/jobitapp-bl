@@ -159,7 +159,7 @@ export function ProfileDrawerModal({
       // Admin phone check
       if (cleanTen === '8289968045') {
         await loginWithPhone('8289968045', otpInput, 'Master Admin', 'admin');
-        setActiveSubView('main');
+        onClose();
         return;
       }
 
@@ -750,20 +750,6 @@ export function ProfileDrawerModal({
                 <span>{authLoading ? 'Checking Number...' : 'Send OTP'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-
-              {/* Quick Admin Test Helper */}
-              <div className="pt-2 border-t border-[#D0EEF9] text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhoneInput('8289968045');
-                    setAuthError('');
-                  }}
-                  className="text-[11px] text-amber-600 hover:text-amber-700 font-bold cursor-pointer"
-                >
-                  ⚡ Use Admin Phone (8289968045)
-                </button>
-              </div>
             </form>
           )}
 

@@ -17,7 +17,6 @@ import { useAuth } from '../context/AuthContext';
 export function ProfileScreen({ 
   onOpenPartnerLogin,
   onOpenAuth, 
-  onViewSplash,
   onOpenWorkerOnboarding
 }) {
   const { currentUser, updateUserProfile, logout } = useAuth();
@@ -201,7 +200,7 @@ export function ProfileScreen({
           <ChevronRight className="w-4 h-4 text-slate-400" />
         </button>
 
-        {/* Staff & Partner Portal (Admins & Workers) */}
+        {/* Staff & Partner Portal (Workers) */}
         <button
           onClick={onOpenPartnerLogin}
           className="w-full p-4 rounded-[24px] bg-white border border-slate-200/70 hover:border-slate-300 transition flex items-center justify-between text-left shadow-xs cursor-pointer"
@@ -211,31 +210,12 @@ export function ProfileScreen({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-extrabold text-slate-800">Admin & Partner Login</p>
-              <p className="text-[11px] text-slate-400">Access Admin Dashboard (8289968045) or Pro Portal</p>
+              <p className="text-xs font-extrabold text-slate-800">Technician & Partner Login</p>
+              <p className="text-[11px] text-slate-400">Access verified technician portal</p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400" />
         </button>
-
-        {/* View Splash / Welcome Screen */}
-        {onViewSplash && (
-          <button
-            onClick={onViewSplash}
-            className="w-full p-4 rounded-[24px] bg-white border border-slate-200/70 hover:border-slate-300 transition flex items-center justify-between text-left shadow-xs cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-sky-50 text-[#0EA5E0] flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-extrabold text-slate-800">Welcome Screen</p>
-                <p className="text-[11px] text-slate-400">View introductory splash & hero</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400" />
-          </button>
-        )}
 
         {/* Customer Logout / Switch Account */}
         {isLoggedIn && (

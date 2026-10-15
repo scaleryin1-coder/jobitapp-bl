@@ -160,7 +160,7 @@ function MainLayout() {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.toLowerCase();
-      if (hash === '#partner' || hash === '#worker' || hash === '#admin') {
+      if (hash === '#partner' || hash === '#worker') {
         setIsPartnerLoginOpen(true);
       } else if (hash === '#register-pro' || hash === '#onboard' || hash === '#onboarding' || hash === '#pro') {
         setIsWorkerOnboardingOpen(true);
@@ -404,7 +404,6 @@ function MainLayout() {
                   onOpenPartnerLogin={() => setIsPartnerLoginOpen(true)}
                   onOpenAuth={() => setIsAuthModalOpen(true)}
                   onOpenWorkerOnboarding={() => setIsWorkerOnboardingOpen(true)}
-                  onViewSplash={() => setCurrentScreen('splash')}
                 />
               )}
             </>
