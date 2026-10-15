@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
-import { getSubCategoriesForCategory } from '../data/categoriesData';
+import { getSubCategoriesForCategory, isPortfolioCategory } from '../data/categoriesData';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 
 export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity, workers = [] }) {
@@ -46,17 +46,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     availableSubCategories[0] || 'Standard Inspection & Service'
   );
 
-  // Dynamically resolve the local approved technician registered in this area
-  const matchedLocalWorkers = getWorkersForCategoryInLocation(service, effectiveCity, workers);
-  const localAssignedWorker = service?.workerId 
-    ? {
-        id: service.workerId,
-        name: service.workerName,
-        phone: service.workerPhone,
-        avatar: service.workerAvatar,
-        city: effectiveCity
-      }
-    : (matchedLocalWorkers.length > 0 ? matchedLocalWorkers[0] : null);
+  // Check if this booking is for a portfolio category with an explicitly chosen pro
+  const isPortfolioTrade = Boolean(service && isPortfolioCategory(service));
+  const hasPreselectedWorker = isPortfolioTrade && Boolean(service?.workerId);
 
   useEffect(() => {
     if (service) {
@@ -90,10 +82,12 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     if (loading) return;
     setLoading(true);
 
-    const workerId = localAssignedWorker?.id || service.workerId || null;
-    const workerName = localAssignedWorker?.name || service.workerName || 'Dispatch Assignment Pending';
-    const workerPhone = localAssignedWorker?.phone || service.workerPhone || '';
-    const workerAvatar = localAssignedWorker?.avatar || service.workerAvatar || '';
+    // Strictly enforce requirement: In non-portfolio trades, NEVER assign worker prematurely
+    const workerId = hasPreselectedWorker ? service.workerId : null;
+    const workerName = hasPreselectedWorker ? service.workerName : null;
+    const workerPhone = hasPreselectedWorker ? service.workerPhone : null;
+    const workerAvatar = hasPreselectedWorker ? service.workerAvatar : null;
+    const workerAccepted = Boolean(hasPreselectedWorker);
 
     const bookingPayload = {
       customerId: currentUser?.uid || 'guest_user',
@@ -101,9 +95,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
       customerPhone: currentUser?.phone || '9876543210',
       workerId,
       workerName,
-      workerTitle: 'JOBit Verified Technician',
+      workerTitle: workerName ? 'JOBit Verified Technician' : 'Dispatch Assignment Pending',
       workerPhone,
       workerAvatar,
+      workerAccepted,
       serviceId: service.id,
       serviceTitle: `${service.title} (${selectedSubCategory})`,
       subCategory: selectedSubCategory,
@@ -119,9 +114,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
       note: note.trim() 
         ? `Issue: ${selectedSubCategory}. Note: ${note.trim()}`
         : `Issue: ${selectedSubCategory}`,
-      status: 'confirmed', // Active Status: Booking Confirmed - Technician Assigned
+      status: 'pending', // Pending worker acceptance
       paymentStatus: 'paid_visiting_fee_99',
-      paymentId: 'pay_' + Date.now()
+      paymentId: 'pay_' + Date.now(),
+      city: cleanCity
     };
 
     let result = null;
@@ -150,10 +146,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
           <div>
             <h3 className="text-lg font-black text-[#111827] tracking-tight">
-              {confirmedBookingData ? 'Booking Confirmation' : `Book ${service.title}`}
+              {confirmedBookingData ? 'Booking Status' : `Book ${service.title}`}
             </h3>
             <p className="text-xs text-[#0EA5E0] font-bold mt-0.5">
-              {confirmedBookingData ? 'Status: Confirmed' : 'Flat ₹99 Visiting Charge • Doorstep Inspection'}
+              {confirmedBookingData ? 'Request Dispatched' : 'Flat ₹99 Visiting Charge • Doorstep Inspection'}
             </p>
           </div>
           <button
@@ -166,7 +162,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
 
         {confirmedBookingData ? (
           /* ========================================================= */
-          /* BOOKING CONFIRMED - TECHNICIAN ASSIGNED SUCCESS SCREEN    */
+          /* BOOKING CONFIRMED SCREEN - REQUEST DISPATCHED             */
           /* ========================================================= */
           <div className="py-6 space-y-4 animate-scale-up text-left">
             <div className="text-center space-y-2">
@@ -174,49 +170,54 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black tracking-wide uppercase">
-                Booking Confirmed - Technician Assigned
+                {confirmedBookingData.workerName ? 'Booking Request Submitted' : 'Booking Confirmed - Request Dispatched'}
               </span>
               <h4 className="text-xl font-black text-slate-900">
                 {confirmedBookingData.serviceTitle || service.title}
               </h4>
               <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Flat ₹99 Visiting Charge confirmed. Your technician has been dispatched and assigned.
+                Flat ₹99 Visiting Charge confirmed. Finding verified technicians in {cleanCity}...
               </p>
             </div>
 
-            {/* Assigned Technician Card */}
-            <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={confirmedBookingData.workerAvatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
-                  alt={confirmedBookingData.workerName || 'JOBit Technician'}
-                  className="w-11 h-11 rounded-xl object-cover ring-2 ring-white shadow-xs"
-                />
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned Expert</p>
-                  <p className="text-sm font-black text-slate-900">{confirmedBookingData.workerName || 'JOBit Verified Technician'}</p>
-                  <p className="text-[11px] text-[#0EA5E0] font-bold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#0EA5E0]" />
-                    <span>JOBit Verified Technician</span>
-                  </p>
+            {/* In portfolio bookings with preselected pro, show chosen pro card */}
+            {confirmedBookingData.workerName ? (
+              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={confirmedBookingData.workerAvatar || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"}
+                    alt={confirmedBookingData.workerName}
+                    className="w-11 h-11 rounded-xl object-cover ring-2 ring-white shadow-xs"
+                  />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Requested Pro</p>
+                    <p className="text-sm font-black text-slate-900">{confirmedBookingData.workerName}</p>
+                    <p className="text-[11px] text-purple-600 font-bold flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Portfolio Verified Pro</span>
+                    </p>
+                  </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsVoiceCallOpen(true)}
-                className="px-3 py-1.5 rounded-full bg-white text-emerald-600 border border-emerald-200 flex items-center gap-1.5 font-black text-xs shadow-xs hover:bg-emerald-50 active:scale-95 transition cursor-pointer"
-                title="In-App Voice Call (Agora.io - Phone number protected)"
-              >
-                <Phone className="w-3.5 h-3.5 fill-emerald-600" />
-                <span>In-App Call</span>
-              </button>
-            </div>
-
-            {/* Privacy Shield Notice */}
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Phone numbers protected. Voice calls are routed privately inside JOBit.</span>
-            </div>
+            ) : (
+              /* Non-portfolio trade: Searching nearby verified technician */
+              <div className="p-3.5 rounded-2xl bg-sky-50/80 border border-sky-100 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-3 w-3 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0EA5E0]"></span>
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-slate-900">Broadcasting Request to Nearby Technicians</p>
+                    <p className="text-[11px] text-slate-500 font-medium">Hyperlocal radius: {cleanCity}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold bg-white/80 p-2 rounded-xl border border-sky-100/60">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
+                  <span>Technician details, direct call & chat options will unlock as soon as a technician accepts your request.</span>
+                </div>
+              </div>
+            )}
 
             {/* Summary Details */}
             <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-2 text-xs">
@@ -240,37 +241,37 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
               onClick={handleFinish}
               className="w-full py-4 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-sm shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] transition cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>View in My Bookings</span>
+              <span>Track in My Bookings</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         ) : (
           /* ========================================================= */
-          /* BOOKING FORM - ONLY FLAT ₹99 VISITING FEE                 */
+          /* BOOKING FORM - PURELY COLLECTS DETAILS                    */
           /* ========================================================= */
           <form onSubmit={handleConfirm} className="space-y-4 pt-4">
             
-            {/* Assigned Local Professional Indicator */}
-            {localAssignedWorker && (
-              <div className="p-3 bg-gradient-to-r from-sky-50 to-indigo-50/40 rounded-2xl border border-sky-100 flex items-center justify-between">
+            {/* ONLY display technician if this is a portfolio trade where user selected a specific pro */}
+            {hasPreselectedWorker && (
+              <div className="p-3 bg-gradient-to-r from-purple-50 to-sky-50 rounded-2xl border border-purple-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <img
-                    src={localAssignedWorker.avatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
-                    alt={localAssignedWorker.name}
+                    src={service.workerAvatar || "https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80"}
+                    alt={service.workerName}
                     className="w-10 h-10 rounded-xl object-cover ring-2 ring-white shadow-2xs"
                   />
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0EA5E0] block flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3 text-[#0EA5E0]" />
-                      <span>Assigned Verified Pro • {cleanCity}</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 block flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-purple-600" />
+                      <span>Selected Portfolio Pro • {cleanCity}</span>
                     </span>
-                    <p className="text-xs font-black text-slate-900">{localAssignedWorker.name}</p>
-                    <p className="text-[10px] text-slate-500 font-semibold">{maskPhoneNumber(localAssignedWorker.phone)}</p>
+                    <p className="text-xs font-black text-slate-900">{service.workerName}</p>
+                    <p className="text-[10px] text-slate-500 font-semibold">{maskPhoneNumber(service.workerPhone)}</p>
                   </div>
                 </div>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-[10px] bg-purple-100 text-purple-800 font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Check className="w-2.5 h-2.5 stroke-[3]" />
-                  <span>Assigned</span>
+                  <span>Selected</span>
                 </span>
               </div>
             )}

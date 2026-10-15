@@ -39,15 +39,55 @@ function MainLayout() {
     try {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#splash' || hash === '#welcome') return 'splash';
+      const saved = localStorage.getItem('jobit_current_screen');
+      if (saved && ['main', 'service-list', 'detail', 'portfolio-selection'].includes(saved)) {
+        return saved;
+      }
     } catch {}
     return 'main';
   }); // 'main' | 'splash' | 'service-list' | 'detail' | 'chat' | 'portfolio-selection'
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'chat' | 'bookings' | 'profile'
-  const [selectedCategoryName, setSelectedCategoryName] = useState('All');
-  const [selectedService, setSelectedService] = useState(null);
-  const [selectedPortfolioCategory, setSelectedPortfolioCategory] = useState(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jobit_active_tab');
+      if (saved && ['home', 'chat', 'bookings', 'profile'].includes(saved)) {
+        return saved;
+      }
+    } catch {}
+    return 'home';
+  }); // 'home' | 'chat' | 'bookings' | 'profile'
+  const [selectedCategoryName, setSelectedCategoryName] = useState(() => {
+    try {
+      return localStorage.getItem('jobit_selected_category_name') || 'All';
+    } catch {
+      return 'All';
+    }
+  });
+  const [selectedService, setSelectedService] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jobit_selected_service');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedPortfolioCategory, setSelectedPortfolioCategory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jobit_selected_portfolio_cat');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeChatBooking, setActiveChatBooking] = useState(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(() => {
+    try {
+      const isOpen = localStorage.getItem('jobit_booking_modal_open') === 'true';
+      const hasService = Boolean(localStorage.getItem('jobit_selected_service'));
+      return isOpen && hasService;
+    } catch {
+      return false;
+    }
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPartnerLoginOpen, setIsPartnerLoginOpen] = useState(false);
   const [isWorkerOnboardingOpen, setIsWorkerOnboardingOpen] = useState(false);
@@ -60,6 +100,53 @@ function MainLayout() {
   const [currentCity, setCurrentCity] = useState(() => {
     return localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   });
+
+  // State persistence across browser refresh
+  useEffect(() => {
+    try {
+      if (['main', 'service-list', 'detail', 'portfolio-selection'].includes(currentScreen)) {
+        localStorage.setItem('jobit_current_screen', currentScreen);
+      }
+    } catch {}
+  }, [currentScreen]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('jobit_active_tab', activeTab);
+    } catch {}
+  }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('jobit_selected_category_name', selectedCategoryName || 'All');
+    } catch {}
+  }, [selectedCategoryName]);
+
+  useEffect(() => {
+    try {
+      if (selectedService) {
+        localStorage.setItem('jobit_selected_service', JSON.stringify(selectedService));
+      } else {
+        localStorage.removeItem('jobit_selected_service');
+      }
+    } catch {}
+  }, [selectedService]);
+
+  useEffect(() => {
+    try {
+      if (selectedPortfolioCategory) {
+        localStorage.setItem('jobit_selected_portfolio_cat', JSON.stringify(selectedPortfolioCategory));
+      } else {
+        localStorage.removeItem('jobit_selected_portfolio_cat');
+      }
+    } catch {}
+  }, [selectedPortfolioCategory]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('jobit_booking_modal_open', isBookingModalOpen ? 'true' : 'false');
+    } catch {}
+  }, [isBookingModalOpen]);
 
   // Subscribe to real-time workers to dynamically unlock categories per location
   useEffect(() => {
@@ -363,7 +450,10 @@ function MainLayout() {
             <SkilledProfessionalSelectionScreen
               category={selectedPortfolioCategory}
               currentCity={currentCity}
-              onBack={() => setCurrentScreen('main')}
+              onBack={() => {
+                setSelectedPortfolioCategory(null);
+                setCurrentScreen('main');
+              }}
               onSelectWorkerToBook={(worker, album) => {
                 const catName = selectedPortfolioCategory?.name || selectedPortfolioCategory?.title || worker.skill || 'Skilled Pro';
                 const serviceObj = {
@@ -386,7 +476,10 @@ function MainLayout() {
           {currentScreen === 'detail' && selectedService && (
             <ServiceDetailScreen
               service={selectedService}
-              onBack={() => setCurrentScreen('main')}
+              onBack={() => {
+                setSelectedService(null);
+                setCurrentScreen('main');
+              }}
               onBookNow={() => setIsBookingModalOpen(true)}
               onOpenChat={() => {
                 setActiveChatBooking({

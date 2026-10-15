@@ -91,11 +91,21 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   });
 
   // Helper to map status to step 1..5
-  const getStepProgress = (status) => {
+  const getStepProgress = (booking) => {
+    const status = typeof booking === 'string' ? booking : (booking?.status || 'pending');
+    const isAccepted = typeof booking === 'object' && Boolean(
+      booking?.acceptedAt || 
+      booking?.workerAccepted === true || 
+      ['accepted', 'on_the_way', 'in_progress', 'completed'].includes(status)
+    );
+
     switch (status) {
-      case 'confirmed':
-      case 'pending': 
-        return { step: 1, text: 'Booking Confirmed - Technician Assigned', color: 'text-emerald-600', bg: 'bg-emerald-500' };
+      case 'pending':
+      case 'confirmed': 
+        if (!isAccepted) {
+          return { step: 1, text: 'Booking Confirmed • Finding Nearby Technician', color: 'text-sky-600', bg: 'bg-[#0EA5E0]' };
+        }
+        return { step: 2, text: 'Technician Assigned', color: 'text-[#0EA5E0]', bg: 'bg-[#0EA5E0]' };
       case 'accepted': 
         return { step: 2, text: 'Technician Assigned', color: 'text-[#0EA5E0]', bg: 'bg-[#0EA5E0]' };
       case 'on_the_way': 
@@ -107,7 +117,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
       case 'cancelled': 
         return { step: 0, text: 'Cancelled', color: 'text-red-500', bg: 'bg-red-400' };
       default: 
-        return { step: 1, text: 'Booking Confirmed - Technician Assigned', color: 'text-emerald-600', bg: 'bg-emerald-500' };
+        return { step: 1, text: 'Booking Confirmed • Finding Nearby Technician', color: 'text-sky-600', bg: 'bg-[#0EA5E0]' };
     }
   };
 
@@ -150,7 +160,15 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
       {/* Bookings List */}
       <div className="px-5 space-y-4">
         {filteredBookings.map((booking) => {
-          const stepInfo = getStepProgress(booking.status);
+          const stepInfo = getStepProgress(booking);
+          const hasWorkerAccepted = Boolean(
+            booking.workerName && 
+            (booking.status === 'accepted' || 
+             booking.status === 'on_the_way' || 
+             booking.status === 'in_progress' || 
+             booking.status === 'completed' || 
+             booking.workerAccepted === true)
+          );
 
           return (
             <div
@@ -223,13 +241,17 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                 {(booking.status === 'confirmed' || booking.status === 'pending') && (
                   <p className="text-[11px] text-emerald-800 font-semibold bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/60 leading-tight flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Booking Confirmed! JOBit Verified Technician assigned for your visit.</span>
+                    <span>
+                      {hasWorkerAccepted
+                        ? 'Booking Confirmed! JOBit Verified Technician assigned for your visit.'
+                        : 'Booking Confirmed! Searching nearby verified technicians in your area.'}
+                    </span>
                   </p>
                 )}
               </div>
 
-              {/* Technician Info Card - Strictly branded as JOBit Verified Technicians / Experts */}
-              {booking.workerName ? (
+              {/* Technician Info Card - ONLY displayed after technician actually accepts the job */}
+              {hasWorkerAccepted ? (
                 <div className="p-3 rounded-2xl bg-sky-50/60 border border-sky-100 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <img 
@@ -265,12 +287,20 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                   </div>
                 </div>
               ) : (
-                <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-[#0EA5E0] animate-pulse" />
-                    <span className="font-semibold text-slate-700">Awaiting JOBit Verified Technician pickup...</span>
+                <div className="p-3 rounded-2xl bg-sky-50/80 border border-sky-100 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-2.5 w-2.5 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0EA5E0]"></span>
+                    </span>
+                    <div>
+                      <p className="font-extrabold text-slate-800">Finding Verified Technician Nearby...</p>
+                      <p className="text-[10px] text-slate-500 font-semibold">Broadcasting request. Name, call & message options will appear once accepted.</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400">Hyperlocal Radius</span>
+                  <span className="text-[10px] font-black uppercase text-[#0EA5E0] bg-white px-2.5 py-1 rounded-full border border-sky-100 shadow-2xs">
+                    Searching
+                  </span>
                 </div>
               )}
 

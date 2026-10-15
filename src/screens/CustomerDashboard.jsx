@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { initialCategories, initialBanners, initialServices } from '../data/seedData';
-import { subscribeServices, subscribeCategories, subscribeWorkers } from '../data/bookingService';
+import { subscribeServices, subscribeCategories, subscribeWorkers, getLocalCategories } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchSection } from '../components/home/HomeSearchSection';
@@ -33,8 +33,8 @@ export function CustomerDashboard({
 }) {
   const { currentUser } = useAuth();
 
-  // Existing Data State (preserves existing sources and structure)
-  const [categories, setCategories] = useState(initialCategories || []);
+  // Existing Data State (guarantees all catalog categories load consistently from database/state)
+  const [categories, setCategories] = useState(() => getLocalCategories());
   const [banners, setBanners] = useState(initialBanners || []);
   const [services, setServices] = useState(initialServices || []);
   const [workers, setWorkers] = useState([]);

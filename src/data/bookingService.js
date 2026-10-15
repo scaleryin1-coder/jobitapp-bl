@@ -63,8 +63,23 @@ export function normalizeLocation(loc) {
 }
 
 export function isLocationInRollout(loc) {
+  if (!loc) return true;
+  const raw = String(loc).toLowerCase().trim();
   const norm = normalizeLocation(loc);
-  return ['melattur', 'pattikkad', 'pandikkad'].includes(norm);
+  return (
+    raw.includes('melattur') ||
+    raw.includes('pattikkad') ||
+    raw.includes('pandikkad') ||
+    raw.includes('malappuram') ||
+    raw.includes('kerala') ||
+    raw.includes('perinthalmanna') ||
+    raw.includes('manjeri') ||
+    raw.includes('kozhikode') ||
+    raw.includes('calicut') ||
+    raw.includes('palakkad') ||
+    raw.includes('kochi') ||
+    ['melattur', 'pattikkad', 'pandikkad', 'malappuram', 'kerala'].includes(norm)
+  );
 }
 
 /**
@@ -81,7 +96,7 @@ export function maskPhoneNumber(phone) {
  * Find all approved workers registered for a specific category in an area
  */
 export function getWorkersForCategoryInLocation(category, location, workersList) {
-  const workers = workersList || getLocalWorkers();
+  const workers = (Array.isArray(workersList) && workersList.length > 0) ? workersList : getLocalWorkers();
   const normLoc = normalizeLocation(location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
   
   const catName = (typeof category === 'string' ? category : (category?.name || category?.title || '')).toLowerCase().trim();
@@ -93,7 +108,7 @@ export function getWorkersForCategoryInLocation(category, location, workersList)
     if (!isApproved) return false;
 
     // Location matching: worker's city / address must match current location
-    const workerLoc = normalizeLocation(w.city || w.address || '');
+    const workerLoc = normalizeLocation(w.city || w.address || w.serviceArea || '');
     const locMatch = !normLoc || !workerLoc || workerLoc.includes(normLoc) || normLoc.includes(workerLoc);
     if (!locMatch) return false;
 
@@ -122,13 +137,33 @@ export function getWorkersForCategoryInLocation(category, location, workersList)
 }
 
 /**
- * Check if at least ONE active, approved worker is registered for this category in this location.
- * Dynamic category-level availability rule per location!
+ * Check if category is available in a location.
+ * In launch rollout areas (Melattur, Pattikkad, Pandikkad, and Kerala state), categories in the catalog are live and active.
+ * Ensures state hydration/refresh never falsely resets catalog categories to Coming Soon.
  */
 export function isCategoryAvailableInLocation(category, location, workersList) {
-  const workers = workersList || getLocalWorkers();
+  if (!category) return true;
+  const normLoc = normalizeLocation(location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
+  
+  // 1. All categories in primary rollout and launch areas are live and bookable
+  if (isLocationInRollout(normLoc) || isLocationInRollout(location)) {
+    return true;
+  }
+
+  // 2. Otherwise check for dynamically registered approved workers in that specific location
+  const workers = (Array.isArray(workersList) && workersList.length > 0) ? workersList : getLocalWorkers();
   const matched = getWorkersForCategoryInLocation(category, location, workers);
-  return matched.length > 0;
+  if (matched.length > 0) {
+    return true;
+  }
+
+  // 3. Fallback: On page refresh / initial hydration when workers list is still loading (0 items),
+  // ensure core catalog categories remain live without resetting to Coming Soon
+  if (!workersList || workersList.length === 0) {
+    return true;
+  }
+
+  return false;
 }
 
 // Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
@@ -196,7 +231,7 @@ export function getLocalBookings() {
     return list
       .filter(b => b && typeof b === 'object' && b.id !== 'bk_sample_1' && b.id !== 'bk_sample_2')
       .map(b => {
-        const status = (b.status === 'pending' || !b.status) ? 'confirmed' : b.status;
+        const status = b.status || 'pending';
         return {
           ...b,
           price: b.price || 99,
@@ -330,29 +365,24 @@ export function subscribeWorkers(callback) {
   };
 }
 
-// Customer initiates booking -> confirmed with Flat ₹99 visiting fee and assigned technician
+// Customer initiates booking -> Flat ₹99 visiting fee with broadcast dispatch
 export async function createBooking(payload) {
-  const availableWorkers = getLocalWorkers().filter(w => w.status === 'approved' || w.workerStatus === 'approved');
-  const cat = (payload.categoryName || payload.serviceTitle || '').toLowerCase();
-  const assignedWorker = availableWorkers.find(w => 
-    (payload.preferredWorkerId && w.id === payload.preferredWorkerId) ||
-    (payload.workerId && w.id === payload.workerId) ||
-    (w.categoryId === payload.categoryId) ||
-    (cat && w.skill && w.skill.toLowerCase().includes(cat))
-  ) || null;
+  // If payload already specifies a chosen worker (from a portfolio trade), keep it
+  const isPreAssigned = Boolean(payload.workerId && payload.workerName);
 
   const newBooking = {
     id: 'bk_' + Date.now(),
     ...payload,
-    status: 'confirmed', // Active status: Booking Confirmed - Technician Assigned
+    // Status is 'pending' broadcast unless a portfolio-specific specialist was already selected
+    status: payload.status || (isPreAssigned ? 'confirmed' : 'pending'),
     createdAt: new Date().toISOString(),
     broadcastedAt: new Date().toISOString(),
-    assignedAt: assignedWorker ? new Date().toISOString() : null,
-    workerId: payload.workerId || assignedWorker?.id || null,
-    workerName: payload.workerName || assignedWorker?.name || (assignedWorker ? 'JOBit Verified Technician' : 'Pending Assignment'),
-    workerPhone: payload.workerPhone || assignedWorker?.phone || '',
-    workerAvatar: payload.workerAvatar || assignedWorker?.avatar || '',
-    workerTitle: assignedWorker?.workerTitle || (assignedWorker ? 'JOBit Verified Technician' : 'Pending Assignment'),
+    assignedAt: isPreAssigned ? new Date().toISOString() : null,
+    workerId: isPreAssigned ? payload.workerId : null,
+    workerName: isPreAssigned ? payload.workerName : null,
+    workerPhone: isPreAssigned ? payload.workerPhone : '',
+    workerAvatar: isPreAssigned ? payload.workerAvatar : '',
+    workerTitle: isPreAssigned ? (payload.workerTitle || 'JOBit Verified Specialist') : null,
     price: 99,
     visitingFee: 99,
     totalServiceCharge: 99,
