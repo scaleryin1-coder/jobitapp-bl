@@ -13,7 +13,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getLocalWorkers, DUMMY_WORKER_IDS } from '../data/bookingService';
+import { getLocalWorkers, getPendingWorkers, DUMMY_WORKER_IDS } from '../data/bookingService';
 
 export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }) {
   const { loginAsWorker, loginAsAdmin, loginWithPhone } = useAuth();
@@ -21,6 +21,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
   
   // Worker state
   const [workers, setWorkers] = useState([]);
+  const [pendingWorkers, setPendingWorkers] = useState([]);
   const [workerLoginMethod, setWorkerLoginMethod] = useState('credentials'); // 'credentials' | 'profile'
   const [workerEmail, setWorkerEmail] = useState('worker@jobit.com');
   const [workerPassword, setWorkerPassword] = useState('worker123');
@@ -41,9 +42,13 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
     if (isOpen) {
       const allWorkers = getLocalWorkers();
       const approvedOnly = allWorkers.filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
+      const pendingList = getPendingWorkers();
       setWorkers(approvedOnly);
+      setPendingWorkers(pendingList);
       if (approvedOnly.length > 0) {
         setSelectedWorkerId(approvedOnly[0].id);
+      } else if (pendingList.length > 0) {
+        setSelectedWorkerId(pendingList[0].id);
       } else {
         setSelectedWorkerId('');
       }
@@ -58,24 +63,52 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
     setLoading(true);
     setError('');
 
-    if (workers.length === 0) {
-      setError('No registered & approved technicians found in the database. Please register as a new partner first.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const targetWorker = workers.find(w => w.email && w.email.toLowerCase() === workerEmail.trim().toLowerCase()) || workers[0];
+      const cleanInput = workerEmail.trim().toLowerCase();
+      const cleanPhone = cleanInput.replace(/\D/g, '').slice(-10);
+
+      // Check in approved workers
+      let targetWorker = workers.find(w => 
+        (w.email && w.email.toLowerCase() === cleanInput) ||
+        (w.phone && cleanPhone && w.phone.replace(/\D/g, '').slice(-10) === cleanPhone)
+      );
+
+      // If not in approved, check in pending applicants
+      let isPending = false;
       if (!targetWorker) {
-        setError('Technician record not found.');
-        setLoading(false);
-        return;
+        targetWorker = pendingWorkers.find(p => 
+          (p.email && p.email.toLowerCase() === cleanInput) ||
+          (p.phone && cleanPhone && p.phone.replace(/\D/g, '').slice(-10) === cleanPhone)
+        );
+        if (targetWorker) isPending = true;
       }
+
+      // If still not found and no registered workers exist
+      if (!targetWorker) {
+        if (workers.length === 0 && pendingWorkers.length === 0) {
+          setError('No registered technicians found in database. Please click "Register as New Pro" to submit your application.');
+          alert('No technician records found. Please complete the registration form to register your account.');
+          setLoading(false);
+          return;
+        }
+        // Fallback to first available or error
+        targetWorker = workers[0] || pendingWorkers[0];
+        if (!targetWorker) {
+          setError(`No technician record found for "${workerEmail}". Please check credentials or register.`);
+          alert(`No technician record matching "${workerEmail}" was found.`);
+          setLoading(false);
+          return;
+        }
+      }
+
       await loginAsWorker(targetWorker);
       onSuccess?.('worker');
       onClose();
     } catch (err) {
-      setError('Failed to log in as worker: ' + (err.message || 'Error'));
+      console.error('Worker login failed:', err);
+      const errMsg = err?.message || 'Database error occurred during login.';
+      setError('Technician Login Failed: ' + errMsg);
+      alert(`Technician Login Error:\n\n${errMsg}\n\nPlease try again.`);
     } finally {
       setLoading(false);
     }
@@ -86,7 +119,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
     setLoading(true);
     setError('');
 
-    const targetWorker = workers.find(w => w.id === selectedWorkerId);
+    const targetWorker = workers.find(w => w.id === selectedWorkerId) || pendingWorkers.find(p => p.id === selectedWorkerId);
     if (!targetWorker) {
       setError('Please select a valid registered technician profile');
       setLoading(false);
@@ -98,7 +131,10 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
       onSuccess?.('worker');
       onClose();
     } catch (err) {
-      setError('Failed to log in as technician');
+      console.error('Worker profile login error:', err);
+      const errMsg = err?.message || 'Failed to authenticate technician profile.';
+      setError('Login Error: ' + errMsg);
+      alert(`Authentication Error:\n\n${errMsg}`);
     } finally {
       setLoading(false);
     }

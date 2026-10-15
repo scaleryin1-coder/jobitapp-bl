@@ -12,6 +12,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // PENDING WORKERS COLLECTION (Applications awaiting admin verification)
+    match /pending_workers/{workerId} {
+      allow read, write: if true;
+    }
+
     // CATEGORIES COLLECTION
     match /categories/{categoryId} {
       allow read: if true;

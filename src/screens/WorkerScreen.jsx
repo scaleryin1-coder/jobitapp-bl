@@ -43,6 +43,7 @@ import {
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
+import { compressImage } from '../utils/imageUtils';
 
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const { currentUser } = useAuth();
@@ -62,6 +63,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [albumImages, setAlbumImages] = useState([]);
   const [urlInput, setUrlInput] = useState('');
   const [isSubmittingAlbum, setIsSubmittingAlbum] = useState(false);
+  const [albumError, setAlbumError] = useState('');
   const [selectedAlbumViewer, setSelectedAlbumViewer] = useState(null);
   const [viewerPhotoIndex, setViewerPhotoIndex] = useState(0);
 
@@ -204,19 +206,21 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     ]
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (loadEvt) => {
-        if (loadEvt.target?.result) {
-          setAlbumImages((prev) => [...prev, loadEvt.target.result]);
+    for (const file of files) {
+      try {
+        const compressed = await compressImage(file, 800, 800, 0.75);
+        if (compressed) {
+          setAlbumImages((prev) => [...prev, compressed]);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.warn('Failed to compress album image', err);
+      }
+    }
+    e.target.value = '';
   };
 
   const handleAddImageUrl = () => {
@@ -236,12 +240,22 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
   const handlePublishAlbum = async (e) => {
     e.preventDefault();
+    setAlbumError('');
+
     if (!albumTitle.trim()) {
-      alert('Please enter an album title (e.g. Bridal Mehndi, Modular Kitchen Setup)');
+      setAlbumError('Please enter an album title (e.g. Bridal Mehndi, Modular Kitchen Setup)');
+      alert('Please enter an album title.');
       return;
     }
     if (albumImages.length === 0) {
+      setAlbumError('Please upload or select at least one photo for this album.');
       alert('Please upload or select at least one photo for this album.');
+      return;
+    }
+
+    if (!activeWorker?.id) {
+      setAlbumError('No active technician profile identified. Please log in again.');
+      alert('Technician profile not found. Please log in.');
       return;
     }
 
@@ -260,8 +274,15 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
       setAlbumDescription('');
       setAlbumImages([]);
       setUrlInput('');
+      setAlbumError('');
       setIsUploadAlbumOpen(false);
       setActiveTab('portfolio');
+      alert('Work album published successfully to your portfolio!');
+    } catch (err) {
+      console.error('Failed to publish work album:', err);
+      const errMsg = err?.message || 'Database error: Could not publish portfolio album.';
+      setAlbumError(errMsg);
+      alert(`Album Submission Failed:\n\n${errMsg}\n\nPlease check your network connection and try again.`);
     } finally {
       setIsSubmittingAlbum(false);
     }
@@ -1156,6 +1177,13 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             {/* Modal Form */}
             <form onSubmit={handlePublishAlbum} className="p-4 space-y-3.5 overflow-y-auto flex-1">
               
+              {albumError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-xs font-bold text-red-600 animate-shake">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{albumError}</span>
+                </div>
+              )}
+
               {/* Album Title */}
               <div>
                 <label className="text-[11px] font-black text-slate-700 block mb-1">

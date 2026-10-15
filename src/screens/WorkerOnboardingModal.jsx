@@ -30,6 +30,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { registerWorkerOnboarding, getLocalCategories, subscribeCategories } from '../data/bookingService';
 import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
+import { compressImage } from '../utils/imageUtils';
 
 const POPULAR_LOCATIONS = [
   'Melattur, Kerala',
@@ -252,8 +253,21 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    canvas.width = video.videoWidth || 720;
-    canvas.height = video.videoHeight || 720;
+    // Scale canvas to max 800px to keep payload size lightweight and within Firestore 1MB limit
+    const maxDimension = 800;
+    let w = video.videoWidth || 720;
+    let h = video.videoHeight || 720;
+    if (w > maxDimension || h > maxDimension) {
+      if (w > h) {
+        h = Math.round((h * maxDimension) / w);
+        w = maxDimension;
+      } else {
+        w = Math.round((w * maxDimension) / h);
+        h = maxDimension;
+      }
+    }
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
 
     // If selfie, flip horizontally for mirror selfie preview
@@ -263,7 +277,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     }
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
 
     if (liveCameraTarget === 'selfie') {
       setPhotoUrl(dataUrl);
@@ -291,30 +305,31 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   };
 
   // Handle native file inputs (Device Camera capture or Gallery picker)
-  const handleFileInput = (e, target, isCamera = false) => {
+  const handleFileInput = async (e, target, isCamera = false) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      setErrorMsg('Selected file exceeds 15MB limit. Please choose a smaller photo.');
+    if (file.size > 20 * 1024 * 1024) {
+      setErrorMsg('Selected file exceeds 20MB limit. Please choose a smaller photo.');
       e.target.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target.result;
+    try {
+      // Compress the image before saving to state or Firestore
+      const compressedDataUrl = await compressImage(file, 800, 800, 0.75);
+      const isAadhaar = target === 'aadhaar';
+
       if (target === 'selfie') {
-        setPhotoUrl(dataUrl);
+        setPhotoUrl(compressedDataUrl);
         setSelfieCapturedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         setErrorMsg('');
       } else {
-        const isAadhaar = target === 'aadhaar';
         const docMeta = {
-          url: dataUrl,
+          url: compressedDataUrl,
           name: file.name || `${isAadhaar ? 'Aadhaar_Card' : 'Driving_License'}_${Date.now()}.jpg`,
-          size: `${(file.size / 1024).toFixed(1)} KB`,
-          type: file.type || 'image/jpeg',
+          size: `${Math.round((compressedDataUrl.length * 0.75) / 1024)} KB`,
+          type: 'image/jpeg',
           isCameraCaptured: isCamera
         };
         if (isAadhaar) {
@@ -324,9 +339,12 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
         }
         setErrorMsg('');
       }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    } catch (compressErr) {
+      console.error('File compression error:', compressErr);
+      setErrorMsg('Failed to process image file: ' + (compressErr.message || 'Unsupported format'));
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const removeDoc = (target) => {
@@ -488,8 +506,16 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setErrorMsg('');
+
+    // Pre-flight validation for mandatory photos & documents
+    if (!photoUrl) {
+      setErrorMsg('Mandatory Live Selfie photo is missing! Please return to Step 1 to capture your live photo.');
+      setCurrentStep(1);
+      return;
+    }
+
     const err = validateStep4();
     if (err) {
       setErrorMsg(err);
@@ -498,27 +524,40 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
 
     setSubmitting(true);
 
+    const nowIso = new Date().toISOString();
+    const primaryCat = primaryCategory || 'Home Services';
+    const subSkillsList = (selectedSubSkills && selectedSubSkills.length > 0) ? selectedSubSkills : [primaryCat];
+    const expNum = Number(experienceYears) || 3;
+    const legalName = fullName.trim();
+    const contactPhone = primaryPhone.trim();
+    const userEmail = (email || `${legalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'worker'}@jobit.com`).trim();
+
     const onboardingPayload = {
-      name: fullName.trim(),
-      avatar: photoUrl,
-      photo: photoUrl,
-      liveSelfieUrl: photoUrl,
-      phone: primaryPhone.trim(),
+      name: legalName,
+      phone: contactPhone,
       altPhone: altPhone.trim(),
-      email: (email || `${fullName.toLowerCase().replace(/[^a-z0-9]/g, '')}@jobit.com`).trim(),
+      email: userEmail,
       gender,
       dob,
       address: address.trim(),
       city: city.trim(),
+      serviceArea: city.trim(),
       pincode: pincode.trim(),
-      serviceRadius,
-      category: primaryCategory,
-      categoryName: primaryCategory,
-      categoryId: `cat_${primaryCategory.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-      skill: primaryCategory,
-      subSkills: selectedSubSkills,
-      experience: experienceYears,
+      serviceRadius: String(serviceRadius || '25'),
+      category: primaryCat,
+      categoryName: primaryCat,
+      categoryId: `cat_${primaryCat.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+      skill: primaryCat,
+      skills: subSkillsList,
+      categories: [primaryCat],
+      subSkills: subSkillsList,
+      experience: `${expNum} years`,
+      experienceYears: expNum,
       baseRate: Number(baseRate) || 350,
+      avatar: photoUrl,
+      avatarUrl: photoUrl,
+      photo: photoUrl,
+      liveSelfieUrl: photoUrl,
       documents: {
         liveSelfieUrl: photoUrl,
         aadhaarNumber: aadhaarNumber.trim(),
@@ -544,9 +583,19 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       accountNumber: accountNumber.trim(),
       ifscCode: ifscCode.trim().toUpperCase(),
       upiId: upiId.trim(),
+      rating: 5.0,
+      jobsCompleted: 0,
+      totalJobsCompleted: 0,
       status: 'pending',
       workerStatus: 'pending',
-      submittedAt: new Date().toISOString()
+      isVerified: false,
+      isAvailable: false,
+      isOnline: false,
+      role: 'WORKER',
+      userRole: 'worker',
+      appliedAt: nowIso,
+      submittedAt: nowIso,
+      createdAt: nowIso
     };
 
     try {
@@ -557,7 +606,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
         await loginWithPhone(
           primaryPhone, 
           '123456', 
-          fullName.trim(), 
+          legalName, 
           'worker', 
           { 
             workerId: savedApp.id, 
@@ -572,10 +621,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
 
       setSubmitting(false);
       setIsCompleted(true);
+      onSuccess?.(savedApp);
     } catch (err) {
-      console.error('Submission failed:', err);
-      setErrorMsg(err.message || 'Submission failed. Please check your network and try again.');
+      console.error('Worker registration failed with backend error:', err);
+      const errMsg = err?.message || 'Application submission failed. Please check your network and try again.';
+      setErrorMsg(errMsg);
       setSubmitting(false);
+      // Explicit error alert so the user immediately sees the exact error
+      alert(`Worker Application Submission Error:\n\n${errMsg}\n\nPlease check your details or network connection and try again.`);
     }
   };
 
@@ -1677,6 +1730,23 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
           )}
 
         </div>
+
+        {/* Persistent Footer Error Alert (Visible on Step 4 and across steps) */}
+        {errorMsg && !isCompleted && (
+          <div className="px-4 py-2.5 bg-red-50 border-t border-red-200 flex items-center justify-between gap-2 text-xs font-bold text-red-600 animate-shake">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span className="line-clamp-2">{errorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMsg('')}
+              className="text-red-400 hover:text-red-600 text-[10px] underline cursor-pointer shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Modal Navigation Footer */}
         {!isCompleted && (

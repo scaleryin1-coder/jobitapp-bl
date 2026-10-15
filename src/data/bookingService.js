@@ -846,38 +846,99 @@ export function subscribePendingWorkers(callback) {
   };
 }
 
-// Multi-step Worker Onboarding Submission - Fast, persistent and non-hanging
+// Multi-step Worker Onboarding Submission - Fast, persistent and schema-compliant
 export async function registerWorkerOnboarding(onboardingData) {
   const current = getPendingWorkers();
   const appId = 'app_worker_' + Date.now();
-  
+  const nowIso = new Date().toISOString();
+
+  const primaryCategory = onboardingData.categoryName || onboardingData.category || onboardingData.skill || 'Home Services';
+  const subSkillsList = Array.isArray(onboardingData.subSkills) && onboardingData.subSkills.length > 0
+    ? onboardingData.subSkills
+    : [primaryCategory];
+  const experienceNumber = Number(onboardingData.experienceYears || parseInt(onboardingData.experience, 10)) || 3;
+  const areaName = onboardingData.city || onboardingData.address || 'Melattur, Kerala';
+  const selfiePhoto = onboardingData.liveSelfieUrl || onboardingData.avatar || onboardingData.photo || onboardingData.avatarUrl || '';
+
   const newApplication = {
+    // Unique IDs
     id: appId,
+    userId: appId,
+    // Personal Info
+    name: (onboardingData.name || '').trim(),
+    phone: (onboardingData.phone || '').trim(),
+    altPhone: (onboardingData.altPhone || '').trim(),
+    email: (onboardingData.email || `${(onboardingData.name || 'pro').toLowerCase().replace(/[^a-z0-9]/g, '')}@jobit.com`).trim(),
+    gender: onboardingData.gender || 'Not specified',
+    dob: onboardingData.dob || '',
+    // Location
+    address: (onboardingData.address || '').trim(),
+    city: areaName,
+    serviceArea: areaName,
+    pincode: (onboardingData.pincode || '').trim(),
+    serviceRadius: String(onboardingData.serviceRadius || '25'),
+    // Skills & Category matching both arrays and single strings
+    category: primaryCategory,
+    categoryName: primaryCategory,
+    categoryId: onboardingData.categoryId || `cat_${primaryCategory.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+    skill: primaryCategory,
+    skills: subSkillsList,
+    categories: [primaryCategory],
+    subSkills: subSkillsList,
+    experience: `${experienceNumber} years`,
+    experienceYears: experienceNumber,
+    baseRate: Number(onboardingData.baseRate) || 350,
+    // Status & Availability
     status: 'pending',
     workerStatus: 'pending',
-    appliedAt: new Date().toISOString(),
+    isVerified: false,
+    isAvailable: false,
+    isOnline: false,
+    // Photo & Documents
+    liveSelfieUrl: selfiePhoto,
+    avatarUrl: selfiePhoto,
+    avatar: selfiePhoto,
+    photo: selfiePhoto,
+    aadhaarNumber: (onboardingData.aadhaarNumber || '').trim(),
+    aadhaarDocUrl: onboardingData.aadhaarDocUrl || onboardingData.idProofUrl || '',
+    drivingLicenseNumber: (onboardingData.drivingLicenseNumber || '').trim(),
+    drivingLicenseDocUrl: onboardingData.drivingLicenseDocUrl || '',
+    documents: onboardingData.documents || {
+      liveSelfieUrl: selfiePhoto,
+      aadhaarDocUrl: onboardingData.aadhaarDocUrl || '',
+      drivingLicenseDocUrl: onboardingData.drivingLicenseDocUrl || ''
+    },
+    // Bank & Payout
+    accountHolderName: (onboardingData.accountHolderName || onboardingData.name || '').trim(),
+    bankName: (onboardingData.bankName || '').trim(),
+    accountNumber: (onboardingData.accountNumber || '').trim(),
+    ifscCode: (onboardingData.ifscCode || '').trim().toUpperCase(),
+    upiId: (onboardingData.upiId || '').trim(),
+    // Performance & Metrics
     rating: 5.0,
     jobsCompleted: 0,
-    isOnline: false,
-    ...onboardingData,
-    // Guarantee status is strictly 'pending'
-    status: 'pending',
-    workerStatus: 'pending'
+    totalJobsCompleted: 0,
+    // Audit Timestamps
+    appliedAt: nowIso,
+    submittedAt: nowIso,
+    createdAt: nowIso
   };
 
+  // 1. Instant local persistence
   const updated = [newApplication, ...current.filter(p => p.id !== appId)];
   savePendingWorkers(updated);
 
-  // Also save in user profiles table as pending worker so they can log in
+  // 2. Also register in local users map as pending worker so they can check status
   try {
-    const cleanTen = (onboardingData.phone || '').replace(/\D/g, '').slice(-10);
+    const cleanTen = (newApplication.phone || '').replace(/\D/g, '').slice(-10);
     if (cleanTen) {
       const rawUsers = localStorage.getItem('jobit_registered_users');
       const users = rawUsers ? JSON.parse(rawUsers) : {};
       users[cleanTen] = {
         uid: appId,
         workerId: appId,
-        role: 'worker',
+        role: 'WORKER',
+        userRole: 'worker',
         status: 'pending',
         workerStatus: 'pending',
         ...newApplication
@@ -886,26 +947,28 @@ export async function registerWorkerOnboarding(onboardingData) {
     }
   } catch {}
 
-  // Sync to database with safe timeout so it never blocks UI indefinitely
+  // 3. Sync to Firestore when configured with explicit error propagation
   if (isFirebaseConfigured && db) {
     try {
-      await safeDbPromise(
-        Promise.all([
-          setDoc(doc(db, 'pending_workers', appId), {
-            ...newApplication,
-            submittedAt: new Date().toISOString()
-          }),
-          setDoc(doc(db, 'users', appId), {
-            ...newApplication,
-            role: 'worker',
-            status: 'pending',
-            workerStatus: 'pending'
-          }, { merge: true })
-        ]),
-        2500
-      );
+      await Promise.all([
+        setDoc(doc(db, 'pending_workers', appId), {
+          ...newApplication,
+          submittedAt: nowIso
+        }),
+        setDoc(doc(db, 'users', appId), {
+          ...newApplication,
+          role: 'WORKER',
+          userRole: 'worker',
+          status: 'pending',
+          workerStatus: 'pending',
+          createdAt: nowIso
+        }, { merge: true })
+      ]);
     } catch (e) {
-      console.warn('Firestore registerWorkerOnboarding fallback', e);
+      console.error('Firestore worker onboarding error:', e);
+      const customErr = new Error(`Cloud Database Error (${e.code || 'write-error'}): ${e.message || 'Worker registration failed to write to database.'}`);
+      customErr.original = e;
+      throw customErr;
     }
   }
 
@@ -924,8 +987,16 @@ export async function approveWorkerApplication(workerAppId) {
 
   // 2. Add to active verified workers roster with strictly status: 'approved'
   const activeWorkers = getLocalWorkers();
+  const workerUniqueId = target.id.replace('app_', '');
+  const nowIso = new Date().toISOString();
+  const primaryCat = target.categoryName || target.skill || 'Home Services Pro';
+  const subSkills = target.subSkills && target.subSkills.length > 0 ? target.subSkills : [primaryCat];
+  const expNumber = Number(target.experienceYears || parseInt(target.experience, 10)) || 3;
+  const avatarImage = target.avatar || target.liveSelfieUrl || target.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80';
+
   const verifiedWorker = {
-    id: target.id.replace('app_', ''),
+    id: workerUniqueId,
+    userId: workerUniqueId,
     originalAppId: target.id,
     name: target.name,
     phone: target.phone,
@@ -933,14 +1004,18 @@ export async function approveWorkerApplication(workerAppId) {
     email: target.email || `${(target.name || 'pro').toLowerCase().replace(/\s+/g, '')}@jobit.com`,
     gender: target.gender || 'Not specified',
     dob: target.dob || '',
-    skill: target.categoryName || target.skill || 'Home Services Pro',
-    categoryName: target.categoryName || target.skill,
+    skill: primaryCat,
+    categoryName: primaryCat,
     categoryId: target.categoryId || 'cat_general',
-    subSkills: target.subSkills || [],
-    experience: target.experience ? `${target.experience} years` : '3 years',
+    skills: subSkills,
+    categories: [primaryCat],
+    subSkills: subSkills,
+    experience: `${expNumber} years`,
+    experienceYears: expNumber,
     baseRate: target.baseRate || 350,
     address: target.address || '',
     city: target.city || 'Melattur, Kerala',
+    serviceArea: target.city || 'Melattur, Kerala',
     pincode: target.pincode || '',
     serviceRadius: target.serviceRadius || '15',
     aadhaarNumber: target.aadhaarNumber || 'Verified',
@@ -954,11 +1029,19 @@ export async function approveWorkerApplication(workerAppId) {
     upiId: target.upiId || '',
     rating: target.rating || 5.0,
     jobsCompleted: 0,
+    totalJobsCompleted: 0,
     isOnline: true, // Auto set online upon approval
+    isAvailable: true,
+    isVerified: true,
     status: 'approved',
     workerStatus: 'approved',
-    approvedAt: new Date().toISOString(),
-    avatar: target.avatar || target.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+    role: 'WORKER',
+    userRole: 'worker',
+    approvedAt: nowIso,
+    createdAt: target.createdAt || nowIso,
+    avatar: avatarImage,
+    avatarUrl: avatarImage,
+    photo: avatarImage,
     vehicle: 'Bike'
   };
 
@@ -974,7 +1057,8 @@ export async function approveWorkerApplication(workerAppId) {
       users[cleanTen] = {
         ...verifiedWorker,
         uid: verifiedWorker.id,
-        role: 'worker',
+        role: 'WORKER',
+        userRole: 'worker',
         status: 'approved',
         workerStatus: 'approved'
       };
@@ -994,24 +1078,22 @@ export async function approveWorkerApplication(workerAppId) {
     }
   } catch {}
 
-  // 5. Sync to database with safe timeout
+  // 5. Sync to database
   if (isFirebaseConfigured && db) {
     try {
-      await safeDbPromise(
-        Promise.all([
-          deleteDoc(doc(db, 'pending_workers', workerAppId)),
-          setDoc(doc(db, 'workers', verifiedWorker.id), verifiedWorker, { merge: true }),
-          setDoc(doc(db, 'users', verifiedWorker.id), {
-            ...verifiedWorker,
-            role: 'worker',
-            status: 'approved',
-            workerStatus: 'approved'
-          }, { merge: true })
-        ]),
-        2500
-      );
+      await Promise.all([
+        deleteDoc(doc(db, 'pending_workers', workerAppId)),
+        setDoc(doc(db, 'workers', verifiedWorker.id), verifiedWorker, { merge: true }),
+        setDoc(doc(db, 'users', verifiedWorker.id), {
+          ...verifiedWorker,
+          role: 'WORKER',
+          userRole: 'worker',
+          status: 'approved',
+          workerStatus: 'approved'
+        }, { merge: true })
+      ]);
     } catch (e) {
-      console.warn('Firestore approveWorker fallback', e);
+      console.warn('Firestore approveWorker notice', e);
     }
   }
 
@@ -1391,9 +1473,12 @@ export async function addWorkerPortfolio(albumData) {
   // 2. Persist to Firestore if configured
   if (isFirebaseConfigured && db) {
     try {
-      await safeDbPromise(setDoc(doc(db, 'worker_portfolios', newId), cleanAlbum));
+      await setDoc(doc(db, 'worker_portfolios', newId), cleanAlbum);
     } catch (err) {
-      console.warn('Failed to persist portfolio album to Firestore', err);
+      console.error('Failed to persist portfolio album to Firestore', err);
+      const customErr = new Error(`Database error (${err.code || 'failed'}): ${err.message || 'Could not save work album to cloud database.'}`);
+      customErr.original = err;
+      throw customErr;
     }
   }
 

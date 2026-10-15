@@ -232,9 +232,62 @@
         "created_at": { "type": "string" }
       },
       "required": ["id", "worker_id", "category_id", "title", "image_urls"]
+    },
+    "PendingWorker": {
+      "title": "PendingWorker",
+      "description": "Applicant worker profile pending admin KYC and trade verification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "altPhone": { "type": "string" },
+        "email": { "type": "string" },
+        "gender": { "type": "string" },
+        "dob": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "pincode": { "type": "string" },
+        "serviceRadius": { "type": "string" },
+        "category": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "skill": { "type": "string" },
+        "skills": { "type": "array" },
+        "categories": { "type": "array" },
+        "subSkills": { "type": "array" },
+        "experience": { "type": "string" },
+        "experienceYears": { "type": "number" },
+        "baseRate": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "workerStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "isVerified": { "type": "boolean" },
+        "isAvailable": { "type": "boolean" },
+        "liveSelfieUrl": { "type": "string" },
+        "aadhaarNumber": { "type": "string" },
+        "aadhaarDocUrl": { "type": "string" },
+        "drivingLicenseNumber": { "type": "string" },
+        "drivingLicenseDocUrl": { "type": "string" },
+        "bankName": { "type": "string" },
+        "accountHolderName": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "ifscCode": { "type": "string" },
+        "upiId": { "type": "string" },
+        "rating": { "type": "number" },
+        "totalJobsCompleted": { "type": "number" },
+        "appliedAt": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "status"]
     }
   },
   "firestore": {
+    "/pending_workers/{workerId}": {
+      "schema": { "$ref": "#/entities/PendingWorker" },
+      "description": "Worker applications awaiting admin approval"
+    },
     "/worker_portfolios/{portfolioId}": {
       "schema": { "$ref": "#/entities/WorkerPortfolio" },
       "description": "Worker portfolio albums with photos"
