@@ -27,6 +27,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 
 export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   const { currentUser } = useAuth();
@@ -34,6 +35,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   const [bookings, setBookings] = useState([]);
   const [ratingModalBooking, setRatingModalBooking] = useState(null);
   const [receiptModalBooking, setReceiptModalBooking] = useState(null);
+  const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
 
@@ -246,13 +248,13 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <a
-                      href={`tel:${booking.workerPhone || '9876543210'}`}
-                      className="w-8 h-8 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow-xs hover:bg-emerald-50 transition"
-                      title="Call JOBit Expert"
+                    <button
+                      onClick={() => setActiveVoiceCallBooking(booking)}
+                      className="w-8 h-8 rounded-full bg-white text-emerald-600 flex items-center justify-center shadow-xs hover:bg-emerald-50 transition cursor-pointer"
+                      title="In-App Voice Call (Agora.io - Phone number protected)"
                     >
                       <Phone className="w-3.5 h-3.5" />
-                    </a>
+                    </button>
                     <button
                       onClick={() => onOpenChat(booking)}
                       className="w-8 h-8 rounded-full bg-white text-[#0EA5E0] flex items-center justify-center shadow-xs hover:bg-sky-50 transition cursor-pointer"
@@ -486,6 +488,14 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
           </div>
         </div>
       )}
+
+      {/* Agora.io Voice Call Modal */}
+      <VoiceCallModal
+        isOpen={Boolean(activeVoiceCallBooking)}
+        onClose={() => setActiveVoiceCallBooking(null)}
+        booking={activeVoiceCallBooking}
+        currentUserRole="customer"
+      />
 
     </div>
   );

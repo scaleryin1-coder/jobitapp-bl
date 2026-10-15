@@ -41,6 +41,7 @@ import {
   deleteWorkerPortfolio
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
+import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const { currentUser } = useAuth();
@@ -49,6 +50,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [bookings, setBookings] = useState([]);
   const [declinedJobIds, setDeclinedJobIds] = useState([]);
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
+  const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   
   // Portfolio / Work Albums State
   const [portfolios, setPortfolios] = useState([]);
@@ -728,21 +730,24 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                         </div>
                         <div>
                           <p className="font-extrabold text-slate-800">{job.customerName || 'Customer'}</p>
-                          <p className="text-[11px] text-slate-400">{job.customerPhone || '98765 00001'}</p>
+                          <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                            <span>In-App Protected Contact</span>
+                          </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <a
-                          href={`tel:${job.customerPhone || '9876543210'}`}
-                          className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition"
-                          title="Call Customer"
+                        <button
+                          onClick={() => setActiveVoiceCallBooking(job)}
+                          className="w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition cursor-pointer"
+                          title="In-App Voice Call (Agora.io - Phone number protected)"
                         >
                           <Phone className="w-3.5 h-3.5" />
-                        </a>
+                        </button>
                         <button
                           onClick={() => onOpenChat?.(job)}
-                          className="w-8 h-8 rounded-full bg-sky-50 text-[#0EA5E0] flex items-center justify-center hover:bg-sky-100 transition"
+                          className="w-8 h-8 rounded-full bg-sky-50 text-[#0EA5E0] flex items-center justify-center hover:bg-sky-100 transition cursor-pointer"
                           title="Chat with Customer"
                         >
                           <MessageCircle className="w-3.5 h-3.5" />
@@ -1305,6 +1310,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
           </div>
         </div>
       )}
+
+      {/* Agora.io Voice Call Modal */}
+      <VoiceCallModal
+        isOpen={Boolean(activeVoiceCallBooking)}
+        onClose={() => setActiveVoiceCallBooking(null)}
+        booking={activeVoiceCallBooking}
+        currentUserRole="worker"
+      />
 
     </div>
   );

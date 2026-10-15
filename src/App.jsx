@@ -138,6 +138,23 @@ function MainLayout() {
 
   // 1. If authenticated as Worker -> Strictly Worker Dashboard
   if (currentUser?.role === 'worker') {
+    if (currentScreen === 'chat') {
+      return (
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
+          <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+            <ChatScreen
+              booking={activeChatBooking || {
+                id: 'bk_default',
+                customerName: 'Customer',
+                serviceTitle: 'Home Service'
+              }}
+              onBack={() => setCurrentScreen('main')}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
         <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
