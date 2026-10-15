@@ -59,7 +59,9 @@ export const ROLLOUT_LOCATIONS = [
 
 export function normalizeLocation(loc) {
   if (!loc) return '';
-  return String(loc).split(',')[0].trim().toLowerCase();
+  // Extract primary town/city name without state or pincode
+  const primary = String(loc).split(',')[0].trim().toLowerCase();
+  return primary.replace(/[^a-z0-9]/g, '');
 }
 
 export function isLocationInRollout(loc) {
@@ -83,6 +85,113 @@ export function isLocationInRollout(loc) {
 }
 
 /**
+ * Check if a worker's registered service area covers the user's location
+ */
+export function doesWorkerCoverLocation(worker, location) {
+  if (!worker) return false;
+  if (!location) return true;
+  
+  const targetNorm = normalizeLocation(location);
+  const targetRaw = String(location).toLowerCase().trim();
+  if (!targetNorm) return true;
+
+  const candidateAreas = [
+    worker.service_area,
+    worker.serviceArea,
+    worker.city,
+    worker.address,
+    ...(Array.isArray(worker.service_areas) ? worker.service_areas : []),
+    ...(Array.isArray(worker.serviceAreas) ? worker.serviceAreas : [])
+  ].filter(Boolean);
+
+  if (candidateAreas.length === 0) return false;
+
+  return candidateAreas.some(area => {
+    const aNorm = normalizeLocation(area);
+    const aRaw = String(area).toLowerCase().trim();
+    return (
+      aNorm === targetNorm ||
+      aNorm.includes(targetNorm) ||
+      targetNorm.includes(aNorm) ||
+      aRaw.includes(targetRaw) ||
+      targetRaw.includes(aRaw)
+    );
+  });
+}
+
+/**
+ * Check if a worker's skills/categories match the requested category
+ */
+export function doesWorkerMatchCategory(worker, category) {
+  if (!worker || !category) return false;
+  
+  const catName = (typeof category === 'string' 
+    ? category 
+    : (category?.name || category?.title || category?.categoryName || '')).toLowerCase().trim();
+  
+  const catId = (typeof category === 'object' 
+    ? (category?.id || category?.categoryId || '') 
+    : '').toLowerCase().trim();
+
+  const workerSkills = [
+    worker.category,
+    worker.categoryName,
+    worker.skill,
+    worker.categoryId,
+    ...(Array.isArray(worker.skills) ? worker.skills : []),
+    ...(Array.isArray(worker.categories) ? worker.categories : []),
+    ...(Array.isArray(worker.subSkills) ? worker.subSkills : [])
+  ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+
+  if (workerSkills.length === 0) return false;
+
+  // Direct match
+  if (catId && workerSkills.some(s => s === catId || s.includes(catId) || catId.includes(s))) {
+    return true;
+  }
+  if (catName && workerSkills.some(s => s === catName || s.includes(catName) || catName.includes(s))) {
+    return true;
+  }
+
+  // Canonical trade domain patterns
+  const tradeMatchers = [
+    { key: 'ac', test: (s) => s.includes('ac') || s.includes('air condition') || s.includes('hvac') || s.includes('cooling') },
+    { key: 'plumb', test: (s) => s.includes('plumb') || s.includes('pipe') || s.includes('leak') || s.includes('drain') },
+    { key: 'elect', test: (s) => s.includes('elect') || s.includes('wiring') },
+    { key: 'coconut', test: (s) => s.includes('coconut') || s.includes('tree') || s.includes('palm') || s.includes('തെങ്ങ്') },
+    { key: 'paint', test: (s) => s.includes('paint') || s.includes('whitewash') || s.includes('wall') },
+    { key: 'carp', test: (s) => s.includes('carp') || s.includes('wood') || s.includes('furniture') },
+    { key: 'clean', test: (s) => s.includes('clean') || s.includes('sanit') || s.includes('housekeep') },
+    { key: 'beauty', test: (s) => s.includes('beauty') || s.includes('salon') || s.includes('makeup') || s.includes('spa') },
+    { key: 'mehndi', test: (s) => s.includes('mehndi') || s.includes('henna') },
+    { key: 'driver', test: (s) => s.includes('driver') || s.includes('chauffeur') },
+    { key: 'car', test: (s) => s.includes('car') || s.includes('auto') || s.includes('mechanic') },
+    { key: 'bike', test: (s) => s.includes('bike') || s.includes('motorcycle') || s.includes('scooter') || s.includes('two wheeler') },
+    { key: 'garden', test: (s) => s.includes('garden') || s.includes('lawn') || s.includes('landscape') },
+    { key: 'pest', test: (s) => s.includes('pest') || s.includes('termite') || s.includes('fumigation') },
+    { key: 'construct', test: (s) => s.includes('construct') || s.includes('mason') || s.includes('civil') },
+    { key: 'weld', test: (s) => s.includes('weld') || s.includes('fabricat') || s.includes('iron work') },
+    { key: 'alumin', test: (s) => s.includes('alumin') || s.includes('glass work') || s.includes('window') },
+    { key: 'moving', test: (s) => s.includes('mov') || s.includes('shift') || s.includes('packer') || s.includes('labour') },
+    { key: 'secur', test: (s) => s.includes('secur') || s.includes('cctv') || s.includes('camera') || s.includes('smart home') },
+    { key: 'electron', test: (s) => s.includes('electron') || s.includes('tv') || s.includes('appliance') },
+    { key: 'laund', test: (s) => s.includes('laund') || s.includes('iron') || s.includes('dry clean') },
+    { key: 'support', test: (s) => s.includes('support') || s.includes('elder') || s.includes('domestic') || s.includes('home help') },
+    { key: 'tank', test: (s) => s.includes('tank') || s.includes('water tank') || s.includes('sump') }
+  ];
+
+  for (const m of tradeMatchers) {
+    if (m.test(catName) || (catId && m.test(catId))) {
+      if (workerSkills.some(s => m.test(s))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Mask telephone number for privacy in Customer and Worker panels
  */
 export function maskPhoneNumber(phone) {
@@ -93,77 +202,45 @@ export function maskPhoneNumber(phone) {
 }
 
 /**
- * Find all approved workers registered for a specific category in an area
+ * Find all genuine Admin-approved workers registered and available for a specific category in an area
  */
 export function getWorkersForCategoryInLocation(category, location, workersList) {
   const workers = (Array.isArray(workersList) && workersList.length > 0) ? workersList : getLocalWorkers();
-  const normLoc = normalizeLocation(location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
-  
-  const catName = (typeof category === 'string' ? category : (category?.name || category?.title || '')).toLowerCase().trim();
-  const catId = (typeof category === 'object' ? (category?.id || category?.categoryId || '') : '').toLowerCase().trim();
+  const effectiveLoc = location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
 
   return (workers || []).filter((w) => {
-    if (!w) return false;
-    const isApproved = w.status === 'approved' || w.workerStatus === 'approved';
+    if (!w || !w.id) return false;
+
+    // Disregard any mock/dummy IDs
+    if (DUMMY_WORKER_IDS.has(w.id)) return false;
+
+    // 1. Must be genuine worker approved by Admin:
+    // status === 'approved' OR is_approved === true OR workerStatus === 'approved'
+    const isApproved = w.is_approved === true || w.status === 'approved' || w.workerStatus === 'approved';
     if (!isApproved) return false;
 
-    // Location matching: worker's city / address must match current location
-    const workerLoc = normalizeLocation(w.city || w.address || w.serviceArea || '');
-    const locMatch = !normLoc || !workerLoc || workerLoc.includes(normLoc) || normLoc.includes(workerLoc);
-    if (!locMatch) return false;
+    // 2. Must be active/available for work
+    if (w.isAvailable === false || w.isOnline === false) return false;
 
-    // Category / Skill matching
-    const wSkill = (w.skill || '').toLowerCase().trim();
-    const wCatName = (w.categoryName || '').toLowerCase().trim();
-    const wCatId = (w.categoryId || '').toLowerCase().trim();
+    // 3. Must cover this service area / location
+    if (!doesWorkerCoverLocation(w, effectiveLoc)) return false;
 
-    const matchesCat = (
-      (catId && wCatId && (catId === wCatId || catId.includes(wCatId) || wCatId.includes(catId))) ||
-      (catName && wCatName && (catName === wCatName || catName.includes(wCatName) || wCatName.includes(catName))) ||
-      (catName && wSkill && (catName.includes(wSkill) || wSkill.includes(catName))) ||
-      (catName.includes('ac') && (wSkill.includes('ac') || wCatName.includes('ac'))) ||
-      (catName.includes('plumb') && (wSkill.includes('plumb') || wCatName.includes('plumb'))) ||
-      (catName.includes('elect') && (wSkill.includes('elect') || wCatName.includes('elect'))) ||
-      (catName.includes('carp') && (wSkill.includes('carp') || wCatName.includes('carp'))) ||
-      (catName.includes('paint') && (wSkill.includes('paint') || wCatName.includes('paint'))) ||
-      (catName.includes('clean') && (wSkill.includes('clean') || wCatName.includes('clean'))) ||
-      (catName.includes('beauty') && (wSkill.includes('beauty') || wCatName.includes('beauty'))) ||
-      (catName.includes('mehndi') && (wSkill.includes('mehndi') || wCatName.includes('mehndi') || wSkill.includes('henna'))) ||
-      ((catName.includes('tree') || catName.includes('coconut')) && (wSkill.includes('tree') || wSkill.includes('coconut') || wSkill.includes('തെങ്ങ്')))
-    );
+    // 4. Must match this trade / service category
+    if (!doesWorkerMatchCategory(w, category)) return false;
 
-    return matchesCat;
+    return true;
   });
 }
 
 /**
- * Check if category is available in a location.
- * In launch rollout areas (Melattur, Pattikkad, Pandikkad, and Kerala state), categories in the catalog are live and active.
- * Ensures state hydration/refresh never falsely resets catalog categories to Coming Soon.
+ * Check if category is available in a location strictly based on real worker registrations.
+ * A category in an area is active ONLY IF at least one Admin-approved worker is available.
+ * If 0 approved workers exist for that trade in that area, it returns false (triggers "Coming Soon").
  */
 export function isCategoryAvailableInLocation(category, location, workersList) {
-  if (!category) return true;
-  const normLoc = normalizeLocation(location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
-  
-  // 1. All categories in primary rollout and launch areas are live and bookable
-  if (isLocationInRollout(normLoc) || isLocationInRollout(location)) {
-    return true;
-  }
-
-  // 2. Otherwise check for dynamically registered approved workers in that specific location
-  const workers = (Array.isArray(workersList) && workersList.length > 0) ? workersList : getLocalWorkers();
-  const matched = getWorkersForCategoryInLocation(category, location, workers);
-  if (matched.length > 0) {
-    return true;
-  }
-
-  // 3. Fallback: On page refresh / initial hydration when workers list is still loading (0 items),
-  // ensure core catalog categories remain live without resetting to Coming Soon
-  if (!workersList || workersList.length === 0) {
-    return true;
-  }
-
-  return false;
+  if (!category) return false;
+  const availableWorkers = getWorkersForCategoryInLocation(category, location, workersList);
+  return availableWorkers.length > 0;
 }
 
 // Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
@@ -1063,8 +1140,14 @@ export async function approveWorkerApplication(workerAppId) {
     isOnline: true, // Auto set online upon approval
     isAvailable: true,
     isVerified: true,
+    is_approved: true, // Standard field for approved worker
     status: 'approved',
     workerStatus: 'approved',
+    category: primaryCat,
+    categoryName: primaryCat,
+    service_area: target.city || target.serviceArea || target.address || 'Melattur, Kerala',
+    service_areas: [target.city || target.serviceArea || target.address || 'Melattur, Kerala'],
+    serviceAreas: [target.city || target.serviceArea || target.address || 'Melattur, Kerala'],
     role: 'WORKER',
     userRole: 'worker',
     approvedAt: nowIso,
@@ -1165,6 +1248,76 @@ export async function rejectWorkerApplication(workerAppId, reason = 'Document ve
 // Only workers with status 'approved' should be listed for booking/jobs on the main platform
 export function getApprovedWorkers() {
   return getLocalWorkers().filter(w => w.status === 'approved' || w.workerStatus === 'approved');
+}
+
+// Admin manually registers & approves a technician for a category and service area
+export async function adminAddWorker(workerData) {
+  const activeWorkers = getLocalWorkers();
+  const workerUniqueId = workerData.id || `worker_${Date.now()}`;
+  const nowIso = new Date().toISOString();
+  const primaryCat = (workerData.category || workerData.categoryName || workerData.skill || 'Home Services Pro').trim();
+  const subSkills = Array.isArray(workerData.subSkills) && workerData.subSkills.length > 0
+    ? workerData.subSkills
+    : [primaryCat];
+  const serviceArea = (workerData.service_area || workerData.serviceArea || workerData.city || 'Melattur, Kerala').trim();
+  const avatarImage = workerData.avatar || workerData.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80';
+
+  const newWorker = {
+    id: workerUniqueId,
+    userId: workerUniqueId,
+    name: (workerData.name || 'Verified Technician').trim(),
+    phone: (workerData.phone || '+91 98471 00000').trim(),
+    email: workerData.email || `${(workerData.name || 'pro').toLowerCase().replace(/\s+/g, '')}@jobit.com`,
+    is_approved: true,
+    status: 'approved',
+    workerStatus: 'approved',
+    category: primaryCat,
+    categoryName: primaryCat,
+    categoryId: workerData.categoryId || `cat_${primaryCat.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+    skill: primaryCat,
+    skills: subSkills,
+    categories: [primaryCat],
+    subSkills: subSkills,
+    service_area: serviceArea,
+    serviceArea: serviceArea,
+    service_areas: [serviceArea],
+    serviceAreas: [serviceArea],
+    city: serviceArea,
+    address: workerData.address || serviceArea,
+    experience: workerData.experience || '4 years',
+    experienceYears: Number(workerData.experienceYears) || 4,
+    baseRate: Number(workerData.baseRate) || 350,
+    isOnline: true,
+    isAvailable: true,
+    isVerified: true,
+    rating: Number(workerData.rating) || 5.0,
+    jobsCompleted: Number(workerData.jobsCompleted) || 0,
+    totalJobsCompleted: Number(workerData.totalJobsCompleted) || 0,
+    role: 'WORKER',
+    userRole: 'worker',
+    approvedAt: nowIso,
+    createdAt: nowIso,
+    avatar: avatarImage,
+    avatarUrl: avatarImage,
+    photo: avatarImage,
+    vehicle: workerData.vehicle || 'Bike'
+  };
+
+  const updatedActive = [newWorker, ...activeWorkers.filter(w => w.id !== newWorker.id)];
+  saveLocalWorkers(updatedActive);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await Promise.all([
+        setDoc(doc(db, 'workers', newWorker.id), newWorker, { merge: true }),
+        setDoc(doc(db, 'users', newWorker.id), newWorker, { merge: true })
+      ]);
+    } catch (e) {
+      console.warn('Firestore adminAddWorker fallback', e);
+    }
+  }
+
+  return newWorker;
 }
 
 // Admin delete an active worker

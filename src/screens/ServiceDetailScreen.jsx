@@ -12,12 +12,23 @@ import {
   MessageCircle,
   HelpCircle
 } from 'lucide-react';
+import { isCategoryAvailableInLocation } from '../data/bookingService';
 
-export function ServiceDetailScreen({ service, onBack, onBookNow, onOpenChat }) {
+export function ServiceDetailScreen({ 
+  service, 
+  currentCity = 'Melattur, Kerala',
+  workers = [],
+  onBack, 
+  onBookNow, 
+  onOpenChat 
+}) {
   const [activeTab, setActiveTab] = useState('Overview'); // 'Overview' | 'Details' | 'Review' | 'FAQ'
   const [isExpandedAbout, setIsExpandedAbout] = useState(false);
 
   if (!service) return null;
+
+  const isLive = isCategoryAvailableInLocation(service, currentCity, workers);
+  const cleanCity = (currentCity || 'your area').split(',')[0].trim();
 
   return (
     <div className="w-full min-h-screen bg-white pb-28 text-slate-900 select-none">
@@ -76,15 +87,32 @@ export function ServiceDetailScreen({ service, onBack, onBookNow, onOpenChat }) 
         {/* Pricing & Rating Info Row */}
         <div className="flex items-center justify-between pt-1">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-xs sm:text-sm font-black shadow-xs">
-              <span>Flat ₹99</span>
-            </div>
-            <span className="text-[11px] font-bold text-slate-500 block mt-1 leading-tight">
-              Visiting & Doorstep Inspection
-            </span>
-            <span className="text-[10px] font-semibold text-emerald-600 block mt-0.5">
-              (Technician assigned upon booking)
-            </span>
+            {isLive ? (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-xs sm:text-sm font-black shadow-xs">
+                  <span>Flat ₹99</span>
+                </div>
+                <span className="text-[11px] font-bold text-slate-500 block mt-1 leading-tight">
+                  Visiting & Doorstep Inspection
+                </span>
+                <span className="text-[10px] font-semibold text-emerald-600 block mt-0.5">
+                  (Technician assigned upon booking)
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-white text-xs sm:text-sm font-black shadow-xs">
+                  <Clock className="w-3.5 h-3.5 text-white" />
+                  <span>Coming Soon</span>
+                </div>
+                <span className="text-[11px] font-bold text-slate-500 block mt-1 leading-tight">
+                  Area: {cleanCity}
+                </span>
+                <span className="text-[10px] font-semibold text-amber-600 block mt-0.5">
+                  (Awaiting verified technician in this area)
+                </span>
+              </>
+            )}
           </div>
 
           <div className="text-right">
@@ -221,14 +249,34 @@ export function ServiceDetailScreen({ service, onBack, onBookNow, onOpenChat }) 
 
       </div>
 
-      {/* 4. Floating Full-Width Gradient "Book Now" Button */}
-      <div className="fixed inset-x-0 bottom-0 p-5 bg-gradient-to-t from-white via-white/95 to-transparent z-40 max-w-md mx-auto">
-        <button
-          onClick={() => onBookNow(service)}
-          className="w-full py-4 px-6 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-extrabold text-base tracking-tight shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] hover:opacity-95 active:scale-[0.99] transition flex items-center justify-center gap-2"
-        >
-          <span>Book Now</span>
-        </button>
+      {/* 4. Floating Action Footer */}
+      <div className="fixed inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent z-40 max-w-md mx-auto">
+        {isLive ? (
+          <button
+            onClick={() => onBookNow(service)}
+            className="w-full py-4 px-6 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white font-extrabold text-base tracking-tight shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] hover:opacity-95 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Book Now</span>
+          </button>
+        ) : (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 shadow-md flex items-center justify-between gap-3 animate-fade-in">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-amber-800 font-extrabold text-xs">
+                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="truncate">Coming Soon to {cleanCity}!</span>
+              </div>
+              <p className="text-[11px] text-amber-700/90 font-medium leading-tight mt-0.5">
+                We are onboarding verified technicians in {cleanCity} soon.
+              </p>
+            </div>
+            <button
+              onClick={() => onBookNow(service)}
+              className="py-2.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs transition cursor-pointer shrink-0 shadow-xs"
+            >
+              Notify Me
+            </button>
+          </div>
+        )}
       </div>
 
     </div>

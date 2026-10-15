@@ -18,7 +18,7 @@ import {
   Award,
   Maximize2
 } from 'lucide-react';
-import { subscribeWorkers, subscribePortfolios } from '../data/bookingService';
+import { subscribeWorkers, subscribePortfolios, getWorkersForCategoryInLocation } from '../data/bookingService';
 
 export function SkilledProfessionalSelectionScreen({ 
   category, 
@@ -52,43 +52,8 @@ export function SkilledProfessionalSelectionScreen({
     };
   }, []);
 
-  // Filter workers relevant to this specialized category and current location
-  const relevantWorkers = allWorkers.filter((worker) => {
-    if (!worker) return false;
-    const isApproved = worker.status === 'approved' || worker.workerStatus === 'approved';
-    if (!isApproved) return false;
-
-    // Location check
-    const normCity = cleanCity.toLowerCase();
-    const wCity = (worker.city || worker.address || '').toLowerCase();
-    const matchCity = !normCity || wCity.includes(normCity) || normCity.includes(wCity);
-    if (!matchCity) return false;
-
-    const catLower = categoryName.toLowerCase();
-    const wSkill = (worker.skill || '').toLowerCase();
-    const wCatId = (worker.categoryId || '').toLowerCase();
-    const wCatName = (worker.categoryName || '').toLowerCase();
-
-    // Check direct category ID or skill keywords
-    if (categoryId && wCatId && (wCatId === categoryId.toLowerCase() || categoryId.toLowerCase().includes(wCatId))) {
-      return true;
-    }
-
-    if (catLower.includes('mehndi') || catLower.includes('henna')) {
-      return wSkill.includes('mehndi') || wSkill.includes('henna') || wCatName.includes('mehndi');
-    }
-    if (catLower.includes('beauty') || catLower.includes('makeup') || catLower.includes('salon')) {
-      return wSkill.includes('beauty') || wSkill.includes('makeup') || wSkill.includes('salon') || wCatName.includes('beauty');
-    }
-    if (catLower.includes('paint') || catLower.includes('wall')) {
-      return wSkill.includes('paint') || wSkill.includes('wall') || wCatName.includes('paint');
-    }
-    if (catLower.includes('carpenter') || catLower.includes('wood') || catLower.includes('modular')) {
-      return wSkill.includes('carpenter') || wSkill.includes('wood') || wSkill.includes('kitchen') || wCatName.includes('carpenter');
-    }
-
-    return wSkill.includes(catLower) || catLower.includes(wSkill);
-  });
+  // Filter genuine Admin-approved workers registered and available for this specialized category and current location
+  const relevantWorkers = getWorkersForCategoryInLocation(category, currentCity, allWorkers);
 
   // Apply sub-filters
   const filteredWorkers = relevantWorkers.filter((w) => {

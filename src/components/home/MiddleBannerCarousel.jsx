@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Sparkles, ShieldCheck, Clock } from 'lucide-react';
+import { isCategoryAvailableInLocation } from '../../data/bookingService';
 
 /**
  * Image configurations:
@@ -40,12 +41,17 @@ function BannerHeroImage({ primarySrc, directSrc, fallbackSrc, alt }) {
 
 export function MiddleBannerCarousel({
   services = [],
+  currentLocation = 'Melattur, Kerala',
+  workers = [],
   onSelectService,
   onBookService
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const scrollRef = useRef(null);
   const isInteracting = useRef(false);
+
+  const isAcLive = isCategoryAvailableInLocation({ id: 'cat_ac', name: 'AC Service' }, currentLocation, workers);
+  const isCocoLive = isCategoryAvailableInLocation({ id: 'cat_coconut_tree', name: 'Coconut Tree Climbing' }, currentLocation, workers);
 
   const handleBookAC = () => {
     const acService = (services || []).find(s => {
@@ -182,9 +188,13 @@ export function MiddleBannerCarousel({
               <button
                 type="button"
                 onClick={handleBookAC}
-                className="mt-3 text-[11px] px-4 py-1.5 rounded-full bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white font-bold shadow-sm shadow-[#4B6EF5]/25 active:scale-95 transition cursor-pointer inline-flex items-center gap-1.5"
+                className={`mt-3 text-[11px] px-4 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition cursor-pointer inline-flex items-center gap-1.5 ${
+                  isAcLive
+                    ? 'bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white shadow-[#4B6EF5]/25'
+                    : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25'
+                }`}
               >
-                <span>Book Now</span>
+                <span>{isAcLive ? 'Book Now' : 'Coming Soon'}</span>
                 <ArrowRight className="w-3 h-3 text-white stroke-[2.5]" />
               </button>
             </div>
@@ -228,13 +238,17 @@ export function MiddleBannerCarousel({
                 Machine climbing, cleaning & harvesting
               </p>
 
-              {/* Prominent Orange "Book Now" CTA Button */}
+              {/* Prominent CTA Button */}
               <button
                 type="button"
                 onClick={handleBookCoconutClimber}
-                className="mt-3 text-[11px] px-4 py-1.5 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow-sm shadow-orange-500/30 active:scale-95 transition cursor-pointer inline-flex items-center gap-1.5"
+                className={`mt-3 text-[11px] px-4 py-1.5 rounded-full font-black shadow-sm active:scale-95 transition cursor-pointer inline-flex items-center gap-1.5 ${
+                  isCocoLive
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/30'
+                    : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30'
+                }`}
               >
-                <span>Book Now</span>
+                <span>{isCocoLive ? 'Book Now' : 'Coming Soon'}</span>
                 <ArrowRight className="w-3 h-3 text-white stroke-[2.5]" />
               </button>
             </div>

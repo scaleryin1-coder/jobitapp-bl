@@ -50,6 +50,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
   const isPortfolioTrade = Boolean(service && isPortfolioCategory(service));
   const hasPreselectedWorker = isPortfolioTrade && Boolean(service?.workerId);
 
+  // Check if at least one Admin-approved worker is available in this area
+  const availableWorkers = getWorkersForCategoryInLocation(service, effectiveCity, workers);
+  const isAvailable = availableWorkers.length > 0;
+
   useEffect(() => {
     if (service) {
       const list = service.subCategories && service.subCategories.length > 0
@@ -160,7 +164,45 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
           </button>
         </div>
 
-        {confirmedBookingData ? (
+        {!isAvailable ? (
+          /* ========================================================= */
+          /* UNIFIED COMING SOON TO YOUR AREA STATE                    */
+          /* ========================================================= */
+          <div className="py-8 text-center space-y-4 animate-scale-up">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center text-3xl shadow-sm border border-amber-200">
+              🛠️
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold mb-2">
+                <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                <span>{cleanCity}</span>
+              </div>
+              <h4 className="text-xl font-black text-slate-900 tracking-tight">
+                Coming Soon to Your Area!
+              </h4>
+              <p className="text-xs text-slate-600 font-medium mt-1 max-w-xs mx-auto leading-relaxed">
+                We are currently onboarding and verifying top certified technicians in <strong className="text-slate-900">{cleanCity}</strong>.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-sky-50 text-left text-xs space-y-1 text-slate-600 border border-sky-100">
+              <div className="flex items-center gap-1.5 text-sky-800 font-extrabold text-[11px]">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                <span>JOBit Safety & Availability Standard</span>
+              </div>
+              <p className="text-[11px]">
+                Direct booking unlocks automatically as soon as an Admin-approved technician is verified in your area.
+              </p>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full py-3 px-4 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black transition cursor-pointer shadow-sm"
+            >
+              Explore Other Services
+            </button>
+          </div>
+        ) : confirmedBookingData ? (
           /* ========================================================= */
           /* BOOKING CONFIRMED SCREEN - REQUEST DISPATCHED             */
           /* ========================================================= */

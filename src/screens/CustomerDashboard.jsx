@@ -235,6 +235,8 @@ export function CustomerDashboard({
       {/* Section 3 (Middle Banner): Auto-scroll carousel (Slide 1: AC Service, Slide 2: Coconut Tree Climbing) */}
       <MiddleBannerCarousel
         services={services}
+        currentLocation={locationName}
+        workers={workers}
         onSelectService={(serv) => onSelectService?.(serv)}
         onBookService={(serv) => onBookService?.(serv)}
       />
@@ -242,6 +244,8 @@ export function CustomerDashboard({
       {/* Section 4: Popular Services / Top Rated Technicians list */}
       <PopularServiceSection
         services={services}
+        currentLocation={locationName}
+        workers={workers}
         onSelectService={(serv) => onSelectService?.(serv)}
         onBookService={(serv) => onBookService?.(serv)}
         onOpenAll={() => onOpenSearch?.()}

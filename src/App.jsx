@@ -476,11 +476,19 @@ function MainLayout() {
           {currentScreen === 'detail' && selectedService && (
             <ServiceDetailScreen
               service={selectedService}
+              currentCity={currentCity}
+              workers={workers}
               onBack={() => {
                 setSelectedService(null);
                 setCurrentScreen('main');
               }}
-              onBookNow={() => setIsBookingModalOpen(true)}
+              onBookNow={() => {
+                if (!isCategoryAvailableInLocation(selectedService, currentCity, workers)) {
+                  setComingSoonCategory(selectedService);
+                  return;
+                }
+                setIsBookingModalOpen(true);
+              }}
               onOpenChat={() => {
                 setActiveChatBooking({
                   id: 'bk_' + selectedService.id,

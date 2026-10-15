@@ -51,6 +51,7 @@ import {
   approveWorkerApplication,
   rejectWorkerApplication,
   subscribeCustomers,
+  adminAddWorker,
   adminDeleteWorker,
   adminAssignJob, 
   updateBookingStatus, 
@@ -118,6 +119,18 @@ export function AdminScreen({ onBack, onLogout }) {
 
   // Modals for Worker Assignment
   const [assignModalBooking, setAssignModalBooking] = useState(null);
+
+  // Modals for Worker Management
+  const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
+  const [workerForm, setWorkerForm] = useState({
+    name: '',
+    phone: '',
+    category: 'Electrician',
+    city: 'Melattur, Kerala',
+    experience: '5 years',
+    baseRate: '350',
+    avatar: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=400&q=80'
+  });
 
   // Modals for Services Management
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
@@ -239,6 +252,27 @@ export function AdminScreen({ onBack, onLogout }) {
     if (window.confirm(`Are you sure you want to remove verified worker "${name}"?`)) {
       await adminDeleteWorker(workerId);
     }
+  };
+
+  const handleCreateWorker = async (e) => {
+    e.preventDefault();
+    if (!workerForm.name.trim() || !workerForm.phone.trim()) {
+      alert('Please enter worker name and phone number');
+      return;
+    }
+    await adminAddWorker(workerForm);
+    setIsAddWorkerOpen(false);
+    setApprovalSuccessMsg(`Registered & Approved ${workerForm.name} for ${workerForm.category} in ${workerForm.city}! Service category is now automatically live in that area.`);
+    setWorkerForm({
+      name: '',
+      phone: '',
+      category: 'Electrician',
+      city: 'Melattur, Kerala',
+      experience: '5 years',
+      baseRate: '350',
+      avatar: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=400&q=80'
+    });
+    setTimeout(() => setApprovalSuccessMsg(''), 4000);
   };
 
   const handleAdvanceBookingStatus = async (bookingId, currentStatus) => {
@@ -913,15 +947,25 @@ export function AdminScreen({ onBack, onLogout }) {
           {/* VERIFIED TECHNICIANS SUB-VIEW */}
           {userWorkerSubTab === 'workers' && (
             <div className="space-y-3">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  value={workerSearch}
-                  onChange={(e) => setWorkerSearch(e.target.value)}
-                  placeholder="Search technicians by name, trade or phone..."
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
-                />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={workerSearch}
+                    onChange={(e) => setWorkerSearch(e.target.value)}
+                    placeholder="Search technicians by name, trade or phone..."
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddWorkerOpen(true)}
+                  className="py-2 px-3 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold flex items-center gap-1 shadow-sm active:scale-95 transition cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span>Add Technician</span>
+                </button>
               </div>
 
               <div className="space-y-2.5">
@@ -3013,6 +3057,140 @@ export function AdminScreen({ onBack, onLogout }) {
           booking={selectedChatAuditBooking}
           onClose={() => setSelectedChatAuditBooking(null)}
         />
+      )}
+
+      {/* ========================================================= */}
+      {/* 15. MODAL: ADD & APPROVE NEW TECHNICIAN                  */}
+      {/* ========================================================= */}
+      {isAddWorkerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none">
+          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h4 className="text-sm font-black text-slate-900">Add & Approve Technician</h4>
+                <p className="text-[11px] text-slate-500 font-medium">Instantly activates this category for customer bookings in their area</p>
+              </div>
+              <button
+                onClick={() => setIsAddWorkerOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateWorker} className="space-y-3">
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={workerForm.name}
+                  onChange={(e) => setWorkerForm({ ...workerForm, name: e.target.value })}
+                  placeholder="e.g. Suresh Kumar"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">Mobile Phone Number</label>
+                <input
+                  type="tel"
+                  required
+                  value={workerForm.phone}
+                  onChange={(e) => setWorkerForm({ ...workerForm, phone: e.target.value })}
+                  placeholder="e.g. 9847123456"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">Trade Category</label>
+                  <select
+                    value={workerForm.category}
+                    onChange={(e) => setWorkerForm({ ...workerForm, category: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">Service Area / City</label>
+                  <select
+                    value={workerForm.city}
+                    onChange={(e) => setWorkerForm({ ...workerForm, city: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                  >
+                    <option value="Melattur, Kerala">Melattur, Kerala</option>
+                    <option value="Pattikkad, Kerala">Pattikkad, Kerala</option>
+                    <option value="Pandikkad, Kerala">Pandikkad, Kerala</option>
+                    <option value="Perinthalmanna, Kerala">Perinthalmanna, Kerala</option>
+                    <option value="Manjeri, Kerala">Manjeri, Kerala</option>
+                    <option value="Malappuram, Kerala">Malappuram, Kerala</option>
+                    <option value="Kozhikode, Kerala">Kozhikode, Kerala</option>
+                    <option value="Kochi, Kerala">Kochi, Kerala</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">Experience</label>
+                  <input
+                    type="text"
+                    value={workerForm.experience}
+                    onChange={(e) => setWorkerForm({ ...workerForm, experience: e.target.value })}
+                    placeholder="e.g. 5 years"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-extrabold text-slate-700 block mb-1">Base Rate (₹)</label>
+                  <input
+                    type="number"
+                    value={workerForm.baseRate}
+                    onChange={(e) => setWorkerForm({ ...workerForm, baseRate: e.target.value })}
+                    placeholder="e.g. 350"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100 text-[11px] text-sky-800 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                  <span>Automated Dynamic Availability</span>
+                </div>
+                <p className="text-slate-600 leading-snug">
+                  Adding this technician marks them as <strong>is_approved: true</strong>. The <strong>{workerForm.category}</strong> category will automatically unlock and become bookable for all customers in <strong>{workerForm.city}</strong>.
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddWorkerOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black shadow-sm active:scale-95 transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>Approve & Save</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>
