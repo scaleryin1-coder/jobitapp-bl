@@ -11,9 +11,9 @@ const AC_TECHNICIAN_HERO_IMAGE = 'https://kommodo.ai/i/6x5oOPsxxTObOhMuPqNT';
 const AC_TECHNICIAN_HERO_DIRECT = 'https://plain-apac-prod-public.komododecks.com/202610/13/6x5oOPsxxTObOhMuPqNT/image.png';
 const AC_TECHNICIAN_HERO_FALLBACK = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80';
 
-const COCONUT_HERO_PRIMARY = '/assets/images/coconut_climber.jpg';
-const COCONUT_HERO_DIRECT = 'https://plain-apac-prod-public.komododecks.com/202610/13/Wh1T3p3vwgl9o8sLMgZE/image.png';
-const COCONUT_HERO_FALLBACK = 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=800&q=80';
+const COCONUT_HERO_PRIMARY = '/src/assets/images/coconut_tree_climber_1792078093859.jpg';
+const COCONUT_HERO_DIRECT = '/assets/images/coconut_climber.jpg';
+const COCONUT_HERO_FALLBACK = '/src/assets/images/coconut_tree_climber_1792078093859.jpg';
 
 function BannerHeroImage({ primarySrc, directSrc, fallbackSrc, alt }) {
   const [currentSrc, setCurrentSrc] = useState(primarySrc);
@@ -31,6 +31,7 @@ function BannerHeroImage({ primarySrc, directSrc, fallbackSrc, alt }) {
       src={currentSrc}
       onError={handleError}
       alt={alt}
+      referrerPolicy="no-referrer"
       className="w-full h-full object-cover object-center"
       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       loading="eager"
@@ -84,7 +85,7 @@ export function MiddleBannerCarousel({
       price: 650,
       advancePaid: 99,
       remainingDue: 551,
-      heroImage: '/assets/images/coconut_climber.jpg',
+      heroImage: '/src/assets/images/coconut_tree_climber_1792078093859.jpg',
       subCategories: [
         'Machine Coconut Tree Climbing & Harvesting',
         'Coconut Crown Cleaning & Leaf Trimming',
