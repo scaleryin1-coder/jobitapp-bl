@@ -53,6 +53,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [declinedJobIds, setDeclinedJobIds] = useState([]);
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
+  const [completedJobSummary, setCompletedJobSummary] = useState(null);
   
   // Portfolio / Work Albums State
   const [portfolios, setPortfolios] = useState([]);
@@ -176,6 +177,8 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         completedAt: new Date().toISOString(),
         paymentStatus: 'paid_cash'
       });
+      // Requirement: Show final billing/payment summary to the worker strictly after/at the time of marking the job as "Completed"
+      setCompletedJobSummary(booking);
     }
   };
 
@@ -551,13 +554,13 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         </div>
       </div>
 
-      {/* 2. Operations Metrics Bar */}
+      {/* 2. Operations Metrics Bar - Strictly initialized to 0 for newly registered/logged-in workers */}
       <div className="px-5 py-3">
         <div className="grid grid-cols-3 gap-2.5">
           <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs text-center">
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Earnings</p>
             <p className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
-              ₹{totalEarnings || 750}
+              ₹{totalEarnings}
             </p>
           </div>
           <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs text-center">
@@ -569,7 +572,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
           <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs text-center">
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Completed</p>
             <p className="text-sm sm:text-base font-extrabold text-emerald-600 mt-0.5">
-              {myCompletedJobs.length + 12}
+              {myCompletedJobs.length}
             </p>
           </div>
         </div>
@@ -594,11 +597,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               </span>
             </div>
 
-            {/* Top pending broadcast item */}
+            {/* Top pending broadcast item - Essential job details only, no pricing/billing breakdowns */}
             {incomingBroadcastJobs.slice(0, 1).map((job) => (
               <div key={job.id} className="pt-3 space-y-2.5">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 text-sky-100 px-2.5 py-0.5 rounded-full inline-block mb-1">
+                      {job.categoryName || 'Home Service'}
+                    </span>
                     <h4 className="text-base font-extrabold leading-tight text-white">
                       {job.serviceTitle}
                     </h4>
@@ -606,35 +612,17 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       Customer: {job.customerName || 'Valued Client'}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-amber-300 leading-none">
-                      ₹{job.workerCharge || 500}
-                    </p>
-                    <p className="text-[10px] text-white/90 font-bold mt-0.5">Your Net Earning</p>
-                  </div>
+                  {/* Status label if advance payment was collected online */}
+                  {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/30 border border-emerald-300/40 text-emerald-100 text-[11px] font-black shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>Advance ₹99 Collected</span>
+                    </span>
+                  )}
                 </div>
 
-                {/* Worker Financial Split Details */}
-                <div className="bg-white/15 rounded-xl p-2.5 text-[11px] text-white space-y-1">
-                  <div className="flex justify-between font-medium">
-                    <span className="text-sky-100">Customer Total Bill:</span>
-                    <span className="font-bold text-white">₹{job.totalServiceCharge || job.price || 650}</span>
-                  </div>
-                  <div className="flex justify-between font-medium">
-                    <span className="text-sky-100">Platform Fee (JOBit Share):</span>
-                    <span className="text-amber-200 font-semibold">-₹{job.platformFee || 150}</span>
-                  </div>
-                  <div className="flex justify-between font-medium">
-                    <span className="text-sky-100">Advance Inspection Deduction:</span>
-                    <span className="text-amber-200 font-semibold">-₹{job.advancePaid || 99}</span>
-                  </div>
-                  <div className="pt-1 border-t border-white/20 flex justify-between font-bold text-amber-300">
-                    <span>Balance to Collect from Customer:</span>
-                    <span>₹{job.remainingDue || 551}</span>
-                  </div>
-                </div>
-
-                <div className="bg-white/10 rounded-xl p-2.5 text-xs text-white/95 space-y-1">
+                {/* Essential job requirement details needed to perform the work */}
+                <div className="bg-white/10 rounded-xl p-2.5 text-xs text-white/95 space-y-1.5">
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="flex items-center gap-1.5 truncate">
                       <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0" />
@@ -655,7 +643,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     <span>{job.dateTime}</span>
                   </div>
                   {job.note && (
-                    <p className="text-[11px] text-sky-100 italic">"{job.note}"</p>
+                    <p className="text-[11px] text-sky-100 italic pt-0.5 border-t border-white/10">"{job.note}"</p>
                   )}
                 </div>
 
@@ -772,32 +760,13 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     </h3>
                   </div>
 
-                  {/* Internal Financial Split Calculation for Worker */}
-                  <div className="p-3.5 bg-sky-50/70 rounded-2xl border border-sky-100/90 text-xs space-y-1.5">
-                    <div className="flex items-center justify-between text-slate-600 font-semibold">
-                      <span>Total Collected from Customer:</span>
-                      <span className="font-extrabold text-slate-900">₹{job.totalServiceCharge || job.price || 650}</span>
+                  {/* Advance payment status label if collected online - Full billing hidden until completed */}
+                  {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-black">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Advance ₹99 Collected</span>
                     </div>
-                    <div className="flex items-center justify-between text-slate-500 font-medium">
-                      <span>Advance Deduction (Inspection Fee):</span>
-                      <span className="font-semibold text-amber-700">-₹{job.advancePaid || 99}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-800 font-bold">
-                      <span>Balance Payable by Customer:</span>
-                      <span className="font-black text-[#0EA5E0]">₹{job.remainingDue || 551}</span>
-                    </div>
-                    <div className="pt-1.5 border-t border-sky-200/80 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-emerald-800">Worker Charge (Your Share):</span>
-                        <span className="text-[10px] text-slate-500 font-bold">
-                          (Platform Fee: ₹{job.platformFee || 150})
-                        </span>
-                      </div>
-                      <span className="text-sm font-black text-emerald-600">
-                        ₹{job.workerCharge || 500}
-                      </span>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Customer Card */}
                   <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
@@ -910,33 +879,45 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               <div key={job.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full">
-                    {job.categoryName}
+                    {job.categoryName || 'Home Service'}
                   </span>
-                  <div className="text-right">
-                    <span className="text-xs font-black text-emerald-600 block">Net: ₹{job.workerCharge || 500}</span>
-                    <span className="text-[10px] text-slate-400 font-semibold block">Bill: ₹{job.totalServiceCharge || job.price || 650}</span>
-                  </div>
+                  {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>Advance ₹99 Collected</span>
+                    </span>
+                  )}
                 </div>
 
                 <div>
                   <h4 className="text-sm font-extrabold text-slate-900">{job.serviceTitle}</h4>
-                  <p className="text-xs text-slate-500 font-medium">{job.address}</p>
                 </div>
-
-                {/* Worker Financial Split Info */}
-                <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Platform Commission (JOBit):</span>
-                    <span className="font-semibold text-slate-700">₹{job.platformFee || 150}</span>
+                {/* Essential Job Requirement Details Needed to Perform Work */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-700 space-y-1.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span className="truncate font-semibold text-slate-800">{job.address}</span>
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address || 'Melattur, Kerala')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold shrink-0 transition"
+                      title="Route in Google Maps"
+                    >
+                      Maps ➔
+                    </a>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Advance Inspection Paid:</span>
-                    <span className="font-semibold text-amber-700">-₹{job.advancePaid || 99}</span>
+                  <div className="flex items-center gap-1.5 text-slate-600">
+                    <Clock className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
+                    <span>{job.dateTime}</span>
                   </div>
-                  <div className="flex justify-between font-bold text-slate-900 pt-0.5 border-t border-slate-200">
-                    <span>Balance to Collect at Doorstep:</span>
-                    <span className="text-[#0EA5E0]">₹{job.remainingDue || 551}</span>
-                  </div>
+                  {job.note && (
+                    <p className="text-[11px] text-slate-500 bg-white p-2 rounded-xl border border-slate-100 italic">
+                      "{job.note}"
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
@@ -972,20 +953,42 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         {activeTab === 'history' && (
           <div className="space-y-3">
             {myCompletedJobs.map((job) => (
-              <div key={job.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    COMPLETED & PAID
+              <div key={job.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>COMPLETED & PAID</span>
                   </span>
-                  <h4 className="text-xs font-extrabold text-slate-900 mt-1">{job.serviceTitle}</h4>
-                  <p className="text-[11px] text-slate-400">{job.customerName} • {job.address?.slice(0, 25)}...</p>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                    Customer Bill: ₹{job.totalServiceCharge || job.price || 650} • Platform Fee: ₹{job.platformFee || 150}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-emerald-600">+₹{job.workerCharge || 500}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">Net Credited</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-emerald-600">+₹{job.workerCharge || 500}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">Net Credited</p>
+
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-900">{job.serviceTitle}</h4>
+                  <p className="text-[11px] text-slate-500 font-medium">{job.customerName} • {job.address}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{job.dateTime}</p>
+                </div>
+
+                {/* Final Billing & Payment Summary shown strictly upon completion */}
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Customer Total Bill:</span>
+                    <span className="font-bold text-slate-900">₹{job.totalServiceCharge || job.price || 650}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Advance Collected Online:</span>
+                    <span className="font-semibold text-emerald-600">-₹{job.advancePaid || 99}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Platform Commission (JOBit):</span>
+                    <span className="font-semibold text-amber-700">-₹{job.platformFee || 150}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-slate-200 font-bold text-slate-900">
+                    <span>Cash Collected at Doorstep:</span>
+                    <span className="text-[#0EA5E0]">₹{job.remainingDue || 551}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1392,6 +1395,63 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Final Billing / Payment Summary Modal (Strictly shown at the time of marking the job as Completed) */}
+      {completedJobSummary && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl space-y-4 border border-slate-100 animate-scale-up">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center ring-8 ring-emerald-50/50">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
+                Job Completed Successfully
+              </span>
+              <h3 className="text-lg font-black text-slate-900 leading-tight">
+                Final Billing Summary
+              </h3>
+              <p className="text-xs text-slate-500 font-medium truncate">
+                {completedJobSummary.serviceTitle}
+              </p>
+            </div>
+
+            {/* Final Billing & Payment Breakdown */}
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-xs space-y-2">
+              <div className="flex justify-between items-center text-slate-600 font-medium">
+                <span>Customer Total Bill:</span>
+                <span className="font-bold text-slate-900">₹{completedJobSummary.totalServiceCharge || completedJobSummary.price || 650}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600 font-medium">
+                <span>Advance Collected Online:</span>
+                <span className="font-bold text-emerald-600">-₹{completedJobSummary.advancePaid || 99}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600 font-medium">
+                <span>Platform Fee (JOBit Share):</span>
+                <span className="font-bold text-amber-700">-₹{completedJobSummary.platformFee || 150}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-800 font-bold pt-1.5 border-t border-slate-200">
+                <span>Cash Collected at Doorstep:</span>
+                <span className="font-black text-[#0EA5E0]">₹{completedJobSummary.remainingDue || 551}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200 text-sm">
+                <span className="font-black text-emerald-800">Your Net Share Credited:</span>
+                <span className="font-black text-emerald-600 text-base">₹{completedJobSummary.workerCharge || 500}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setCompletedJobSummary(null);
+                setActiveTab('history');
+              }}
+              className="w-full py-3.5 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Done • View in History</span>
+              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+            </button>
           </div>
         </div>
       )}
