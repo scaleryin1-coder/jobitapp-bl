@@ -12,7 +12,8 @@ import {
   Phone, 
   User, 
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
@@ -23,17 +24,27 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
   const { currentUser } = useAuth() || {};
   const effectiveCity = currentCity || localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
   const cleanCity = effectiveCity.split(',')[0].trim();
-  const [address, setAddress] = useState(`Main Road, ${effectiveCity}`);
-  const [date, setDate] = useState(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  });
-  const [timeSlot, setTimeSlot] = useState('10:00 AM - 12:00 PM');
+  // Requirements: Remove pre-filled address, date, and timeSlot. All must be explicitly chosen.
+  const [address, setAddress] = useState('');
+  const [date, setDate] = useState('');
+  const [timeSlot, setTimeSlot] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
+
+  // Validation state tracking
+  const [touched, setTouched] = useState({
+    address: false,
+    date: false,
+    timeSlot: false
+  });
+
+  const isAddressValid = Boolean(address && address.trim().length > 0);
+  const isDateValid = Boolean(date && date.trim().length > 0);
+  const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0);
+  const isFormValid = isAddressValid && isDateValid && isTimeSlotValid;
+  const todayString = new Date().toISOString().split('T')[0];
 
   // Derive sub-categories for this service/category
   const availableSubCategories = service
@@ -65,17 +76,16 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     }
   }, [service]);
 
-  useEffect(() => {
-    if (effectiveCity) {
-      setAddress(`Main Road, ${effectiveCity}`);
-    }
-  }, [effectiveCity]);
-
-  // Clean state when modal opens or closes
+  // Clean state when modal opens or closes - ensure fields remain empty for new bookings
   useEffect(() => {
     if (!isOpen) {
       setConfirmedBookingData(null);
       setLoading(false);
+      setAddress('');
+      setDate('');
+      setTimeSlot('');
+      setNote('');
+      setTouched({ address: false, date: false, timeSlot: false });
     }
   }, [isOpen]);
 
@@ -83,6 +93,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
 
   const handleConfirm = async (e) => {
     e.preventDefault();
+    if (!isFormValid) {
+      setTouched({ address: true, date: true, timeSlot: true });
+      return;
+    }
     if (loading) return;
     setLoading(true);
 
@@ -354,64 +368,123 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
               </div>
             )}
 
-            {/* Address Input */}
+            {/* Address Input - Strictly required with no pre-fill */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                <span>Service Address</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#4B6EF5]" />
+                  <span>Service Address <span className="text-rose-500">*</span></span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-semibold">{cleanCity}</span>
+              </div>
               <textarea
                 rows="2"
                 required
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white"
-                placeholder="Enter complete street, house no., and landmark"
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
+                className={`w-full p-3 bg-[#F8FAFC] border rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none transition-colors ${
+                  touched.address && !isAddressValid
+                    ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                    : 'border-slate-200 focus:border-[#4B6EF5] focus:bg-white'
+                }`}
+                placeholder="Enter complete street, house no., building name, and landmark"
               />
+              {touched.address && !isAddressValid && (
+                <p className="text-[11px] font-bold text-rose-500 mt-1 flex items-center gap-1 animate-fade-in">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>Please enter your service address</span>
+                </p>
+              )}
             </div>
 
-            {/* Date Picker */}
+            {/* Date Picker - Strictly required with no pre-selection */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                <span>Preferred Date</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#4B6EF5]" />
+                  <span>Preferred Date <span className="text-rose-500">*</span></span>
+                </label>
+                {!date && (
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                    Required
+                  </span>
+                )}
+              </div>
               <input
                 type="date"
                 required
+                min={todayString}
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] focus:bg-white"
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (!touched.date) setTouched((prev) => ({ ...prev, date: true }));
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, date: true }))}
+                className={`w-full p-3 bg-[#F8FAFC] border rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none transition-colors ${
+                  touched.date && !isDateValid
+                    ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                    : 'border-slate-200 focus:border-[#4B6EF5] focus:bg-white'
+                }`}
               />
+              {touched.date && !isDateValid && (
+                <p className="text-[11px] font-bold text-rose-500 mt-1 flex items-center gap-1 animate-fade-in">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>Please select a service date</span>
+                </p>
+              )}
             </div>
 
-            {/* Time Slot Selector */}
+            {/* Time Slot Selector - Strictly required with no pre-selection */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                <span>Time Slot</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#4B6EF5]" />
+                  <span>Time Slot <span className="text-rose-500">*</span></span>
+                </label>
+                {!timeSlot && (
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                    Required
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   '09:00 AM - 11:00 AM',
                   '11:00 AM - 01:00 PM',
                   '02:00 PM - 04:00 PM',
                   '04:00 PM - 06:00 PM'
-                ].map((slot) => (
-                  <button
-                    type="button"
-                    key={slot}
-                    onClick={() => setTimeSlot(slot)}
-                    className={`p-2.5 rounded-2xl text-[11px] font-bold border transition cursor-pointer ${
-                      timeSlot === slot
-                        ? 'bg-[#EAF0FF] border-[#4B6EF5] text-[#4B6EF5]'
-                        : 'bg-[#F8FAFC] border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
+                ].map((slot) => {
+                  const isSelected = timeSlot === slot;
+                  return (
+                    <button
+                      type="button"
+                      key={slot}
+                      onClick={() => {
+                        setTimeSlot(slot);
+                        if (!touched.timeSlot) setTouched((prev) => ({ ...prev, timeSlot: true }));
+                      }}
+                      className={`p-2.5 rounded-2xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-[#EAF0FF] border-[#4B6EF5] text-[#4B6EF5] shadow-xs ring-1 ring-[#4B6EF5]'
+                          : 'bg-[#F8FAFC] border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>{slot}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3] text-[#4B6EF5]" />}
+                    </button>
+                  );
+                })}
               </div>
+              {touched.timeSlot && !isTimeSlotValid && (
+                <p className="text-[11px] font-bold text-rose-500 mt-1 flex items-center gap-1 animate-fade-in">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>Please select a preferred time slot</span>
+                </p>
+              )}
             </div>
 
             {/* Additional Note */}
@@ -448,13 +521,50 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Clear Validation Error Notification if any field is missing */}
+            {!isFormValid && (touched.address || touched.date || touched.timeSlot) && (
+              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1 animate-fade-in">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Required fields missing before booking:</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {!isAddressValid && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px]">
+                      • Address
+                    </span>
+                  )}
+                  {!isDateValid && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px]">
+                      • Service Date
+                    </span>
+                  )}
+                  {!isTimeSlotValid && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px]">
+                      • Time Slot
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Submit Button - Disabled until user explicitly selects Address, Date, and Time Slot */}
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-4 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-extrabold text-sm shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] transition cursor-pointer"
+              disabled={!isFormValid || loading}
+              className={`w-full py-4 rounded-full font-extrabold text-sm transition flex items-center justify-center gap-2 ${
+                !isFormValid || loading
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60 shadow-none'
+                  : 'bg-[#0EA5E0] hover:bg-[#0284C7] text-white shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] cursor-pointer'
+              }`}
             >
-              {loading ? 'Confirming...' : 'Confirm Booking • Pay Flat ₹99'}
+              {loading ? (
+                'Confirming...'
+              ) : !isFormValid ? (
+                'Select Address, Date & Time to Book'
+              ) : (
+                'Confirm Booking • Pay Flat ₹99'
+              )}
             </button>
           </form>
         )}
