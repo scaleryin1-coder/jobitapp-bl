@@ -31,7 +31,6 @@ export function UrbanLocationPicker({
 
   const [isDragging, setIsDragging] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [gpsError, setGpsError] = useState('');
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -202,18 +201,48 @@ export function UrbanLocationPicker({
     return () => clearTimeout(timer);
   }, [isFullScreen]);
 
+  // Auto-detect GPS coordinates in the background silently on mount
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(6));
+          const lng = Number(pos.coords.longitude.toFixed(6));
+          const coords = { lat, lng };
+
+          setCurrentCoords(coords);
+          onChangeCoordinates?.(coords);
+
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([lat, lng], 17, {
+              duration: 0.9,
+              easeLinearity: 0.25
+            });
+          }
+          fetchAddressDetails(lat, lng);
+        },
+        () => {
+          // Silently default to primary service area (Melattur/Malappuram) without warnings
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 60000
+        }
+      );
+    }
+  }, [onChangeCoordinates, fetchAddressDetails]);
+
   // One-tap Current Location GPS
   const handleUseCurrentLocation = useCallback((e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
 
     if (!navigator.geolocation) {
-      setGpsError('Geolocation is not supported by your browser');
       return;
     }
 
     setIsLocating(true);
-    setGpsError('');
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -233,19 +262,14 @@ export function UrbanLocationPicker({
         }
         fetchAddressDetails(lat, lng);
       },
-      (err) => {
+      () => {
         setIsLocating(false);
-        if (err.code === 1) {
-          setGpsError('GPS permission was denied. Please allow location access or drag the map.');
-        } else {
-          setGpsError('GPS signal weak. You can drag the map to set your doorstep pin.');
-        }
-        setTimeout(() => setGpsError(''), 4000);
+        // Silently ignore without popups or warnings
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        timeout: 8000,
+        maximumAge: 30000
       }
     );
   }, [onChangeCoordinates, fetchAddressDetails]);
@@ -279,7 +303,7 @@ export function UrbanLocationPicker({
           ) : (
             <Compass className="w-4 h-4 shrink-0 text-white animate-pulse" />
           )}
-          <span>{isLocating ? 'Detecting exact GPS...' : 'Use Current Location'}</span>
+          <span>{isLocating ? 'Locating...' : 'Use Current Location'}</span>
         </button>
 
         <a
@@ -293,13 +317,6 @@ export function UrbanLocationPicker({
           <span className="hidden sm:inline">Google Maps</span>
         </a>
       </div>
-
-      {gpsError && (
-        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center gap-1.5 animate-fade-in">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-          <span>{gpsError}</span>
-        </div>
-      )}
 
       {isSearchingArea && (
         <div className="p-2 rounded-xl bg-sky-50 border border-sky-100 text-[#0284C7] text-xs font-semibold flex items-center gap-2 animate-fade-in">

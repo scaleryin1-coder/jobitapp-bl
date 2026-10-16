@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, MapPin, Compass, Search, Check, Sparkles, Navigation, Layers } from 'lucide-react';
 import { UrbanLocationPicker } from '../components/common/UrbanLocationPicker';
+
+const PRIMARY_SERVICE_COORDS = { lat: 11.0607, lng: 76.2625 }; // Melattur / Malappuram primary hub
 
 export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLocation }) {
   const [activeMode, setActiveMode] = useState('map'); // 'map' | 'list'
   const [isDetecting, setIsDetecting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
   const [manualQuery, setManualQuery] = useState('');
   
   // Baseline coordinates lookup for key service hubs
@@ -19,11 +20,71 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
     if (key.includes('kozhikode')) return { lat: 11.2588, lng: 75.7804 };
     if (key.includes('kochi')) return { lat: 9.9312, lng: 76.2673 };
     if (key.includes('bengaluru')) return { lat: 12.9716, lng: 77.5946 };
-    return { lat: 11.0607, lng: 76.2625 }; // Melattur default
+    return PRIMARY_SERVICE_COORDS;
   };
 
-  const [mapCoords, setMapCoords] = useState(() => getCityCoords(currentCity));
+  const [mapCoords, setMapCoords] = useState(PRIMARY_SERVICE_COORDS);
   const [pendingAddress, setPendingAddress] = useState(currentCity || 'Melattur, Kerala');
+
+  // 1. On opening location selector: automatically default/center cleanly to primary service area (Melattur/Malappuram)
+  // 2. Auto-detect GPS coordinates in the background silently so the pin falls near the user naturally
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Center on primary service area by default
+    const baseCoords = getCityCoords(currentCity) || PRIMARY_SERVICE_COORDS;
+    setMapCoords(baseCoords);
+    setPendingAddress(currentCity || 'Melattur, Kerala');
+
+    // Silent background auto-detection
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const coords = { 
+            lat: Number(latitude.toFixed(6)), 
+            lng: Number(longitude.toFixed(6)) 
+          };
+          setMapCoords(coords);
+
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`,
+              {
+                headers: {
+                  'Accept': 'application/json',
+                  'User-Agent': 'JobitHomeServicesWeb/1.0'
+                }
+              }
+            );
+
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || {};
+              const neighborhood = addr.suburb || addr.neighbourhood || addr.residential || addr.road || addr.hamlet;
+              const city = addr.city || addr.town || addr.county || addr.state_district || addr.state;
+              
+              const resolvedLocation = neighborhood && city 
+                ? `${neighborhood}, ${city}` 
+                : (city || `GPS: ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`);
+
+              setPendingAddress(resolvedLocation);
+            }
+          } catch {
+            // Silently ignore without popups or error warnings
+          }
+        },
+        () => {
+          // Silently default to Melattur/Malappuram without any warnings or error banners
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 60000
+        }
+      );
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -47,12 +108,10 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
 
   const handleTriggerLiveGPS = () => {
     if (!navigator.geolocation) {
-      setStatusMessage('Geolocation is not supported by your browser.');
       return;
     }
 
     setIsDetecting(true);
-    setStatusMessage('Requesting GPS permission from device...');
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -62,7 +121,6 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
           lng: Number(longitude.toFixed(6)) 
         };
         setMapCoords(coords);
-        setStatusMessage('Resolving neighborhood & city...');
 
         try {
           const res = await fetch(
@@ -107,19 +165,13 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
           onClose();
         }
       },
-      (err) => {
+      () => {
         setIsDetecting(false);
-        if (err.code === 1) {
-          setStatusMessage('Location access permission was denied in your browser.');
-        } else if (err.code === 2) {
-          setStatusMessage('Position unavailable from GPS hardware.');
-        } else {
-          setStatusMessage('Location request timed out. Please choose a city below.');
-        }
+        // Silently ignore without popups or error warnings
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 8000,
         maximumAge: 30000
       }
     );
@@ -227,14 +279,8 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
                 className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-black shadow-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99] transition cursor-pointer"
               >
                 <Compass className={`w-4 h-4 ${isDetecting ? 'animate-spin' : ''}`} />
-                <span>{isDetecting ? 'Detecting Live GPS...' : 'Use Current Location'}</span>
+                <span>{isDetecting ? 'Locating...' : 'Use Current Location'}</span>
               </button>
-
-              {statusMessage && (
-                <p className="text-[11px] text-[#0EA5E0] font-semibold text-center mt-2 bg-sky-50 py-1 px-2 rounded-xl">
-                  {statusMessage}
-                </p>
-              )}
             </div>
 
             {/* Search input */}
