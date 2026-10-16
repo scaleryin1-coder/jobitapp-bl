@@ -77,11 +77,7 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
         () => {
           // Silently default to Melattur/Malappuram without any warnings or error banners
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 60000
-        }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
   }, [isOpen]);
@@ -169,11 +165,7 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
         setIsDetecting(false);
         // Silently ignore without popups or error warnings
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 30000
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 

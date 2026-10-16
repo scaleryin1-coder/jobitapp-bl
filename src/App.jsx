@@ -228,7 +228,7 @@ function MainLayout() {
         () => {
           setCityPickerOpen(false);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
   };

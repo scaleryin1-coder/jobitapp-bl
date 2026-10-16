@@ -26,6 +26,7 @@ export function UrbanLocationPicker({
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
   const isInternalMoveRef = useRef(false);
   const geocodeTimeoutRef = useRef(null);
 
@@ -51,6 +52,9 @@ export function UrbanLocationPicker({
       if (latDiff > 0.00001 || lngDiff > 0.00001) {
         const next = { lat: targetLat, lng: targetLng };
         setCurrentCoords(next);
+        if (markerRef.current) {
+          markerRef.current.setLatLng([targetLat, targetLng]);
+        }
         if (mapInstanceRef.current && !isInternalMoveRef.current) {
           mapInstanceRef.current.flyTo([targetLat, targetLng], Math.max(mapInstanceRef.current.getZoom(), 16), { 
             duration: 0.6,
@@ -144,24 +148,64 @@ export function UrbanLocationPicker({
       minZoom: 4
     }).addTo(map);
 
-    // Event: dragging start
-    map.on('movestart', () => {
+    // Create custom draggable pin icon
+    const pinIcon = L.divIcon({
+      className: 'jobit-draggable-pin-marker',
+      html: `
+        <div style="position: relative; width: 38px; height: 46px; cursor: grab; display: flex; flex-direction: column; align-items: center; user-select: none;">
+          <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));">
+            <path d="M19 0C8.50659 0 0 8.50659 0 19C0 30.5 16.5 44.5 18.2 45.8C18.67 46.2 19.33 46.2 19.8 45.8C21.5 44.5 38 30.5 38 19C38 8.50659 29.4934 0 19 0Z" fill="#0EA5E0"/>
+            <circle cx="19" cy="18" r="8" fill="white"/>
+            <circle cx="19" cy="18" r="4.5" fill="#0EA5E0"/>
+          </svg>
+          <div style="width: 16px; height: 3px; background: rgba(15,23,42,0.35); border-radius: 9999px; margin-top: -1px; filter: blur(1px);"></div>
+        </div>
+      `,
+      iconSize: [38, 46],
+      iconAnchor: [19, 46]
+    });
+
+    // Make existing map marker/pin draggable
+    const marker = L.marker([initialLat, initialLng], {
+      draggable: true,
+      icon: pinIcon,
+      autoPan: true
+    }).addTo(map);
+
+    markerRef.current = marker;
+
+    // Handle marker dragstart
+    marker.on('dragstart', () => {
       setIsDragging(true);
       isInternalMoveRef.current = true;
     });
 
-    // Event: dragging ends - update coordinates to center of map
-    map.on('moveend', () => {
+    // Handle marker dragend: update Lat/Lng on drag end
+    marker.on('dragend', () => {
       setIsDragging(false);
-      const center = map.getCenter();
-      const newLat = Number(center.lat.toFixed(6));
-      const newLng = Number(center.lng.toFixed(6));
-      
+      const position = marker.getLatLng();
+      const newLat = Number(position.lat.toFixed(6));
+      const newLng = Number(position.lng.toFixed(6));
       const newCoords = { lat: newLat, lng: newLng };
+
       setCurrentCoords(newCoords);
       onChangeCoordinates?.(newCoords);
       fetchAddressDetails(newLat, newLng);
 
+      map.panTo(position, { animate: true, duration: 0.3 });
+
+      setTimeout(() => {
+        isInternalMoveRef.current = false;
+      }, 100);
+    });
+
+    // Event: dragging map start
+    map.on('movestart', () => {
+      isInternalMoveRef.current = true;
+    });
+
+    // Event: dragging map ends
+    map.on('moveend', () => {
       setTimeout(() => {
         isInternalMoveRef.current = false;
       }, 100);
@@ -169,7 +213,16 @@ export function UrbanLocationPicker({
 
     // Event: user taps anywhere on the map to glide pin directly there
     map.on('click', (e) => {
-      map.panTo(e.latlng, { animate: true, duration: 0.4 });
+      marker.setLatLng(e.latlng);
+      const newLat = Number(e.latlng.lat.toFixed(6));
+      const newLng = Number(e.latlng.lng.toFixed(6));
+      const newCoords = { lat: newLat, lng: newLng };
+
+      setCurrentCoords(newCoords);
+      onChangeCoordinates?.(newCoords);
+      fetchAddressDetails(newLat, newLng);
+
+      map.panTo(e.latlng, { animate: true, duration: 0.35 });
     });
 
     mapInstanceRef.current = map;
@@ -185,6 +238,10 @@ export function UrbanLocationPicker({
     return () => {
       if (geocodeTimeoutRef.current) {
         clearTimeout(geocodeTimeoutRef.current);
+      }
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
       }
       map.remove();
       mapInstanceRef.current = null;
@@ -213,6 +270,10 @@ export function UrbanLocationPicker({
           setCurrentCoords(coords);
           onChangeCoordinates?.(coords);
 
+          if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lng]);
+          }
+
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([lat, lng], 17, {
               duration: 0.9,
@@ -224,11 +285,7 @@ export function UrbanLocationPicker({
         () => {
           // Silently default to primary service area (Melattur/Malappuram) without warnings
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 60000
-        }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
   }, [onChangeCoordinates, fetchAddressDetails]);
@@ -254,6 +311,10 @@ export function UrbanLocationPicker({
         onChangeCoordinates?.(coords);
         setIsLocating(false);
 
+        if (markerRef.current) {
+          markerRef.current.setLatLng([lat, lng]);
+        }
+
         if (mapInstanceRef.current) {
           mapInstanceRef.current.flyTo([lat, lng], 17, {
             duration: 1.0,
@@ -264,13 +325,8 @@ export function UrbanLocationPicker({
       },
       () => {
         setIsLocating(false);
-        // Silently ignore without popups or warnings
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 30000
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }, [onChangeCoordinates, fetchAddressDetails]);
 
