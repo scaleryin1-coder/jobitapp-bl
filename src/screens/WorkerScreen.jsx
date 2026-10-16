@@ -74,10 +74,13 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [bookings, setBookings] = useState([]);
   const [declinedJobIds, setDeclinedJobIds] = useState(() => {
     try {
+      const allDeclined = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
       const workerId = currentUser?.workerId || currentUser?.uid || '';
-      if (!workerId) return [];
-      const saved = localStorage.getItem(`jobit_declined_jobs_${workerId}`);
-      return saved ? JSON.parse(saved) : [];
+      const workerDeclined = workerId ? JSON.parse(localStorage.getItem(`jobit_declined_jobs_${workerId}`) || '[]') : [];
+      return Array.from(new Set([
+        ...(Array.isArray(allDeclined) ? allDeclined : []),
+        ...(Array.isArray(workerDeclined) ? workerDeclined : [])
+      ]));
     } catch {
       return [];
     }
@@ -85,8 +88,9 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [completedJobSummary, setCompletedJobSummary] = useState(null);
-  const [billingJob, setBillingJob] = useState(null); // Active job for Customer Billing & Payment QR
   const [congratulationsData, setCongratulationsData] = useState(null); // "Job done! Congratulations 👏" modal
+  const [confirmRejectJob, setConfirmRejectJob] = useState(null); // Job rejection confirmation popup
+  const [isRejecting, setIsRejecting] = useState(false);
   
   // Portfolio / Work Albums State
   const [portfolios, setPortfolios] = useState([]);
@@ -157,15 +161,17 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
   // Sync rejected jobs for the active worker from storage
   useEffect(() => {
-    if (activeWorker?.id) {
-      try {
-        const saved = localStorage.getItem(`jobit_declined_jobs_${activeWorker.id}`);
-        const parsed = saved ? JSON.parse(saved) : [];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setDeclinedJobIds(prev => Array.from(new Set([...prev, ...parsed])));
-        }
-      } catch {}
-    }
+    try {
+      const allDeclined = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
+      const workerDeclined = activeWorker?.id ? JSON.parse(localStorage.getItem(`jobit_declined_jobs_${activeWorker.id}`) || '[]') : [];
+      const merged = Array.from(new Set([
+        ...(Array.isArray(allDeclined) ? allDeclined : []),
+        ...(Array.isArray(workerDeclined) ? workerDeclined : [])
+      ]));
+      if (merged.length > 0) {
+        setDeclinedJobIds(prev => Array.from(new Set([...prev, ...merged])));
+      }
+    } catch {}
   }, [activeWorker?.id]);
 
   const isOnline = Boolean(activeWorker?.isOnline);
@@ -231,17 +237,36 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     setActiveTab('active');
   };
 
-  const handleDeclineJob = async (bookingId) => {
-    // 1. Immediately update UI state so it disappears instantly
-    setDeclinedJobIds(prev => Array.from(new Set([...prev, bookingId])));
+  const handleOpenRejectConfirm = (job) => {
+    setConfirmRejectJob(job);
+  };
 
-    // 2. Persist in database (Supabase, Firestore, and storage)
-    if (activeWorker?.id) {
-      try {
-        await rejectJobAsWorker(bookingId, activeWorker.id);
-      } catch (err) {
-        console.warn('Error persisting job rejection in database:', err);
-      }
+  const handleConfirmReject = async () => {
+    if (!confirmRejectJob) return;
+    const bookingId = confirmRejectJob.id;
+    setIsRejecting(true);
+
+    try {
+      // 1. Immediately update UI state so it disappears instantly
+      setDeclinedJobIds(prev => Array.from(new Set([...prev, bookingId])));
+
+      // 2. Persist in database (Supabase, Firestore, and storage)
+      const currentWorkerId = activeWorker?.id || currentUser?.workerId || currentUser?.uid || 'worker_active';
+      await rejectJobAsWorker(bookingId, currentWorkerId);
+    } catch (err) {
+      console.warn('Error persisting job rejection in database:', err);
+    } finally {
+      setIsRejecting(false);
+      setConfirmRejectJob(null);
+    }
+  };
+
+  const handleDeclineJob = (jobOrId) => {
+    if (typeof jobOrId === 'object' && jobOrId !== null) {
+      setConfirmRejectJob(jobOrId);
+    } else {
+      const found = bookings.find(b => b.id === jobOrId);
+      setConfirmRejectJob(found || { id: jobOrId, serviceTitle: 'Job Request' });
     }
   };
 
@@ -761,13 +786,13 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                   )}
                 </div>
 
-                {/* Accept & Decline Buttons */}
+                {/* Accept & Reject Buttons */}
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
-                    onClick={() => handleDeclineJob(job.id)}
+                    onClick={() => handleOpenRejectConfirm(job)}
                     className="py-2.5 px-3 rounded-full bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs transition active:scale-95 cursor-pointer text-center"
                   >
-                    Decline
+                    Reject
                   </button>
                   <button
                     onClick={() => handleAcceptJob(job)}
@@ -1045,10 +1070,10 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
                 <div className="flex items-center gap-2 pt-1">
                   <button
-                    onClick={() => handleDeclineJob(job.id)}
-                    className="flex-1 py-2 rounded-full bg-slate-100 text-slate-600 text-xs font-bold"
+                    onClick={() => handleOpenRejectConfirm(job)}
+                    className="flex-1 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-rose-600 text-xs font-bold transition cursor-pointer"
                   >
-                    Decline
+                    Reject
                   </button>
                   <button
                     onClick={() => handleAcceptJob(job)}
@@ -1616,6 +1641,49 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               <span>Done • View in History</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Job Confirmation Modal ("Yes / No") */}
+      {confirmRejectJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto shadow-xs border border-rose-100">
+              <XCircle className="w-6 h-6 stroke-[2.2]" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h4 className="text-base font-black text-slate-900 tracking-tight">
+                Reject Job Request?
+              </h4>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Are you sure you want to reject <strong className="text-slate-800 font-bold">{confirmRejectJob.serviceTitle}</strong>? This job will be permanently removed from your dashboard.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmRejectJob(null)}
+                disabled={isRejecting}
+                className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition active:scale-95 cursor-pointer text-center"
+              >
+                No, Keep
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReject}
+                disabled={isRejecting}
+                className="py-3 px-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {isRejecting ? (
+                  <span>Rejecting...</span>
+                ) : (
+                  <span>Yes, Reject</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

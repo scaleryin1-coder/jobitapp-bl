@@ -426,12 +426,26 @@ export function subscribeBookings(callback) {
             const current = getLocalBookings();
             const currentMap = new Map(current.map(b => [b.id, b]));
 
+            let storedDeclined = [];
+            try {
+              const allStored = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
+              if (Array.isArray(allStored)) storedDeclined = allStored;
+            } catch {}
+
             data.forEach(item => {
               const local = currentMap.get(item.id) || {};
+              const isLocallyRejected = local.status === 'rejected' || local.rejected === true || storedDeclined.includes(item.id);
+              const effectiveStatus = isLocallyRejected ? 'rejected' : (item.status || local.status || 'pending');
+
               currentMap.set(item.id, {
                 ...local,
                 ...item,
-                status: item.status || local.status || 'pending',
+                serviceTitle: item.service_type || item.serviceTitle || local.serviceTitle || 'Home Service',
+                categoryName: item.service_type || item.categoryName || local.categoryName || 'Home Service',
+                dateTime: item.slot || item.dateTime || local.dateTime || 'Today',
+                customerName: item.customer_name || item.customerName || local.customerName || 'Customer',
+                workerId: item.assigned_worker_id || item.workerId || local.workerId || null,
+                status: effectiveStatus,
                 declinedWorkerIds: item.declined_worker_ids || item.declinedWorkerIds || local.declinedWorkerIds || [],
                 rejectedWorkerIds: item.rejected_worker_ids || item.rejectedWorkerIds || local.rejectedWorkerIds || [],
                 rejectedBy: item.rejected_by || item.rejectedBy || local.rejectedBy
@@ -453,10 +467,25 @@ export function subscribeBookings(callback) {
             if (payload.new) {
               const current = getLocalBookings();
               const idx = current.findIndex(b => b.id === payload.new.id);
+              
+              let storedDeclined = [];
+              try {
+                const allStored = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
+                if (Array.isArray(allStored)) storedDeclined = allStored;
+              } catch {}
+              
+              const isLocallyRejected = (idx >= 0 && (current[idx].status === 'rejected' || current[idx].rejected === true)) || storedDeclined.includes(payload.new.id);
+              const effectiveStatus = isLocallyRejected ? 'rejected' : (payload.new.status || (idx >= 0 ? current[idx].status : 'pending'));
+
               const updatedItem = {
                 ...(idx >= 0 ? current[idx] : {}),
                 ...payload.new,
-                status: payload.new.status || (idx >= 0 ? current[idx].status : 'pending'),
+                serviceTitle: payload.new.service_type || payload.new.serviceTitle || (idx >= 0 ? current[idx].serviceTitle : 'Home Service'),
+                categoryName: payload.new.service_type || payload.new.categoryName || (idx >= 0 ? current[idx].categoryName : 'Home Service'),
+                dateTime: payload.new.slot || payload.new.dateTime || (idx >= 0 ? current[idx].dateTime : 'Today'),
+                customerName: payload.new.customer_name || payload.new.customerName || (idx >= 0 ? current[idx].customerName : 'Customer'),
+                workerId: payload.new.assigned_worker_id || payload.new.workerId || (idx >= 0 ? current[idx].workerId : null),
+                status: effectiveStatus,
                 declinedWorkerIds: payload.new.declined_worker_ids || payload.new.declinedWorkerIds || (idx >= 0 ? current[idx].declinedWorkerIds : []),
                 rejectedWorkerIds: payload.new.rejected_worker_ids || payload.new.rejectedWorkerIds || (idx >= 0 ? current[idx].rejectedWorkerIds : []),
                 rejectedBy: payload.new.rejected_by || payload.new.rejectedBy || (idx >= 0 ? current[idx].rejectedBy : null)
@@ -576,7 +605,43 @@ export async function createBooking(payload) {
   const updated = [newBooking, ...current];
   saveLocalBookings(updated);
 
-  // 2. Sync to Firestore with a fast timeout safety guarantee so network lag never freezes UI
+  // 2. Sync to Supabase if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const isUuid = typeof newBooking.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(newBooking.id);
+      
+      const supabaseRow = {
+        customer_name: newBooking.customerName || 'Valued Client',
+        phone: newBooking.phone || newBooking.contactPhone || '+91 9876543210',
+        address: newBooking.fullAddress || newBooking.address || 'Melattur, Kerala',
+        service_type: newBooking.serviceTitle || newBooking.categoryName || 'Home Service',
+        slot: newBooking.dateTime || newBooking.timeSlot || 'Today',
+        status: newBooking.status || 'pending',
+        assigned_worker_id: newBooking.workerId || null
+      };
+
+      if (isUuid) {
+        supabaseRow.id = newBooking.id;
+      }
+
+      const { data: inserted, error: sbErr } = await supabase
+        .from('bookings')
+        .insert(supabaseRow)
+        .select()
+        .single();
+
+      if (!sbErr && inserted && inserted.id) {
+        newBooking.supabaseId = inserted.id;
+        newBooking.id = inserted.id;
+        const currentRefreshed = getLocalBookings();
+        saveLocalBookings([newBooking, ...currentRefreshed.filter(b => b.id !== newBooking.id)]);
+      }
+    } catch (e) {
+      console.warn('Supabase booking create background fallback', e);
+    }
+  }
+
+  // 3. Sync to Firestore with a fast timeout safety guarantee so network lag never freezes UI
   if (isFirebaseConfigured && db) {
     try {
       const firestorePromise = setDoc(doc(db, 'bookings', newBooking.id), {
@@ -611,17 +676,22 @@ export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {
   });
   saveLocalBookings(updated);
 
-  // Sync to Supabase 'bookings' table
+  // Sync to Supabase 'bookings' table with exact schema matching
   if (isSupabaseConfigured && supabase) {
     try {
+      const isUuid = typeof bookingId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
+      const target = updated.find(b => b.id === bookingId);
+      const targetId = isUuid ? bookingId : (target?.supabaseId || bookingId);
+
+      const supabasePayload = { status: newStatus };
+      if (extraUpdates.workerId || extraUpdates.assigned_worker_id) {
+        supabasePayload.assigned_worker_id = extraUpdates.workerId || extraUpdates.assigned_worker_id;
+      }
+
       await supabase
         .from('bookings')
-        .update({
-          status: newStatus,
-          last_updated: new Date().toISOString(),
-          ...extraUpdates
-        })
-        .eq('id', bookingId);
+        .update(supabasePayload)
+        .eq('id', targetId);
     } catch (e) {
       console.warn('Supabase update status fallback', e);
     }
@@ -644,17 +714,15 @@ export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {
 // Worker rejects/declines a job - persists in Supabase, Firestore, and local state
 export async function rejectJobAsWorker(bookingId, workerId) {
   const current = getLocalBookings();
-  let wasAssignedToThisWorker = false;
   
   const updated = current.map(b => {
     if (b.id === bookingId) {
       const existingDeclined = Array.isArray(b.declinedWorkerIds) ? b.declinedWorkerIds : [];
       const updatedDeclined = Array.from(new Set([...existingDeclined, workerId]));
-      wasAssignedToThisWorker = b.workerId === workerId;
 
       return {
         ...b,
-        status: wasAssignedToThisWorker ? 'rejected' : b.status,
+        status: 'rejected',
         rejected: true,
         rejectedBy: workerId,
         rejectedAt: new Date().toISOString(),
@@ -668,45 +736,32 @@ export async function rejectJobAsWorker(bookingId, workerId) {
 
   saveLocalBookings(updated);
 
-  // Also persist to worker's dedicated local storage rejected list
+  // Also persist to worker's dedicated local storage rejected list and universal list
   try {
     const storageKey = `jobit_declined_jobs_${workerId}`;
     const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
     const nextList = Array.from(new Set([...stored, bookingId]));
     localStorage.setItem(storageKey, JSON.stringify(nextList));
+
+    const universalKey = 'jobit_all_declined_jobs';
+    const allStored = JSON.parse(localStorage.getItem(universalKey) || '[]');
+    localStorage.setItem(universalKey, JSON.stringify(Array.from(new Set([...allStored, bookingId]))));
   } catch {}
 
   // 1. Sync to Supabase 'bookings' table
   if (isSupabaseConfigured && supabase) {
     try {
+      const isUuid = typeof bookingId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
       const targetBooking = updated.find(b => b.id === bookingId);
-      const declinedList = targetBooking?.declinedWorkerIds || [workerId];
-      
-      const supabasePayload = {
-        status: wasAssignedToThisWorker ? 'rejected' : (targetBooking?.status || 'pending'),
-        rejected_by: workerId,
-        rejected_at: new Date().toISOString(),
-        declined_worker_ids: declinedList,
-        rejected_worker_ids: declinedList,
-        last_updated: new Date().toISOString()
-      };
+      const targetId = isUuid ? bookingId : (targetBooking?.supabaseId || bookingId);
 
       const { error } = await supabase
         .from('bookings')
-        .update(supabasePayload)
-        .eq('id', bookingId);
+        .update({ status: 'rejected' })
+        .eq('id', targetId);
 
       if (error) {
-        console.warn('Supabase reject job update note:', error.message);
-        // Fallback update with standard status column
-        await supabase
-          .from('bookings')
-          .update({
-            status: wasAssignedToThisWorker ? 'rejected' : (targetBooking?.status || 'pending'),
-            last_updated: new Date().toISOString()
-          })
-          .eq('id', bookingId)
-          .catch(() => {});
+        console.warn('Supabase reject status error:', error.message);
       }
     } catch (err) {
       console.warn('Supabase reject update exception:', err);
@@ -718,7 +773,7 @@ export async function rejectJobAsWorker(bookingId, workerId) {
     try {
       const targetBooking = updated.find(b => b.id === bookingId);
       await updateDoc(doc(db, 'bookings', bookingId), {
-        status: wasAssignedToThisWorker ? 'rejected' : (targetBooking?.status || 'pending'),
+        status: 'rejected',
         rejectedBy: workerId,
         rejectedAt: new Date().toISOString(),
         declinedWorkerIds: targetBooking?.declinedWorkerIds || [workerId],
