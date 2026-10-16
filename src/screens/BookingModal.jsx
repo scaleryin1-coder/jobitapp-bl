@@ -22,6 +22,7 @@ import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from 
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory, isPortfolioCategory } from '../data/categoriesData';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
+import { UrbanLocationPicker } from '../components/common/UrbanLocationPicker';
 
 // Baseline coordinates lookup for key service hubs
 const DEFAULT_CITY_COORDS = {
@@ -592,7 +593,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                 )}
               </div>
 
-              {/* B. Exact Map Pin Section */}
+              {/* B. Exact Map Pin Section - Urban Company Style */}
               <div className="pt-2 border-t border-slate-200/70 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -600,98 +601,39 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                       Doorstep GPS Map Pin
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">
-                      Technician opens Google Maps directly to this pin
+                      Drag or tap map to drop your exact doorstep pin
                     </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleDetectGPS}
-                    disabled={isGpsLocating}
-                    className="px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[11px] font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer border border-sky-100 disabled:opacity-50"
-                  >
-                    <Compass className={`w-3.5 h-3.5 ${isGpsLocating ? 'animate-spin' : ''}`} />
-                    <span>{isGpsLocating ? 'Locating...' : 'Use My GPS Pin'}</span>
-                  </button>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-100 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Urban Company Style Pinning</span>
+                  </span>
                 </div>
 
-                {gpsStatusMsg && (
-                  <p className="text-[10px] font-bold text-sky-700 bg-sky-50/90 py-1 px-2 rounded-lg border border-sky-100">
-                    {gpsStatusMsg}
-                  </p>
-                )}
+                {/* Urban Company Style Drag & Tap Interactive Map */}
+                <UrbanLocationPicker
+                  coordinates={coordinates}
+                  onChangeCoordinates={(newCoords) => {
+                    setCoordinates(newCoords);
+                  }}
+                  onAddressResolved={({ road, locality, landmark: lm }) => {
+                    if (!street && road) {
+                      setStreet(road);
+                    }
+                    if (!landmark && lm) {
+                      setLandmark(lm);
+                    }
+                  }}
+                  cityContext={cleanCity}
+                />
 
-                {/* Live Embedded Map with Interactive Crosshair & Pin */}
-                <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shadow-2xs">
-                  <iframe
-                    title="Doorstep Map Pin"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.lng - 0.005}%2C${coordinates.lat - 0.003}%2C${coordinates.lng + 0.005}%2C${coordinates.lat + 0.003}&layer=mapnik&marker=${coordinates.lat}%2C${coordinates.lng}`}
-                    className="w-full h-32 border-0 pointer-events-none block"
-                  />
-
-                  {/* Pin Overlay Badge with Live Coordinates */}
-                  <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1 text-[10px] font-mono font-bold text-slate-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>{coordinates.lat.toFixed(4)}°, {coordinates.lng.toFixed(4)}°</span>
-                  </div>
-
-                  {/* Google Maps External Verify Link */}
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${coordinates.lat},${coordinates.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute top-2 right-2 bg-white/95 hover:bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs text-[10px] font-bold text-[#0EA5E0] flex items-center gap-1 transition"
-                    title="Preview exact destination in Google Maps"
-                  >
-                    <span>Verify in Maps</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
-
-                  {/* Fine-Tuning Nudge Controls Overlay */}
-                  <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-xl border border-slate-200 shadow-xs">
-                    <span className="text-[9px] font-bold text-slate-500 px-1">Nudge Pin:</span>
-                    <button
-                      type="button"
-                      onClick={() => nudgeCoordinates(0.0003, 0)}
-                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
-                      title="Nudge North"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => nudgeCoordinates(-0.0003, 0)}
-                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
-                      title="Nudge South"
-                    >
-                      ▼
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => nudgeCoordinates(0, -0.0003)}
-                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
-                      title="Nudge West"
-                    >
-                      ◀
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => nudgeCoordinates(0, 0.0003)}
-                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
-                      title="Nudge East"
-                    >
-                      ▶
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5">
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5 pt-1 border-t border-slate-100">
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Exact Map Coordinates attached to booking</span>
+                    <span>Exact Map Coordinates saved for technician navigation</span>
                   </span>
-                  <span className="font-mono text-slate-400">
-                    {coordinates.lat.toFixed(5)}, {coordinates.lng.toFixed(5)}
+                  <span className="font-mono text-slate-500 font-bold">
+                    {Number(coordinates.lat).toFixed(5)}°, {Number(coordinates.lng).toFixed(5)}°
                   </span>
                 </div>
               </div>
