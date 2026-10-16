@@ -178,6 +178,8 @@ export function AdminScreen({ onBack, onLogout }) {
     description: '',
     imageUrl: ''
   });
+  const [initialServiceForm, setInitialServiceForm] = useState(null);
+  const [isServiceDirty, setIsServiceDirty] = useState(false);
 
   // Category Management Form State
   const [newCatName, setNewCatName] = useState('');
@@ -391,32 +393,78 @@ export function AdminScreen({ onBack, onLogout }) {
   };
 
   const handleOpenEditService = (service) => {
-    setEditingService(service);
-    setEditForm({
+    const initialImg = (service.heroImage || service.imageUrl || service.image || '').trim();
+    const initialValues = {
       title: service.title || '',
       categoryName: service.categoryName || '',
       subCategory: service.subCategory || service.subCategories?.[0] || '',
-      price: String(service.price || 300),
+      price: String(service.price !== undefined && service.price !== null ? service.price : 300),
       description: service.about || service.description || '',
-      imageUrl: service.heroImage || service.imageUrl || service.image || ''
-    });
+      imageUrl: initialImg
+    };
+    setEditingService(service);
+    setInitialServiceForm(initialValues);
+    setIsServiceDirty(false);
+    setEditForm(initialValues);
   };
 
+  const isServiceImageModified = Boolean(
+    editingService && (
+      (editForm.imageUrl || '').trim() !== (initialServiceForm?.imageUrl || '').trim() ||
+      (editForm.imageUrl || '').trim() !== (editingService.heroImage || editingService.imageUrl || editingService.image || '').trim()
+    )
+  );
+
+  const isServiceCategoryModified = Boolean(
+    editingService && (editForm.categoryName || '').trim() !== (initialServiceForm?.categoryName || editingService.categoryName || '').trim()
+  );
+
+  const isServiceOtherFieldModified = Boolean(
+    editingService && (
+      (editForm.title || '').trim() !== (initialServiceForm?.title || editingService.title || '').trim() ||
+      isServiceCategoryModified ||
+      (editForm.subCategory || '').trim() !== (initialServiceForm?.subCategory || editingService.subCategory || editingService.subCategories?.[0] || '').trim() ||
+      String(editForm.price || '').trim() !== String(initialServiceForm?.price ?? editingService.price ?? '').trim() ||
+      (editForm.description || '').trim() !== (initialServiceForm?.description || editingService.about || editingService.description || '').trim()
+    )
+  );
+
+  // Form dirty state is triggered when image URL is modified independently or any other field changes
+  const isServiceFormDirty = Boolean(
+    isServiceDirty || 
+    isServiceImageModified || 
+    isServiceCategoryModified || 
+    isServiceOtherFieldModified
+  );
+
   const handleSaveEditService = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!editingService) return;
 
+    // Independent field validation with graceful fallbacks so updating ONLY image URL saves cleanly without validation errors
+    const finalTitle = (editForm.title && editForm.title.trim()) || editingService.title || 'Home Service';
+    const finalPrice = !isNaN(Number(editForm.price)) && Number(editForm.price) > 0 ? Number(editForm.price) : (editingService.price || 300);
+    const finalCat = (editForm.categoryName && editForm.categoryName.trim()) || editingService.categoryName || 'General';
+    const finalSub = editForm.subCategory !== undefined ? editForm.subCategory.trim() : (editingService.subCategory || '');
+    const finalAbout = editForm.description !== undefined ? editForm.description.trim() : (editingService.about || editingService.description || '');
+    const finalImage = (editForm.imageUrl !== undefined ? editForm.imageUrl.trim() : '') || 
+      editingService.heroImage || editingService.imageUrl || editingService.image || '';
+
     await adminUpdateService(editingService.id, {
-      title: editForm.title.trim(),
-      categoryName: editForm.categoryName.trim(),
-      subCategory: editForm.subCategory.trim(),
-      price: Number(editForm.price) || 300,
-      about: editForm.description.trim(),
-      heroImage: editForm.imageUrl.trim(),
-      imageUrl: editForm.imageUrl.trim()
+      title: finalTitle,
+      categoryName: finalCat,
+      subCategory: finalSub,
+      price: finalPrice,
+      about: finalAbout,
+      heroImage: finalImage,
+      imageUrl: finalImage,
+      image: finalImage
     });
 
+    showToast(`Service "${finalTitle}" updated successfully!`, 'success');
     setEditingService(null);
+    setInitialServiceForm(null);
+    setIsServiceDirty(false);
   };
 
   const handleDeleteService = async (serviceId, serviceTitle) => {
@@ -2491,7 +2539,7 @@ export function AdminScreen({ onBack, onLogout }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditService} className="mt-4 space-y-3.5">
+            <form noValidate onSubmit={handleSaveEditService} className="mt-4 space-y-3.5">
               
               {/* Service Title */}
               <div>
@@ -2500,9 +2548,11 @@ export function AdminScreen({ onBack, onLogout }) {
                 </label>
                 <input
                   type="text"
-                  required
                   value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, title: e.target.value });
+                    setIsServiceDirty(true);
+                  }}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
                 />
               </div>
@@ -2515,7 +2565,10 @@ export function AdminScreen({ onBack, onLogout }) {
                   </label>
                   <select
                     value={editForm.categoryName}
-                    onChange={(e) => setEditForm({ ...editForm, categoryName: e.target.value })}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, categoryName: e.target.value });
+                      setIsServiceDirty(true);
+                    }}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
                   >
                     {categories.map((c) => (
@@ -2533,7 +2586,10 @@ export function AdminScreen({ onBack, onLogout }) {
                   <input
                     type="text"
                     value={editForm.subCategory}
-                    onChange={(e) => setEditForm({ ...editForm, subCategory: e.target.value })}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, subCategory: e.target.value });
+                      setIsServiceDirty(true);
+                    }}
                     placeholder="Sub-issue title"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
                   />
@@ -2554,11 +2610,13 @@ export function AdminScreen({ onBack, onLogout }) {
                   <span className="absolute left-3.5 top-2.5 text-xs font-extrabold text-slate-400">₹</span>
                   <input
                     type="number"
-                    min="50"
+                    min="0"
                     step="10"
-                    required
                     value={editForm.price}
-                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, price: e.target.value });
+                      setIsServiceDirty(true);
+                    }}
                     className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
                   />
                 </div>
@@ -2570,10 +2628,26 @@ export function AdminScreen({ onBack, onLogout }) {
                   Image URL (Manual Link)
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={editForm.imageUrl}
-                  onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditForm(prev => ({ ...prev, imageUrl: val }));
+                    setIsServiceDirty(true);
+                  }}
+                  onInput={(e) => {
+                    const val = e.target.value;
+                    setEditForm(prev => ({ ...prev, imageUrl: val }));
+                    setIsServiceDirty(true);
+                  }}
+                  onPaste={(e) => {
+                    const val = e.clipboardData?.getData('text');
+                    if (val !== undefined) {
+                      setEditForm(prev => ({ ...prev, imageUrl: val }));
+                      setIsServiceDirty(true);
+                    }
+                  }}
+                  placeholder="https://images.unsplash.com/... or /assets/images/..."
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
                 />
 
@@ -2609,7 +2683,10 @@ export function AdminScreen({ onBack, onLogout }) {
                       <button
                         key={p.label}
                         type="button"
-                        onClick={() => setEditForm({ ...editForm, imageUrl: p.url })}
+                        onClick={() => {
+                          setEditForm({ ...editForm, imageUrl: p.url });
+                          setIsServiceDirty(true);
+                        }}
                         className="px-2 py-0.5 rounded-lg bg-sky-50 text-[#0EA5E0] hover:bg-[#0EA5E0] hover:text-white text-[10px] font-bold border border-sky-100 transition cursor-pointer"
                       >
                         {p.label}
@@ -2627,7 +2704,10 @@ export function AdminScreen({ onBack, onLogout }) {
                 <textarea
                   rows={2}
                   value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, description: e.target.value });
+                    setIsServiceDirty(true);
+                  }}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition resize-none"
                 />
               </div>
@@ -2643,9 +2723,16 @@ export function AdminScreen({ onBack, onLogout }) {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
+                  disabled={!isServiceFormDirty}
+                  className={`flex-1 py-2.5 rounded-2xl text-white text-xs font-extrabold shadow-sm active:scale-98 transition flex items-center justify-center gap-1.5 ${
+                    isServiceFormDirty
+                      ? 'bg-[#0EA5E0] hover:bg-[#0284C7] cursor-pointer'
+                      : 'bg-slate-300 cursor-not-allowed opacity-60'
+                  }`}
+                  title={isServiceFormDirty ? 'Save Changes' : 'No changes detected to save'}
                 >
-                  Save Changes
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>Save Changes</span>
                 </button>
               </div>
 

@@ -734,13 +734,15 @@ export async function adminUpdateService(serviceId, updates) {
       if (updates.price !== undefined) {
         merged.price = Number(updates.price);
       }
-      if (updates.heroImage) {
-        merged.heroImage = updates.heroImage;
-        merged.imageUrl = updates.heroImage;
+      if (updates.heroImage !== undefined || updates.imageUrl !== undefined || updates.image !== undefined) {
+        const img = updates.heroImage || updates.imageUrl || updates.image || '';
+        merged.heroImage = img;
+        merged.imageUrl = img;
+        merged.image = img;
         if (!merged.gallery || merged.gallery.length === 0) {
-          merged.gallery = [updates.heroImage];
+          merged.gallery = [img];
         } else {
-          merged.gallery = [updates.heroImage, ...merged.gallery.slice(1)];
+          merged.gallery = [img, ...merged.gallery.slice(1)];
         }
       }
       if (updates.subCategory && (!merged.subCategories || merged.subCategories.length === 0)) {
