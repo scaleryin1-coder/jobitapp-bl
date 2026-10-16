@@ -317,7 +317,7 @@ export function AdminScreen({ onBack, onLogout }) {
   const handleCreateWorker = async (e) => {
     e.preventDefault();
     if (!workerForm.name.trim() || !workerForm.phone.trim()) {
-      alert('Please enter worker name and phone number');
+      showToast('Please enter worker name and phone number', 'error');
       return;
     }
     await adminAddWorker(workerForm);
@@ -991,7 +991,7 @@ export function AdminScreen({ onBack, onLogout }) {
       </div>
 
       {/* ========================================================= */}
-      {/* 3.1 TAB: PENDING APPROVALS (Urban Company Style KYC Review) */}
+      {/* 3.1 TAB: PENDING APPROVALS (KYC Review) */}
       {/* ========================================================= */}
       {tab === 'approvals' && (
         <div className="px-5 space-y-3.5 animate-fade-in">

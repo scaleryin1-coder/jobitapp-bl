@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'jobit-logo.png'],
       devOptions: {
-        enabled: true
+        enabled: false
       },
       manifest: {
         id: '/',

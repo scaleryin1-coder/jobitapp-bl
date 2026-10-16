@@ -41,6 +41,12 @@ function MainLayout() {
       if (hash === '#splash' || hash === '#welcome') return 'splash';
       const saved = localStorage.getItem('jobit_current_screen');
       if (saved && ['main', 'service-list', 'detail', 'portfolio-selection'].includes(saved)) {
+        if (saved === 'detail' && !localStorage.getItem('jobit_selected_service')) {
+          return 'main';
+        }
+        if (saved === 'portfolio-selection' && !localStorage.getItem('jobit_selected_portfolio_cat')) {
+          return 'main';
+        }
         return saved;
       }
     } catch {}
@@ -109,6 +115,15 @@ function MainLayout() {
       }
     } catch {}
   }, [currentScreen]);
+
+  // Safety guard against white-screen state if required data is missing
+  useEffect(() => {
+    if (currentScreen === 'detail' && !selectedService) {
+      setCurrentScreen('main');
+    } else if (currentScreen === 'portfolio-selection' && !selectedPortfolioCategory) {
+      setCurrentScreen('main');
+    }
+  }, [currentScreen, selectedService, selectedPortfolioCategory]);
 
   useEffect(() => {
     try {

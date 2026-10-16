@@ -434,7 +434,16 @@ export function subscribeBookings(callback) {
 
             data.forEach(item => {
               const local = currentMap.get(item.id) || {};
-              const isLocallyRejected = local.status === 'rejected' || local.rejected === true || storedDeclined.includes(item.id);
+              const isLocallyRejected = 
+                local.status === 'rejected' || 
+                local.rejected === true || 
+                item.status === 'rejected' ||
+                item.status === 'declined' ||
+                storedDeclined.includes(item.id) ||
+                storedDeclined.includes(String(item.id)) ||
+                (local.id && storedDeclined.includes(local.id)) ||
+                (local.supabaseId && storedDeclined.includes(local.supabaseId));
+
               const effectiveStatus = isLocallyRejected ? 'rejected' : (item.status || local.status || 'pending');
 
               currentMap.set(item.id, {
@@ -474,7 +483,14 @@ export function subscribeBookings(callback) {
                 if (Array.isArray(allStored)) storedDeclined = allStored;
               } catch {}
               
-              const isLocallyRejected = (idx >= 0 && (current[idx].status === 'rejected' || current[idx].rejected === true)) || storedDeclined.includes(payload.new.id);
+              const isLocallyRejected = 
+                payload.new.status === 'rejected' ||
+                payload.new.status === 'declined' ||
+                (idx >= 0 && (current[idx].status === 'rejected' || current[idx].rejected === true)) || 
+                storedDeclined.includes(payload.new.id) ||
+                storedDeclined.includes(String(payload.new.id)) ||
+                (idx >= 0 && current[idx].id && storedDeclined.includes(current[idx].id)) ||
+                (idx >= 0 && current[idx].supabaseId && storedDeclined.includes(current[idx].supabaseId));
               const effectiveStatus = isLocallyRejected ? 'rejected' : (payload.new.status || (idx >= 0 ? current[idx].status : 'pending'));
 
               const updatedItem = {
@@ -736,23 +752,27 @@ export async function rejectJobAsWorker(bookingId, workerId) {
 
   saveLocalBookings(updated);
 
+  const targetBooking = updated.find(b => b.id === bookingId || b.supabaseId === bookingId);
+  const idsToRecord = [bookingId];
+  if (targetBooking?.supabaseId) idsToRecord.push(targetBooking.supabaseId);
+  if (targetBooking?.id) idsToRecord.push(targetBooking.id);
+
   // Also persist to worker's dedicated local storage rejected list and universal list
   try {
     const storageKey = `jobit_declined_jobs_${workerId}`;
     const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const nextList = Array.from(new Set([...stored, bookingId]));
+    const nextList = Array.from(new Set([...stored, ...idsToRecord]));
     localStorage.setItem(storageKey, JSON.stringify(nextList));
 
     const universalKey = 'jobit_all_declined_jobs';
     const allStored = JSON.parse(localStorage.getItem(universalKey) || '[]');
-    localStorage.setItem(universalKey, JSON.stringify(Array.from(new Set([...allStored, bookingId]))));
+    localStorage.setItem(universalKey, JSON.stringify(Array.from(new Set([...allStored, ...idsToRecord]))));
   } catch {}
 
   // 1. Sync to Supabase 'bookings' table
   if (isSupabaseConfigured && supabase) {
     try {
       const isUuid = typeof bookingId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
-      const targetBooking = updated.find(b => b.id === bookingId);
       const targetId = isUuid ? bookingId : (targetBooking?.supabaseId || bookingId);
 
       const { error } = await supabase
@@ -761,7 +781,21 @@ export async function rejectJobAsWorker(bookingId, workerId) {
         .eq('id', targetId);
 
       if (error) {
-        console.warn('Supabase reject status error:', error.message);
+        console.warn('Supabase reject status error by ID, trying fallback match:', error.message);
+        if (targetBooking?.phone) {
+          await supabase
+            .from('bookings')
+            .update({ status: 'rejected' })
+            .eq('phone', targetBooking.phone);
+        } else if (targetBooking?.customerName && targetBooking?.serviceTitle) {
+          await supabase
+            .from('bookings')
+            .update({ status: 'rejected' })
+            .match({
+              customer_name: targetBooking.customerName,
+              service_type: targetBooking.serviceTitle
+            });
+        }
       }
     } catch (err) {
       console.warn('Supabase reject update exception:', err);

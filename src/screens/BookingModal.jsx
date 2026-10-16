@@ -74,8 +74,8 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     const s = (streetVal || '').trim();
     const lm = (landmarkVal || '').trim();
 
-    // Do not trigger until at least 3 characters are typed in either field
-    if (s.length < 3 && lm.length < 3) {
+    // Trigger when user types in Street/Area or Landmark
+    if (s.length < 2 && lm.length < 2) {
       return;
     }
 
@@ -86,13 +86,14 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
         if (s && lm) {
           searchCandidates.push(`${s}, ${lm}, ${cleanCity}`);
           searchCandidates.push(`${s}, ${cleanCity}`);
+          searchCandidates.push(`${s}, Kerala`);
         } else if (s) {
           searchCandidates.push(`${s}, ${cleanCity}`);
-          searchCandidates.push(`${s}, Malappuram, Kerala`);
+          searchCandidates.push(`${s}, Kerala`);
           searchCandidates.push(s);
         } else if (lm) {
           searchCandidates.push(`${lm}, ${cleanCity}`);
-          searchCandidates.push(`${lm}, Malappuram, Kerala`);
+          searchCandidates.push(`${lm}, Kerala`);
           searchCandidates.push(lm);
         }
 
@@ -126,17 +127,17 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
           setCoordinates({ lat: newLat, lng: newLng });
           
           const placeLabel = foundMatch.display_name?.split(',').slice(0, 2).join(',') || s || lm;
-          setMapSearchNotice(`Pin moved to "${placeLabel}". Drag or tap map to fine-tune exact doorstep.`);
+          setMapSearchNotice(`Pin centered on "${placeLabel}". Drag or tap map to adjust doorstep pin.`);
           setTimeout(() => {
             setMapSearchNotice('');
-          }, 6000);
+          }, 4500);
         }
       } catch (err) {
-        console.warn('Geocoding search failed:', err);
+        console.warn('Geocoding search notice:', err);
       } finally {
         setIsSearchingMapArea(false);
       }
-    }, 550);
+    }, 320);
   };
 
   const [date, setDate] = useState('');
@@ -693,7 +694,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                   </span>
                 </div>
 
-                {/* Urban Company Style Drag & Tap Interactive Map with Dynamic Geocoding Auto-Pinning */}
+                {/* Interactive Map with Doorstep Pinning */}
                 <UrbanLocationPicker
                   coordinates={coordinates}
                   onChangeCoordinates={(newCoords) => {

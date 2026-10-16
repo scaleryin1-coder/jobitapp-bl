@@ -41,6 +41,12 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
+  const [toastMsg, setToastMsg] = useState('');
+
+  const showNotification = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 4000);
+  };
 
   // Subscribe to real-time synchronized bookings
   useEffect(() => {
@@ -51,9 +57,8 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   }, [currentUser?.uid]);
 
   const handleCancelBooking = async (bookingId) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      await updateBookingStatus(bookingId, 'cancelled');
-    }
+    await updateBookingStatus(bookingId, 'cancelled');
+    showNotification('Booking cancelled.');
   };
 
   const handleSubmitReview = async (e) => {
@@ -77,7 +82,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
 
     setRatingModalBooking(null);
     setReviewComment('');
-    alert('Thank you! Your rating has been recorded.');
+    showNotification('Thank you! Your rating has been recorded.');
   };
 
   const filteredBookings = bookings.filter((b) => {
@@ -591,7 +596,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
             paymentStatus: 'paid'
           });
           setPaymentQRBooking(null);
-          alert('Payment confirmed! Job completed successfully.');
+          showNotification('Payment confirmed! Job completed successfully.');
         }}
       />
 
@@ -602,6 +607,14 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
         booking={activeVoiceCallBooking}
         currentUserRole="customer"
       />
+
+      {/* In-app Toast Banner */}
+      {toastMsg && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-slate-700/60 animate-fade-in flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-[#0EA5E0]" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
     </div>
   );

@@ -40,19 +40,28 @@ export function UrbanLocationPicker({
   // Sync internal state when prop coordinates change from outside (e.g. forward geocoding from street/landmark)
   useEffect(() => {
     if (coordinates?.lat && coordinates?.lng) {
-      const latDiff = Math.abs((currentCoords.lat || 0) - coordinates.lat);
-      const lngDiff = Math.abs((currentCoords.lng || 0) - coordinates.lng);
-      if (latDiff > 0.00005 || lngDiff > 0.00005) {
-        setCurrentCoords(coordinates);
+      const targetLat = Number(Number(coordinates.lat).toFixed(6));
+      const targetLng = Number(Number(coordinates.lng).toFixed(6));
+      if (isNaN(targetLat) || isNaN(targetLng)) return;
+
+      const currentLat = Number(currentCoords?.lat || 0);
+      const currentLng = Number(currentCoords?.lng || 0);
+      const latDiff = Math.abs(currentLat - targetLat);
+      const lngDiff = Math.abs(currentLng - targetLng);
+
+      if (latDiff > 0.00001 || lngDiff > 0.00001) {
+        const next = { lat: targetLat, lng: targetLng };
+        setCurrentCoords(next);
         if (mapInstanceRef.current && !isInternalMoveRef.current) {
-          mapInstanceRef.current.flyTo([coordinates.lat, coordinates.lng], 17, { 
-            duration: 0.8,
+          mapInstanceRef.current.flyTo([targetLat, targetLng], Math.max(mapInstanceRef.current.getZoom(), 16), { 
+            duration: 0.6,
             easeLinearity: 0.25 
           });
         }
+        fetchAddressDetails(targetLat, targetLng);
       }
     }
-  }, [coordinates]);
+  }, [coordinates?.lat, coordinates?.lng]);
 
   // Reverse geocode helper with debounce
   const fetchAddressDetails = useCallback(async (lat, lng) => {
@@ -408,7 +417,7 @@ export function UrbanLocationPicker({
               className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg active:scale-95 transition cursor-pointer"
             >
               <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
-              <span>Done Pinning</span>
+              <span>Done</span>
             </button>
           </div>
         )}

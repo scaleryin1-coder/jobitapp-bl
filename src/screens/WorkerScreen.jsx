@@ -104,6 +104,12 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [albumError, setAlbumError] = useState('');
   const [selectedAlbumViewer, setSelectedAlbumViewer] = useState(null);
   const [viewerPhotoIndex, setViewerPhotoIndex] = useState(0);
+  const [toastMsg, setToastMsg] = useState('');
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 4000);
+  };
 
   useEffect(() => {
     if (currentUser?.workerId || (currentUser?.role === 'worker' && currentUser?.uid)) {
@@ -244,15 +250,19 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const handleConfirmReject = async () => {
     if (!confirmRejectJob) return;
     const bookingId = confirmRejectJob.id;
+    const supabaseId = confirmRejectJob.supabaseId;
     setIsRejecting(true);
 
     try {
       // 1. Immediately update UI state so it disappears instantly
-      setDeclinedJobIds(prev => Array.from(new Set([...prev, bookingId])));
+      const idsToAdd = [bookingId];
+      if (supabaseId) idsToAdd.push(supabaseId);
+      setDeclinedJobIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
 
       // 2. Persist in database (Supabase, Firestore, and storage)
       const currentWorkerId = activeWorker?.id || currentUser?.workerId || currentUser?.uid || 'worker_active';
       await rejectJobAsWorker(bookingId, currentWorkerId);
+      showToast('Job rejected and permanently removed from your dashboard.');
     } catch (err) {
       console.warn('Error persisting job rejection in database:', err);
     } finally {
@@ -385,18 +395,15 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
     if (!albumTitle.trim()) {
       setAlbumError('Please enter an album title (e.g. Bridal Mehndi, Modular Kitchen Setup)');
-      alert('Please enter an album title.');
       return;
     }
     if (albumImages.length === 0) {
       setAlbumError('Please upload or select at least one photo for this album.');
-      alert('Please upload or select at least one photo for this album.');
       return;
     }
 
     if (!activeWorker?.id) {
       setAlbumError('No active technician profile identified. Please log in again.');
-      alert('Technician profile not found. Please log in.');
       return;
     }
 
@@ -418,21 +425,19 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
       setAlbumError('');
       setIsUploadAlbumOpen(false);
       setActiveTab('portfolio');
-      alert('Work album published successfully to your portfolio!');
+      showToast('Work album published successfully to your portfolio!');
     } catch (err) {
       console.error('Failed to publish work album:', err);
       const errMsg = err?.message || 'Database error: Could not publish portfolio album.';
       setAlbumError(errMsg);
-      alert(`Album Submission Failed:\n\n${errMsg}\n\nPlease check your network connection and try again.`);
     } finally {
       setIsSubmittingAlbum(false);
     }
   };
 
   const handleDeleteAlbum = async (albumId, title) => {
-    if (window.confirm(`Delete work album "${title}"?`)) {
-      await deleteWorkerPortfolio(albumId);
-    }
+    await deleteWorkerPortfolio(albumId);
+    showToast(`Work album "${title}" deleted.`);
   };
 
 
@@ -1695,6 +1700,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         booking={activeVoiceCallBooking}
         currentUserRole="worker"
       />
+
+      {/* In-app Toast Banner */}
+      {toastMsg && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-slate-700/60 animate-fade-in flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-[#0EA5E0]" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
     </div>
   );

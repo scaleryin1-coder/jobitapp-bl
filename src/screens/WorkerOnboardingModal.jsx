@@ -627,8 +627,6 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       const errMsg = err?.message || 'Application submission failed. Please check your network and try again.';
       setErrorMsg(errMsg);
       setSubmitting(false);
-      // Explicit error alert so the user immediately sees the exact error
-      alert(`Worker Application Submission Error:\n\n${errMsg}\n\nPlease check your details or network connection and try again.`);
     }
   };
 
