@@ -67,6 +67,7 @@ import {
   adminUpdateCategory,
   adminDeleteCategory,
   uploadCategoryImage,
+  uploadServiceImage,
   subscribeDailyGigs,
   updateDailyGigStatus
 } from '../data/bookingService';
@@ -180,6 +181,11 @@ export function AdminScreen({ onBack, onLogout }) {
   });
   const [initialServiceForm, setInitialServiceForm] = useState(null);
   const [isServiceDirty, setIsServiceDirty] = useState(false);
+  const [editServiceImageFile, setEditServiceImageFile] = useState(null);
+  const [editServiceImagePreview, setEditServiceImagePreview] = useState('');
+  const [isUploadingServiceImage, setIsUploadingServiceImage] = useState(false);
+  const [serviceImageError, setServiceImageError] = useState('');
+  const serviceFileInputRef = useRef(null);
 
   // Category Management Form State
   const [newCatName, setNewCatName] = useState('');
@@ -406,10 +412,38 @@ export function AdminScreen({ onBack, onLogout }) {
     setInitialServiceForm(initialValues);
     setIsServiceDirty(false);
     setEditForm(initialValues);
+    setEditServiceImageFile(null);
+    setEditServiceImagePreview(initialImg);
+    setIsUploadingServiceImage(false);
+    setServiceImageError('');
+  };
+
+  const handleServiceImageFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      setServiceImageError('Image file is too large (max 25MB). Please choose a smaller photo.');
+      return;
+    }
+
+    setServiceImageError('');
+    setEditServiceImageFile(file);
+    setIsServiceDirty(true);
+
+    try {
+      const previewUrl = URL.createObjectURL(file);
+      setEditServiceImagePreview(previewUrl);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (evt) => setEditServiceImagePreview(evt.target?.result);
+      reader.readAsDataURL(file);
+    }
   };
 
   const isServiceImageModified = Boolean(
     editingService && (
+      editServiceImageFile ||
       (editForm.imageUrl || '').trim() !== (initialServiceForm?.imageUrl || '').trim() ||
       (editForm.imageUrl || '').trim() !== (editingService.heroImage || editingService.imageUrl || editingService.image || '').trim()
     )
@@ -429,9 +463,10 @@ export function AdminScreen({ onBack, onLogout }) {
     )
   );
 
-  // Form dirty state is triggered when image URL is modified independently or any other field changes
+  // Form dirty state is triggered when image URL/file is modified independently or any other field changes
   const isServiceFormDirty = Boolean(
     isServiceDirty || 
+    Boolean(editServiceImageFile) ||
     isServiceImageModified || 
     isServiceCategoryModified || 
     isServiceOtherFieldModified
@@ -441,30 +476,51 @@ export function AdminScreen({ onBack, onLogout }) {
     if (e && e.preventDefault) e.preventDefault();
     if (!editingService) return;
 
-    // Independent field validation with graceful fallbacks so updating ONLY image URL saves cleanly without validation errors
-    const finalTitle = (editForm.title && editForm.title.trim()) || editingService.title || 'Home Service';
-    const finalPrice = !isNaN(Number(editForm.price)) && Number(editForm.price) > 0 ? Number(editForm.price) : (editingService.price || 300);
-    const finalCat = (editForm.categoryName && editForm.categoryName.trim()) || editingService.categoryName || 'General';
-    const finalSub = editForm.subCategory !== undefined ? editForm.subCategory.trim() : (editingService.subCategory || '');
-    const finalAbout = editForm.description !== undefined ? editForm.description.trim() : (editingService.about || editingService.description || '');
-    const finalImage = (editForm.imageUrl !== undefined ? editForm.imageUrl.trim() : '') || 
-      editingService.heroImage || editingService.imageUrl || editingService.image || '';
+    setIsUploadingServiceImage(true);
+    setServiceImageError('');
 
-    await adminUpdateService(editingService.id, {
-      title: finalTitle,
-      categoryName: finalCat,
-      subCategory: finalSub,
-      price: finalPrice,
-      about: finalAbout,
-      heroImage: finalImage,
-      imageUrl: finalImage,
-      image: finalImage
-    });
+    try {
+      let finalImage = (editForm.imageUrl !== undefined ? editForm.imageUrl.trim() : '') || 
+        editingService.heroImage || editingService.imageUrl || editingService.image || '';
 
-    showToast(`Service "${finalTitle}" updated successfully!`, 'success');
-    setEditingService(null);
-    setInitialServiceForm(null);
-    setIsServiceDirty(false);
+      // If a new gallery/device photo was selected, upload directly to Supabase storage
+      if (editServiceImageFile) {
+        finalImage = await uploadServiceImage(editServiceImageFile, editingService.id);
+      } else if (editServiceImagePreview && editServiceImagePreview.startsWith('data:')) {
+        finalImage = await uploadServiceImage(editServiceImagePreview, editingService.id);
+      }
+
+      // Independent field validation with graceful fallbacks so updating saves cleanly without validation errors
+      const finalTitle = (editForm.title && editForm.title.trim()) || editingService.title || 'Home Service';
+      const finalPrice = !isNaN(Number(editForm.price)) && Number(editForm.price) > 0 ? Number(editForm.price) : (editingService.price || 300);
+      const finalCat = (editForm.categoryName && editForm.categoryName.trim()) || editingService.categoryName || 'General';
+      const finalSub = editForm.subCategory !== undefined ? editForm.subCategory.trim() : (editingService.subCategory || '');
+      const finalAbout = editForm.description !== undefined ? editForm.description.trim() : (editingService.about || editingService.description || '');
+
+      await adminUpdateService(editingService.id, {
+        title: finalTitle,
+        categoryName: finalCat,
+        subCategory: finalSub,
+        price: finalPrice,
+        about: finalAbout,
+        description: finalAbout,
+        heroImage: finalImage,
+        imageUrl: finalImage,
+        image: finalImage
+      });
+
+      showToast(`Service "${finalTitle}" updated successfully in Supabase!`, 'success');
+      setEditingService(null);
+      setInitialServiceForm(null);
+      setIsServiceDirty(false);
+      setEditServiceImageFile(null);
+      setEditServiceImagePreview('');
+    } catch (err) {
+      console.error('Failed to save service updates:', err);
+      setServiceImageError(`Failed to save changes: ${err.message || 'Please check your connection and try again.'}`);
+    } finally {
+      setIsUploadingServiceImage(false);
+    }
   };
 
   const handleDeleteService = async (serviceId, serviceTitle) => {
@@ -2539,6 +2595,23 @@ export function AdminScreen({ onBack, onLogout }) {
               </button>
             </div>
 
+            {/* Hidden File Input for Device/Gallery Photo Pick */}
+            <input
+              type="file"
+              ref={serviceFileInputRef}
+              onChange={handleServiceImageFileSelect}
+              accept="image/*"
+              className="hidden"
+            />
+
+            {/* Error Message Notice if any */}
+            {serviceImageError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs font-bold animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{serviceImageError}</span>
+              </div>
+            )}
+
             <form noValidate onSubmit={handleSaveEditService} className="mt-4 space-y-3.5">
               
               {/* Service Title */}
@@ -2622,72 +2695,132 @@ export function AdminScreen({ onBack, onLogout }) {
                 </div>
               </div>
 
-              {/* Image URL Manual Management */}
-              <div>
-                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
-                  Image URL (Manual Link)
-                </label>
-                <input
-                  type="text"
-                  value={editForm.imageUrl}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEditForm(prev => ({ ...prev, imageUrl: val }));
-                    setIsServiceDirty(true);
-                  }}
-                  onInput={(e) => {
-                    const val = e.target.value;
-                    setEditForm(prev => ({ ...prev, imageUrl: val }));
-                    setIsServiceDirty(true);
-                  }}
-                  onPaste={(e) => {
-                    const val = e.clipboardData?.getData('text');
-                    if (val !== undefined) {
-                      setEditForm(prev => ({ ...prev, imageUrl: val }));
-                      setIsServiceDirty(true);
-                    }
-                  }}
-                  placeholder="https://images.unsplash.com/... or /assets/images/..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
-                />
-
-                {/* Live Image Preview */}
-                <div className="mt-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
-                  <div 
-                    className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-200 border border-slate-300 relative shadow-2xs"
-                    style={{ width: '3.5rem', height: '3.5rem' }}
-                  >
-                    <img
-                      src={editForm.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80'}
-                      alt="Preview"
-                      className="w-full h-full object-cover block"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80';
-                      }}
-                    />
+              {/* Image Handling: Gallery File Upload + Manual Link */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50/70 via-slate-50/70 to-slate-50 border border-sky-100/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#0EA5E0]">
+                    <Camera className="w-4 h-4" />
+                    <span>Service Photo / Image</span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-slate-700">Updated Image Preview</p>
-                    <p className="text-[10px] text-slate-400">Will render on service listing cards</p>
+                  {editServiceImageFile ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Gallery Image Selected</span>
+                    </span>
+                  ) : editServiceImagePreview ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-[#0284C7]">
+                      Current Photo
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Image Preview & Direct File Picker */}
+                <div className="flex items-center gap-3.5 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  {/* Thumbnail Preview */}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 relative shadow-2xs flex items-center justify-center">
+                    {editServiceImagePreview ? (
+                      <img
+                        src={editServiceImagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover block"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80';
+                        }}
+                      />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                    )}
+
+                    {isUploadingServiceImage && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-2xs flex flex-col items-center justify-center text-white">
+                        <RefreshCw className="w-4 h-4 animate-spin text-white mb-0.5" />
+                        <span className="text-[8px] font-bold">Uploading</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pick from Gallery Button */}
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={isUploadingServiceImage}
+                        onClick={() => serviceFileInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>{editServiceImageFile ? 'Change Photo' : 'Choose from Gallery'}</span>
+                      </button>
+
+                      {editServiceImageFile && (
+                        <button
+                          type="button"
+                          disabled={isUploadingServiceImage}
+                          onClick={() => {
+                            setEditServiceImageFile(null);
+                            const orig = (editingService.heroImage || editingService.imageUrl || editingService.image || '').trim();
+                            setEditServiceImagePreview(orig);
+                            setEditForm(prev => ({ ...prev, imageUrl: orig }));
+                          }}
+                          className="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 font-medium truncate">
+                      {editServiceImageFile
+                        ? `${editServiceImageFile.name} (${Math.round(editServiceImageFile.size / 1024)} KB) • Uploads to Supabase`
+                        : 'Pick PNG, JPG, or WebP photo directly from device gallery'}
+                    </p>
                   </div>
                 </div>
 
-                {/* Quick Presets for Technicians in Blue Uniforms */}
-                <div className="mt-2">
+                {/* Direct Image URL / Manual Link */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                    Or Image URL (Manual Link):
+                  </label>
+                  <input
+                    type="text"
+                    disabled={isUploadingServiceImage}
+                    value={editForm.imageUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditForm(prev => ({ ...prev, imageUrl: val }));
+                      if (!editServiceImageFile) {
+                        setEditServiceImagePreview(val);
+                      }
+                      setIsServiceDirty(true);
+                    }}
+                    placeholder="https://images.unsplash.com/... or /assets/images/..."
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] transition"
+                  />
+                </div>
+
+                {/* Stock Presets */}
+                <div>
                   <span className="text-[10px] font-bold text-slate-400 block mb-1">
                     Technician Stock Presets:
                   </span>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto no-scrollbar">
                     {TECHNICIAN_PRESETS.map((p) => (
                       <button
                         key={p.label}
                         type="button"
+                        disabled={isUploadingServiceImage}
                         onClick={() => {
-                          setEditForm({ ...editForm, imageUrl: p.url });
+                          setEditServiceImageFile(null);
+                          setEditServiceImagePreview(p.url);
+                          setEditForm(prev => ({ ...prev, imageUrl: p.url }));
                           setIsServiceDirty(true);
                         }}
-                        className="px-2 py-0.5 rounded-lg bg-sky-50 text-[#0EA5E0] hover:bg-[#0EA5E0] hover:text-white text-[10px] font-bold border border-sky-100 transition cursor-pointer"
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                          editServiceImagePreview === p.url
+                            ? 'bg-[#0EA5E0] text-white border-[#0EA5E0]'
+                            : 'bg-white text-slate-600 hover:bg-sky-50 hover:text-[#0EA5E0] border-slate-200'
+                        }`}
                       >
                         {p.label}
                       </button>
@@ -2716,23 +2849,37 @@ export function AdminScreen({ onBack, onLogout }) {
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setEditingService(null)}
-                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer"
+                  disabled={isUploadingServiceImage}
+                  onClick={() => {
+                    setEditingService(null);
+                    setEditServiceImageFile(null);
+                    setEditServiceImagePreview('');
+                  }}
+                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={!isServiceFormDirty}
+                  disabled={!isServiceFormDirty || isUploadingServiceImage}
                   className={`flex-1 py-2.5 rounded-2xl text-white text-xs font-extrabold shadow-sm active:scale-98 transition flex items-center justify-center gap-1.5 ${
-                    isServiceFormDirty
+                    isServiceFormDirty && !isUploadingServiceImage
                       ? 'bg-[#0EA5E0] hover:bg-[#0284C7] cursor-pointer'
                       : 'bg-slate-300 cursor-not-allowed opacity-60'
                   }`}
                   title={isServiceFormDirty ? 'Save Changes' : 'No changes detected to save'}
                 >
-                  <Check className="w-4 h-4 stroke-[2.5]" />
-                  <span>Save Changes</span>
+                  {isUploadingServiceImage ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving to Supabase...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[2.5]" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
 

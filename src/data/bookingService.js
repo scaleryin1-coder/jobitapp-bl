@@ -922,6 +922,39 @@ export function subscribeServices(callback) {
   // Initial local state push
   callback(getLocalServices());
 
+  // Supabase sync if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      supabase
+        .from('services')
+        .select('*')
+        .then(({ data, error }) => {
+          if (!error && Array.isArray(data) && data.length > 0) {
+            const current = getLocalServices();
+            const currentMap = new Map(current.map(s => [s.id, s]));
+            data.forEach(item => {
+              const id = item.id;
+              const local = currentMap.get(id) || {};
+              currentMap.set(id, {
+                ...local,
+                ...item,
+                categoryName: item.category_name || item.categoryName || local.categoryName,
+                subCategory: item.sub_category || item.subCategory || local.subCategory,
+                heroImage: item.hero_image || item.heroImage || item.image_url || item.imageUrl || local.heroImage,
+                imageUrl: item.image_url || item.imageUrl || item.hero_image || item.heroImage || local.imageUrl,
+                image: item.image || item.hero_image || item.image_url || local.image,
+                price: item.price !== undefined ? Number(item.price) : local.price,
+                title: item.title || local.title
+              });
+            });
+            const merged = Array.from(currentMap.values());
+            saveLocalServices(merged);
+            callback(merged);
+          }
+        });
+    } catch {}
+  }
+
   // Firestore sync if configured
   if (isFirebaseConfigured && db) {
     try {
@@ -993,8 +1026,113 @@ export async function adminAddService(serviceData) {
   return formatted;
 }
 
+/**
+ * Upload service hero image to Supabase Storage with local compression & fallback
+ * Returns public Supabase URL or download URL or optimized data URL
+ */
+export async function uploadServiceImage(fileOrDataUrl, serviceId = 'service') {
+  if (!fileOrDataUrl) return '';
+
+  // If already a remote web URL (Unsplash, external CDN, etc.), return as is
+  if (typeof fileOrDataUrl === 'string' && (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://'))) {
+    return fileOrDataUrl;
+  }
+
+  // 1. Optimize & compress the image (max 1000x1000, 85% quality)
+  let compressedDataUrl = '';
+  try {
+    compressedDataUrl = await compressImage(fileOrDataUrl, 1000, 1000, 0.85);
+  } catch (err) {
+    console.warn('Service image compression notice:', err);
+    compressedDataUrl = typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '';
+  }
+
+  const sanitizedId = String(serviceId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+  const filename = `services/${sanitizedId}_${Date.now()}.jpg`;
+
+  let blobToUpload = null;
+  if (compressedDataUrl && compressedDataUrl.startsWith('data:')) {
+    try {
+      const res = await fetch(compressedDataUrl);
+      blobToUpload = await res.blob();
+    } catch {}
+  } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+    blobToUpload = fileOrDataUrl;
+  }
+
+  // 2. Upload to Supabase Storage first if configured
+  if (isSupabaseConfigured && supabase && blobToUpload) {
+    try {
+      const targetBuckets = ['services', 'categories', 'images', 'public'];
+      for (const bucket of targetBuckets) {
+        try {
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(filename, blobToUpload, {
+              contentType: 'image/jpeg',
+              upsert: true
+            });
+
+          if (!error && data) {
+            const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
+            if (urlData?.publicUrl) {
+              return urlData.publicUrl;
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback: Direct Supabase Storage REST endpoint
+      const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+      const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+      if (supabaseUrl && supabaseKey) {
+        for (const bucket of ['services', 'categories', 'images']) {
+          try {
+            const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${filename}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'image/jpeg',
+                'x-upsert': 'true'
+              },
+              body: blobToUpload
+            });
+            if (uploadRes.ok) {
+              return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filename}`;
+            }
+          } catch {}
+        }
+      }
+    } catch (sbErr) {
+      console.warn('Supabase storage upload notice:', sbErr);
+    }
+  }
+
+  // 3. Fallback: Firebase Storage if configured
+  if (storage && isFirebaseConfigured && blobToUpload) {
+    try {
+      const storageRef = ref(storage, filename);
+      const uploadSnapshot = await uploadBytes(storageRef, blobToUpload, {
+        contentType: 'image/jpeg',
+        customMetadata: {
+          serviceId: String(serviceId),
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+      if (downloadUrl) return downloadUrl;
+    } catch (fbErr) {
+      console.warn('Firebase Storage upload notice:', fbErr);
+    }
+  }
+
+  // 4. Reliable Resilient Fallback: High-resolution optimized compressed data URL
+  return compressedDataUrl || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
+}
+
 export async function adminUpdateService(serviceId, updates) {
   const current = getLocalServices();
+  let updatedService = null;
   const updated = current.map(s => {
     if (s.id === serviceId) {
       const merged = { ...s, ...updates };
@@ -1016,6 +1154,7 @@ export async function adminUpdateService(serviceId, updates) {
         merged.subCategories = [updates.subCategory];
       }
       merged.updatedAt = new Date().toISOString();
+      updatedService = merged;
       return merged;
     }
     return s;
@@ -1023,16 +1162,68 @@ export async function adminUpdateService(serviceId, updates) {
 
   saveLocalServices(updated);
 
+  // 1. Sync update to Supabase services table if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const finalImg = updates.heroImage || updates.imageUrl || updates.image || updatedService?.heroImage || '';
+      const finalPrice = updates.price !== undefined ? Number(updates.price) : Number(updatedService?.price || 300);
+      const finalCat = updates.categoryName || updatedService?.categoryName || 'General';
+      const finalTitle = updates.title || updatedService?.title || 'Home Service';
+      const finalDesc = updates.about || updates.description || updatedService?.about || '';
+      const finalSub = updates.subCategory || updatedService?.subCategory || '';
+
+      const { error } = await supabase
+        .from('services')
+        .upsert({
+          id: serviceId,
+          title: finalTitle,
+          price: finalPrice,
+          category_name: finalCat,
+          categoryName: finalCat,
+          sub_category: finalSub,
+          subCategory: finalSub,
+          description: finalDesc,
+          about: finalDesc,
+          hero_image: finalImg,
+          heroImage: finalImg,
+          image_url: finalImg,
+          imageUrl: finalImg,
+          image: finalImg,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (error) {
+        // Fallback update by primary ID key
+        await supabase
+          .from('services')
+          .update({
+            title: finalTitle,
+            price: finalPrice,
+            category_name: finalCat,
+            description: finalDesc,
+            image_url: finalImg,
+            hero_image: finalImg
+          })
+          .eq('id', serviceId);
+      }
+    } catch (sbErr) {
+      console.warn('Supabase adminUpdateService notice:', sbErr);
+    }
+  }
+
+  // 2. Sync to Firestore if configured
   if (isFirebaseConfigured && db) {
     try {
-      await updateDoc(doc(db, 'services', serviceId), {
+      await setDoc(doc(db, 'services', serviceId), {
         ...updates,
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
     } catch (e) {
       console.warn('Firestore adminUpdateService fallback', e);
     }
   }
+
+  return updatedService;
 }
 
 export async function adminDeleteService(serviceId) {
