@@ -1,4 +1,5 @@
 import { db, storage, isFirebaseConfigured } from '../firebase';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { 
   collection, 
   onSnapshot, 
@@ -399,9 +400,10 @@ export function saveLocalWorkers(workers) {
   }
 }
 
-// Real-time listener for bookings (Firestore with local fallback & sync)
+// Real-time listener for bookings (Supabase & Firestore with local fallback & sync)
 export function subscribeBookings(callback) {
   let unsubFirestore = null;
+  let supabaseChannel = null;
 
   const handleLocalChange = () => {
     callback(getLocalBookings());
@@ -412,6 +414,70 @@ export function subscribeBookings(callback) {
 
   // Initial trigger from local storage
   callback(getLocalBookings());
+
+  // Supabase fetch & realtime sync if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      supabase
+        .from('bookings')
+        .select('*')
+        .then(({ data, error }) => {
+          if (!error && Array.isArray(data) && data.length > 0) {
+            const current = getLocalBookings();
+            const currentMap = new Map(current.map(b => [b.id, b]));
+
+            data.forEach(item => {
+              const local = currentMap.get(item.id) || {};
+              currentMap.set(item.id, {
+                ...local,
+                ...item,
+                status: item.status || local.status || 'pending',
+                declinedWorkerIds: item.declined_worker_ids || item.declinedWorkerIds || local.declinedWorkerIds || [],
+                rejectedWorkerIds: item.rejected_worker_ids || item.rejectedWorkerIds || local.rejectedWorkerIds || [],
+                rejectedBy: item.rejected_by || item.rejectedBy || local.rejectedBy
+              });
+            });
+
+            const merged = Array.from(currentMap.values());
+            merged.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
+            saveLocalBookings(merged);
+            callback(merged);
+          }
+        })
+        .catch(() => {});
+
+      try {
+        supabaseChannel = supabase
+          .channel('public:bookings_realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+            if (payload.new) {
+              const current = getLocalBookings();
+              const idx = current.findIndex(b => b.id === payload.new.id);
+              const updatedItem = {
+                ...(idx >= 0 ? current[idx] : {}),
+                ...payload.new,
+                status: payload.new.status || (idx >= 0 ? current[idx].status : 'pending'),
+                declinedWorkerIds: payload.new.declined_worker_ids || payload.new.declinedWorkerIds || (idx >= 0 ? current[idx].declinedWorkerIds : []),
+                rejectedWorkerIds: payload.new.rejected_worker_ids || payload.new.rejectedWorkerIds || (idx >= 0 ? current[idx].rejectedWorkerIds : []),
+                rejectedBy: payload.new.rejected_by || payload.new.rejectedBy || (idx >= 0 ? current[idx].rejectedBy : null)
+              };
+
+              let nextList;
+              if (idx >= 0) {
+                nextList = current.map((b, i) => i === idx ? updatedItem : b);
+              } else {
+                nextList = [updatedItem, ...current];
+              }
+              saveLocalBookings(nextList);
+              callback(nextList);
+            }
+          })
+          .subscribe();
+      } catch {}
+    } catch (e) {
+      console.warn('Supabase bookings listener fallback', e);
+    }
+  }
 
   if (isFirebaseConfigured && db) {
     try {
@@ -435,6 +501,9 @@ export function subscribeBookings(callback) {
     window.removeEventListener(EVENT_BOOKINGS_CHANGED, handleLocalChange);
     window.removeEventListener('storage', handleLocalChange);
     if (unsubFirestore) unsubFirestore();
+    if (supabaseChannel && typeof supabaseChannel.unsubscribe === 'function') {
+      supabaseChannel.unsubscribe();
+    }
   };
 }
 
@@ -526,7 +595,7 @@ export async function createBooking(payload) {
 }
 
 // Update booking status:
-// 'pending' -> 'accepted' -> 'on_the_way' -> 'in_progress' -> 'completed' (or 'cancelled')
+// 'pending' -> 'accepted' -> 'on_the_way' -> 'in_progress' -> 'completed' (or 'cancelled', 'rejected')
 export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {}) {
   const current = getLocalBookings();
   const updated = current.map(b => {
@@ -542,6 +611,23 @@ export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {
   });
   saveLocalBookings(updated);
 
+  // Sync to Supabase 'bookings' table
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase
+        .from('bookings')
+        .update({
+          status: newStatus,
+          last_updated: new Date().toISOString(),
+          ...extraUpdates
+        })
+        .eq('id', bookingId);
+    } catch (e) {
+      console.warn('Supabase update status fallback', e);
+    }
+  }
+
+  // Sync to Firestore
   if (isFirebaseConfigured && db) {
     try {
       await updateDoc(doc(db, 'bookings', bookingId), {
@@ -553,6 +639,98 @@ export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {
       console.warn('Firestore update status fallback', e);
     }
   }
+}
+
+// Worker rejects/declines a job - persists in Supabase, Firestore, and local state
+export async function rejectJobAsWorker(bookingId, workerId) {
+  const current = getLocalBookings();
+  let wasAssignedToThisWorker = false;
+  
+  const updated = current.map(b => {
+    if (b.id === bookingId) {
+      const existingDeclined = Array.isArray(b.declinedWorkerIds) ? b.declinedWorkerIds : [];
+      const updatedDeclined = Array.from(new Set([...existingDeclined, workerId]));
+      wasAssignedToThisWorker = b.workerId === workerId;
+
+      return {
+        ...b,
+        status: wasAssignedToThisWorker ? 'rejected' : b.status,
+        rejected: true,
+        rejectedBy: workerId,
+        rejectedAt: new Date().toISOString(),
+        declinedWorkerIds: updatedDeclined,
+        rejectedWorkerIds: updatedDeclined,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+    return b;
+  });
+
+  saveLocalBookings(updated);
+
+  // Also persist to worker's dedicated local storage rejected list
+  try {
+    const storageKey = `jobit_declined_jobs_${workerId}`;
+    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const nextList = Array.from(new Set([...stored, bookingId]));
+    localStorage.setItem(storageKey, JSON.stringify(nextList));
+  } catch {}
+
+  // 1. Sync to Supabase 'bookings' table
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const targetBooking = updated.find(b => b.id === bookingId);
+      const declinedList = targetBooking?.declinedWorkerIds || [workerId];
+      
+      const supabasePayload = {
+        status: wasAssignedToThisWorker ? 'rejected' : (targetBooking?.status || 'pending'),
+        rejected_by: workerId,
+        rejected_at: new Date().toISOString(),
+        declined_worker_ids: declinedList,
+        rejected_worker_ids: declinedList,
+        last_updated: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('bookings')
+        .update(supabasePayload)
+        .eq('id', bookingId);
+
+      if (error) {
+        console.warn('Supabase reject job update note:', error.message);
+        // Fallback update with standard status column
+        await supabase
+          .from('bookings')
+          .update({
+            status: wasAssignedToThisWorker ? 'rejected' : (targetBooking?.status || 'pending'),
+            last_updated: new Date().toISOString()
+          })
+          .eq('id', bookingId)
+          .catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Supabase reject update exception:', err);
+    }
+  }
+
+  // 2. Sync to Firestore
+  if (isFirebaseConfigured && db) {
+    try {
+      const targetBooking = updated.find(b => b.id === bookingId);
+      await updateDoc(doc(db, 'bookings', bookingId), {
+        status: wasAssignedToThisWorker ? 'rejected' : (targetBooking?.status || 'pending'),
+        rejectedBy: workerId,
+        rejectedAt: new Date().toISOString(),
+        declinedWorkerIds: targetBooking?.declinedWorkerIds || [workerId],
+        rejectedWorkerIds: targetBooking?.rejectedWorkerIds || [workerId],
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Firestore reject status fallback', e);
+    }
+  }
+
+  return updated;
 }
 
 // Worker accepts an unallocated or broadcasted job

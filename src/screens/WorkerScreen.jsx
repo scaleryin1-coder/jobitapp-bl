@@ -34,6 +34,7 @@ import {
   subscribeBookings, 
   subscribeWorkers, 
   acceptJobAsWorker, 
+  rejectJobAsWorker,
   updateBookingStatus, 
   toggleWorkerDuty,
   subscribePortfolios,
@@ -71,7 +72,16 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [workers, setWorkers] = useState([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState(() => currentUser?.workerId || currentUser?.uid || '');
   const [bookings, setBookings] = useState([]);
-  const [declinedJobIds, setDeclinedJobIds] = useState([]);
+  const [declinedJobIds, setDeclinedJobIds] = useState(() => {
+    try {
+      const workerId = currentUser?.workerId || currentUser?.uid || '';
+      if (!workerId) return [];
+      const saved = localStorage.getItem(`jobit_declined_jobs_${workerId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [completedJobSummary, setCompletedJobSummary] = useState(null);
@@ -145,6 +155,19 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   // Identify active worker: user's own profile, or explicitly selected real approved worker, or first real approved worker
   const activeWorker = myRegisteredProfile || approvedRealWorkers.find(w => w.id === selectedWorkerId) || approvedRealWorkers[0] || null;
 
+  // Sync rejected jobs for the active worker from storage
+  useEffect(() => {
+    if (activeWorker?.id) {
+      try {
+        const saved = localStorage.getItem(`jobit_declined_jobs_${activeWorker.id}`);
+        const parsed = saved ? JSON.parse(saved) : [];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDeclinedJobIds(prev => Array.from(new Set([...prev, ...parsed])));
+        }
+      } catch {}
+    }
+  }, [activeWorker?.id]);
+
   const isOnline = Boolean(activeWorker?.isOnline);
 
   const handleToggleOnline = async () => {
@@ -153,21 +176,38 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   };
 
   // Incoming unallocated jobs matching skill or broadcast (status: 'pending')
-  const incomingBroadcastJobs = bookings.filter(b => 
-    b.status === 'pending' && 
-    !declinedJobIds.includes(b.id) &&
-    (b.workerId === null || b.workerId === activeWorker.id || !b.workerId)
-  );
+  // Completely and permanently filters out rejected/declined jobs even after page refresh
+  const incomingBroadcastJobs = bookings.filter(b => {
+    if (b.status !== 'pending') return false;
+    if (b.status === 'rejected' || b.status === 'declined' || b.status === 'cancelled') return false;
+
+    // Filter out if rejected by worker in active session or local storage
+    if (declinedJobIds.includes(b.id)) return false;
+
+    // Filter out if recorded as rejected by this worker in Supabase or Firestore data payload
+    if (activeWorker?.id) {
+      if (b.rejectedBy === activeWorker.id || b.rejected_by === activeWorker.id) return false;
+      if (Array.isArray(b.declinedWorkerIds) && b.declinedWorkerIds.includes(activeWorker.id)) return false;
+      if (Array.isArray(b.rejectedWorkerIds) && b.rejectedWorkerIds.includes(activeWorker.id)) return false;
+      if (Array.isArray(b.declined_worker_ids) && b.declined_worker_ids.includes(activeWorker.id)) return false;
+      if (Array.isArray(b.rejected_worker_ids) && b.rejected_worker_ids.includes(activeWorker.id)) return false;
+    }
+
+    return b.workerId === null || b.workerId === activeWorker?.id || !b.workerId;
+  });
 
   // My accepted or ongoing jobs
   const myAssignedJobs = bookings.filter(b => 
-    b.workerId === activeWorker.id && 
-    ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status)
+    b.workerId === activeWorker?.id && 
+    ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status) &&
+    !declinedJobIds.includes(b.id) &&
+    b.status !== 'rejected' &&
+    b.status !== 'declined'
   );
 
   // My completed jobs
   const myCompletedJobs = bookings.filter(b => 
-    b.workerId === activeWorker.id && b.status === 'completed'
+    b.workerId === activeWorker?.id && b.status === 'completed'
   );
 
   // Total earnings calculation (Worker's Net Share)
@@ -191,8 +231,18 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     setActiveTab('active');
   };
 
-  const handleDeclineJob = (bookingId) => {
-    setDeclinedJobIds(prev => [...prev, bookingId]);
+  const handleDeclineJob = async (bookingId) => {
+    // 1. Immediately update UI state so it disappears instantly
+    setDeclinedJobIds(prev => Array.from(new Set([...prev, bookingId])));
+
+    // 2. Persist in database (Supabase, Firestore, and storage)
+    if (activeWorker?.id) {
+      try {
+        await rejectJobAsWorker(bookingId, activeWorker.id);
+      } catch (err) {
+        console.warn('Error persisting job rejection in database:', err);
+      }
+    }
   };
 
   // Step-by-step sequential progress updater
