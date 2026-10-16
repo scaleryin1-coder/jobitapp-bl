@@ -88,6 +88,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'available' | 'history' | 'portfolio'
   const [activeVoiceCallBooking, setActiveVoiceCallBooking] = useState(null);
   const [completedJobSummary, setCompletedJobSummary] = useState(null);
+  const [billingJob, setBillingJob] = useState(null); // Customer Billing & Payment QR modal state
   const [congratulationsData, setCongratulationsData] = useState(null); // "Job done! Congratulations 👏" modal
   const [confirmRejectJob, setConfirmRejectJob] = useState(null); // Job rejection confirmation popup
   const [isRejecting, setIsRejecting] = useState(false);
