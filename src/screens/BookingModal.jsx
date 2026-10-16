@@ -682,20 +682,14 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                 )}
               </div>
 
-              {/* B. Exact Map Pin Section - Urban Company Style */}
+              {/* B. Exact Map Pin Section */}
               <div className="pt-2 border-t border-slate-200/70 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-extrabold text-slate-800 block">
-                      Doorstep GPS Map Pin
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      Drag or tap map to drop your exact doorstep pin
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-100 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Urban Company Style Pinning</span>
+                <div>
+                  <span className="text-[11px] font-extrabold text-slate-800 block">
+                    Doorstep GPS Map Pin
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Drag or tap map to drop your exact doorstep pin
                   </span>
                 </div>
 

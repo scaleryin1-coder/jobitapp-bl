@@ -158,7 +158,7 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
           </button>
         </div>
 
-        {/* Mode Switch Tabs: Urban Company Style Map Pin Drop vs City Search */}
+        {/* Mode Switch Tabs: Pin on Map vs City Search */}
         <div className="flex gap-1.5 p-1 bg-slate-100 rounded-2xl mt-3 mb-2 shrink-0">
           <button
             type="button"

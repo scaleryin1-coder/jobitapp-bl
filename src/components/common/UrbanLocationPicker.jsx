@@ -257,7 +257,7 @@ export function UrbanLocationPicker({
   return (
     <div className={`space-y-2 ${className}`}>
       
-      {/* Top action row: Urban Company Style One-Tap Use Current Location */}
+      {/* Top action row: One-Tap Use Current Location */}
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
@@ -286,29 +286,29 @@ export function UrbanLocationPicker({
       </div>
 
       {gpsError && (
-        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium flex items-center gap-1.5 animate-fade-in">
+        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center gap-1.5 animate-fade-in">
           <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
           <span>{gpsError}</span>
         </div>
       )}
 
       {isSearchingArea && (
-        <div className="p-2 rounded-xl bg-sky-50 border border-sky-200 text-[#0284C7] text-[11px] font-bold flex items-center gap-2 animate-fade-in">
+        <div className="p-2 rounded-xl bg-sky-50 border border-sky-100 text-[#0284C7] text-xs font-semibold flex items-center gap-2 animate-fade-in">
           <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-[#0EA5E0]" />
-          <span>Searching area & centering map pin...</span>
+          <span>Centering map on searched area...</span>
         </div>
       )}
 
       {searchNotice && !isSearchingArea && (
-        <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-2 animate-fade-in">
-          <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+        <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
           <span>{searchNotice}</span>
         </div>
       )}
 
       {/* Main Interactive Map Canvas */}
       <div 
-        className={`relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm transition-all bg-slate-100 ${
+        className={`relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm transition-all bg-slate-100 ${
           isFullScreen 
             ? 'fixed inset-4 z-[999] h-auto shadow-2xl rounded-3xl border-2 border-[#0EA5E0]' 
             : 'h-[230px] sm:h-[260px]'
@@ -317,23 +317,17 @@ export function UrbanLocationPicker({
         {/* Leaflet Map Div */}
         <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-        {/* ============================================================ */}
-        {/* URBAN COMPANY STYLE CENTER FLOATING PIN WITH DYNAMIC SHADOW  */}
-        {/* ============================================================ */}
+        {/* Center Floating Pin with Shadow */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-[400]">
           <div className="relative flex flex-col items-center">
             
-            {/* Dynamic Helper Pill above Pin */}
-            <div 
-              className={`mb-1 px-2.5 py-0.5 rounded-full text-[10px] font-black shadow-md transition-all duration-200 flex items-center gap-1 backdrop-blur-xs ${
-                isDragging 
-                  ? 'bg-slate-900 text-white scale-105 -translate-y-2' 
-                  : 'bg-white/95 text-slate-800 border border-slate-200/80'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isDragging ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
-              <span>{isDragging ? 'Drop pin at doorstep' : 'Doorstep Service Pin'}</span>
-            </div>
+            {/* Minimal Drop Indicator while dragging only */}
+            {isDragging && (
+              <div className="mb-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-md bg-slate-900 text-white -translate-y-2 animate-fade-in flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Drop pin here</span>
+              </div>
+            )}
 
             {/* Pin Body with Lift & Float Animation */}
             <div 
@@ -342,7 +336,6 @@ export function UrbanLocationPicker({
               }`}
             >
               <div className="relative flex items-center justify-center">
-                {/* SVG High-Contrast Urban Company Style Pin */}
                 <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-md">
                   <path 
                     d="M19 0C8.50659 0 0 8.50659 0 19C0 30.5 16.5 44.5 18.2 45.8C18.67 46.2 19.33 46.2 19.8 45.8C21.5 44.5 38 30.5 38 19C38 8.50659 29.4934 0 19 0Z" 
@@ -354,7 +347,7 @@ export function UrbanLocationPicker({
               </div>
             </div>
 
-            {/* Dynamic Ground Shadow below Pin */}
+            {/* Ground Shadow below Pin */}
             <div 
               className={`h-2 rounded-full bg-slate-900/30 blur-[2px] transition-all duration-150 ${
                 isDragging ? 'w-3 opacity-25 scale-75' : 'w-5 opacity-70 scale-100'
@@ -394,19 +387,14 @@ export function UrbanLocationPicker({
           </button>
         </div>
 
-        {/* Bottom Floating Hint */}
+        {/* Bottom Floating Address Bar */}
         <div className="absolute bottom-2.5 left-2.5 right-2.5 z-[500] pointer-events-none">
-          <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-sm flex items-center justify-between text-[11px] font-semibold text-slate-700">
-            <span className="flex items-center gap-1.5 truncate">
-              <Crosshair className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
-              <span className="truncate">
-                {isResolvingAddress 
-                  ? 'Resolving area...' 
-                  : resolvedAddress || 'Drag map or tap anywhere to place pin'}
-              </span>
-            </span>
-            <span className="font-mono text-[10px] text-slate-400 font-bold shrink-0 ml-2">
-              {Number(currentCoords.lat).toFixed(4)}°, {Number(currentCoords.lng).toFixed(4)}°
+          <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-sm flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <Crosshair className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
+            <span className="truncate">
+              {isResolvingAddress 
+                ? 'Resolving area...' 
+                : resolvedAddress || 'Drag map or tap to adjust doorstep pin'}
             </span>
           </div>
         </div>
@@ -425,17 +413,6 @@ export function UrbanLocationPicker({
           </div>
         )}
 
-      </div>
-
-      {/* Helpful Instructions & Coordinates Confirmation */}
-      <div className="flex items-center justify-between px-1 text-[11px] text-slate-500 font-medium">
-        <span className="flex items-center gap-1 text-slate-600">
-          <Sparkles className="w-3.5 h-3.5 text-[#0EA5E0]" />
-          <span>Tap anywhere or drag map to adjust</span>
-        </span>
-        <span className="font-mono text-[10px] text-slate-400 font-bold">
-          Lat {Number(currentCoords.lat).toFixed(5)}, Lng {Number(currentCoords.lng).toFixed(5)}
-        </span>
       </div>
 
     </div>
