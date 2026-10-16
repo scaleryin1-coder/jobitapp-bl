@@ -399,45 +399,6 @@ export function UrbanLocationPicker({
         {/* Leaflet Map Div */}
         <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-        {/* Center Floating Pin with Shadow */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-[400]">
-          <div className="relative flex flex-col items-center">
-            
-            {/* Minimal Drop Indicator while dragging only */}
-            {isDragging && (
-              <div className="mb-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-md bg-slate-900 text-white -translate-y-2 animate-fade-in flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Drop pin here</span>
-              </div>
-            )}
-
-            {/* Pin Body with Lift & Float Animation */}
-            <div 
-              className={`transform transition-transform duration-150 ease-out origin-bottom ${
-                isDragging ? '-translate-y-3 scale-110' : 'translate-y-0 scale-100'
-              }`}
-            >
-              <div className="relative flex items-center justify-center">
-                <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-md">
-                  <path 
-                    d="M19 0C8.50659 0 0 8.50659 0 19C0 30.5 16.5 44.5 18.2 45.8C18.67 46.2 19.33 46.2 19.8 45.8C21.5 44.5 38 30.5 38 19C38 8.50659 29.4934 0 19 0Z" 
-                    fill="#0EA5E0" 
-                  />
-                  <circle cx="19" cy="18" r="8" fill="white" />
-                  <circle cx="19" cy="18" r="4.5" fill="#0EA5E0" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Ground Shadow below Pin */}
-            <div 
-              className={`h-2 rounded-full bg-slate-900/30 blur-[2px] transition-all duration-150 ${
-                isDragging ? 'w-3 opacity-25 scale-75' : 'w-5 opacity-70 scale-100'
-              }`} 
-            />
-
-          </div>
-        </div>
 
         {/* Top-Right Map Controls: Zoom & Fullscreen */}
         <div className="absolute top-2.5 right-2.5 z-[500] flex flex-col gap-1.5">
