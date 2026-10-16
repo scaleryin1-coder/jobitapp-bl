@@ -61,6 +61,84 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
   const [isGpsLocating, setIsGpsLocating] = useState(false);
   const [gpsStatusMsg, setGpsStatusMsg] = useState('');
 
+  // Dynamic geocoding search & auto-pinning states
+  const [isSearchingMapArea, setIsSearchingMapArea] = useState(false);
+  const [mapSearchNotice, setMapSearchNotice] = useState('');
+  const forwardGeocodeTimerRef = React.useRef(null);
+
+  const triggerDynamicGeocode = (streetVal, landmarkVal) => {
+    if (forwardGeocodeTimerRef.current) {
+      clearTimeout(forwardGeocodeTimerRef.current);
+    }
+
+    const s = (streetVal || '').trim();
+    const lm = (landmarkVal || '').trim();
+
+    // Do not trigger until at least 3 characters are typed in either field
+    if (s.length < 3 && lm.length < 3) {
+      return;
+    }
+
+    forwardGeocodeTimerRef.current = setTimeout(async () => {
+      setIsSearchingMapArea(true);
+      try {
+        const searchCandidates = [];
+        if (s && lm) {
+          searchCandidates.push(`${s}, ${lm}, ${cleanCity}`);
+          searchCandidates.push(`${s}, ${cleanCity}`);
+        } else if (s) {
+          searchCandidates.push(`${s}, ${cleanCity}`);
+          searchCandidates.push(`${s}, Malappuram, Kerala`);
+          searchCandidates.push(s);
+        } else if (lm) {
+          searchCandidates.push(`${lm}, ${cleanCity}`);
+          searchCandidates.push(`${lm}, Malappuram, Kerala`);
+          searchCandidates.push(lm);
+        }
+
+        let foundMatch = null;
+        for (const query of searchCandidates) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
+              {
+                headers: {
+                  'Accept': 'application/json',
+                  'User-Agent': 'JobitHomeServicesWeb/2.0'
+                }
+              }
+            );
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0) {
+                foundMatch = data[0];
+                break;
+              }
+            }
+          } catch {
+            // Try next candidate
+          }
+        }
+
+        if (foundMatch) {
+          const newLat = Number(Number(foundMatch.lat).toFixed(6));
+          const newLng = Number(Number(foundMatch.lon).toFixed(6));
+          setCoordinates({ lat: newLat, lng: newLng });
+          
+          const placeLabel = foundMatch.display_name?.split(',').slice(0, 2).join(',') || s || lm;
+          setMapSearchNotice(`Pin moved to "${placeLabel}". Drag or tap map to fine-tune exact doorstep.`);
+          setTimeout(() => {
+            setMapSearchNotice('');
+          }, 6000);
+        }
+      } catch (err) {
+        console.warn('Geocoding search failed:', err);
+      } finally {
+        setIsSearchingMapArea(false);
+      }
+    }, 550);
+  };
+
   const [date, setDate] = useState('');
   const [timeSlot, setTimeSlot] = useState('');
   const [note, setNote] = useState('');
@@ -130,6 +208,11 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
       setStreet('');
       setLandmark('');
       setAddress('');
+      if (forwardGeocodeTimerRef.current) {
+        clearTimeout(forwardGeocodeTimerRef.current);
+      }
+      setIsSearchingMapArea(false);
+      setMapSearchNotice('');
       setCoordinates(getInitialCoords(effectiveCity));
       setGpsStatusMsg('');
       setDate('');
@@ -563,7 +646,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                       required
                       value={street}
                       onChange={(e) => {
-                        setStreet(e.target.value);
+                        const val = e.target.value;
+                        setStreet(val);
+                        triggerDynamicGeocode(val, landmark);
                         if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
                       }}
                       onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
@@ -578,7 +663,11 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                     <input
                       type="text"
                       value={landmark}
-                      onChange={(e) => setLandmark(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLandmark(val);
+                        triggerDynamicGeocode(street, val);
+                      }}
                       placeholder="e.g. Near Town Mosque"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
                     />
@@ -610,7 +699,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                   </span>
                 </div>
 
-                {/* Urban Company Style Drag & Tap Interactive Map */}
+                {/* Urban Company Style Drag & Tap Interactive Map with Dynamic Geocoding Auto-Pinning */}
                 <UrbanLocationPicker
                   coordinates={coordinates}
                   onChangeCoordinates={(newCoords) => {
@@ -625,6 +714,8 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                     }
                   }}
                   cityContext={cleanCity}
+                  isSearchingArea={isSearchingMapArea}
+                  searchNotice={mapSearchNotice}
                 />
 
                 <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5 pt-1 border-t border-slate-100">

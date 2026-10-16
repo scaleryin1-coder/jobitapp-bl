@@ -20,6 +20,8 @@ export function UrbanLocationPicker({
   onChangeCoordinates,
   onAddressResolved,
   cityContext = 'Melattur, Kerala',
+  isSearchingArea = false,
+  searchNotice = '',
   className = ''
 }) {
   const mapContainerRef = useRef(null);
@@ -35,7 +37,7 @@ export function UrbanLocationPicker({
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentCoords, setCurrentCoords] = useState(coordinates);
 
-  // Sync internal state when prop coordinates change from outside
+  // Sync internal state when prop coordinates change from outside (e.g. forward geocoding from street/landmark)
   useEffect(() => {
     if (coordinates?.lat && coordinates?.lng) {
       const latDiff = Math.abs((currentCoords.lat || 0) - coordinates.lat);
@@ -43,7 +45,10 @@ export function UrbanLocationPicker({
       if (latDiff > 0.00005 || lngDiff > 0.00005) {
         setCurrentCoords(coordinates);
         if (mapInstanceRef.current && !isInternalMoveRef.current) {
-          mapInstanceRef.current.setView([coordinates.lat, coordinates.lng], mapInstanceRef.current.getZoom() || 16, { animate: true });
+          mapInstanceRef.current.flyTo([coordinates.lat, coordinates.lng], 17, { 
+            duration: 0.8,
+            easeLinearity: 0.25 
+          });
         }
       }
     }
@@ -284,6 +289,20 @@ export function UrbanLocationPicker({
         <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium flex items-center gap-1.5 animate-fade-in">
           <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
           <span>{gpsError}</span>
+        </div>
+      )}
+
+      {isSearchingArea && (
+        <div className="p-2 rounded-xl bg-sky-50 border border-sky-200 text-[#0284C7] text-[11px] font-bold flex items-center gap-2 animate-fade-in">
+          <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-[#0EA5E0]" />
+          <span>Searching area & centering map pin...</span>
+        </div>
+      )}
+
+      {searchNotice && !isSearchingArea && (
+        <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-2 animate-fade-in">
+          <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+          <span>{searchNotice}</span>
         </div>
       )}
 
