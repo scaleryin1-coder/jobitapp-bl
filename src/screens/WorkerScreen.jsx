@@ -47,6 +47,25 @@ import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 import { PaymentQRModal } from '../components/billing/PaymentQRModal';
 import { compressImage } from '../utils/imageUtils';
 
+/**
+ * Generates accurate Google Maps navigation destination URL
+ * Uses exact saved latitude & longitude coordinates directly:
+ * https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}
+ * Fallback to full address string only if coordinates are missing.
+ */
+export function getGoogleMapsNavigationUrl(job) {
+  const lat = job?.latitude ?? job?.lat ?? job?.coordinates?.lat ?? job?.coordinates?.latitude;
+  const lng = job?.longitude ?? job?.lng ?? job?.coordinates?.lng ?? job?.coordinates?.longitude;
+
+  if (lat !== undefined && lat !== null && lng !== undefined && lng !== null && !isNaN(Number(lat)) && !isNaN(Number(lng)) && Number(lat) !== 0) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${Number(lat)},${Number(lng)}`;
+  }
+
+  // Fallback to full address string only if coordinates are missing
+  const destination = job?.fullAddress || job?.address || job?.city || 'Melattur, Kerala';
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
+
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const { currentUser } = useAuth();
   const [workers, setWorkers] = useState([]);
@@ -673,13 +692,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       <span className="truncate font-semibold">{job.address}</span>
                     </div>
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address || 'Melattur, Kerala')}`}
+                      href={getGoogleMapsNavigationUrl(job)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold shrink-0 transition"
-                      title="Route in Google Maps"
+                      className="px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold shrink-0 transition flex items-center gap-1"
+                      title="Navigate in Google Maps using GPS coordinates"
                     >
-                      Maps ➔
+                      <Navigation className="w-2.5 h-2.5" />
+                      <span>Navigate</span>
                     </a>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -849,17 +869,25 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     <div className="pt-1 border-t border-slate-200/60 text-slate-600 flex items-start justify-between gap-1.5">
                       <div className="flex items-start gap-1.5 flex-1">
                         <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                        <span className="leading-tight font-medium text-slate-800">{job.address}</span>
+                        <div>
+                          <span className="leading-tight font-medium text-slate-800 block">{job.address}</span>
+                          {Boolean((job?.latitude || job?.lat) && (job?.longitude || job?.lng)) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              <span>GPS Coordinates: {Number(job.latitude || job.lat).toFixed(4)}°, {Number(job.longitude || job.lng).toFixed(4)}°</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address || 'Melattur, Kerala')}`}
+                        href={getGoogleMapsNavigationUrl(job)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 shrink-0 transition"
-                        title="Open in Google Maps Navigation"
+                        className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-[11px] font-black flex items-center gap-1.5 shrink-0 transition shadow-sm active:scale-95"
+                        title="Open in Google Maps GPS Navigation"
                       >
-                        <Compass className="w-3 h-3 text-[#0EA5E0]" />
-                        <span>Route</span>
+                        <Navigation className="w-3.5 h-3.5 text-white" />
+                        <span>Navigate</span>
                       </a>
                     </div>
 
@@ -944,13 +972,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       <span className="truncate font-semibold text-slate-800">{job.address}</span>
                     </div>
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address || 'Melattur, Kerala')}`}
+                      href={getGoogleMapsNavigationUrl(job)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold shrink-0 transition"
-                      title="Route in Google Maps"
+                      className="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold shrink-0 transition flex items-center gap-1"
+                      title="Navigate in Google Maps using GPS coordinates"
                     >
-                      Maps ➔
+                      <Navigation className="w-2.5 h-2.5" />
+                      <span>Navigate</span>
                     </a>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-600">

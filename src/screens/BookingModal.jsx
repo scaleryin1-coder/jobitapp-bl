@@ -13,19 +13,53 @@ import {
   User, 
   ChevronRight,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Compass,
+  Navigation,
+  ExternalLink
 } from 'lucide-react';
 import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory, isPortfolioCategory } from '../data/categoriesData';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 
+// Baseline coordinates lookup for key service hubs
+const DEFAULT_CITY_COORDS = {
+  'melattur': { lat: 11.0607, lng: 76.2625 },
+  'pattikkad': { lat: 11.0267, lng: 76.2081 },
+  'pandikkad': { lat: 11.1118, lng: 76.2415 },
+  'perinthalmanna': { lat: 10.9760, lng: 76.2254 },
+  'manjeri': { lat: 11.1213, lng: 76.1213 },
+  'malappuram': { lat: 11.0732, lng: 76.0740 },
+  'kozhikode': { lat: 11.2588, lng: 75.7804 },
+  'kochi': { lat: 9.9312, lng: 76.2673 },
+  'bengaluru': { lat: 12.9716, lng: 77.5946 }
+};
+
+const getInitialCoords = (locName) => {
+  const key = (locName || '').toLowerCase();
+  for (const [cityKey, coords] of Object.entries(DEFAULT_CITY_COORDS)) {
+    if (key.includes(cityKey)) return { ...coords };
+  }
+  return { lat: 11.0607, lng: 76.2625 }; // Melattur default
+};
+
 export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity, workers = [] }) {
   const { currentUser } = useAuth() || {};
   const effectiveCity = currentCity || localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
   const cleanCity = effectiveCity.split(',')[0].trim();
-  // Requirements: Remove pre-filled address, date, and timeSlot. All must be explicitly chosen.
+  
+  // Detailed Text Address fields
+  const [houseName, setHouseName] = useState('');
+  const [street, setStreet] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [address, setAddress] = useState('');
+
+  // Exact Map Pin Coordinates (Latitude & Longitude)
+  const [coordinates, setCoordinates] = useState(() => getInitialCoords(effectiveCity));
+  const [isGpsLocating, setIsGpsLocating] = useState(false);
+  const [gpsStatusMsg, setGpsStatusMsg] = useState('');
+
   const [date, setDate] = useState('');
   const [timeSlot, setTimeSlot] = useState('');
   const [note, setNote] = useState('');
@@ -40,10 +74,20 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     timeSlot: false
   });
 
-  const isAddressValid = Boolean(address && address.trim().length > 0);
+  const isAddressValid = Boolean(
+    (address && address.trim().length > 3) ||
+    (houseName && houseName.trim().length > 0 && street && street.trim().length > 0)
+  );
+  const isCoordinatesValid = Boolean(
+    coordinates &&
+    coordinates.lat !== undefined &&
+    coordinates.lng !== undefined &&
+    !isNaN(Number(coordinates.lat)) &&
+    !isNaN(Number(coordinates.lng))
+  );
   const isDateValid = Boolean(date && date.trim().length > 0);
   const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0);
-  const isFormValid = isAddressValid && isDateValid && isTimeSlotValid;
+  const isFormValid = isAddressValid && isCoordinatesValid && isDateValid && isTimeSlotValid;
   const todayString = new Date().toISOString().split('T')[0];
 
   // Derive sub-categories for this service/category
@@ -76,18 +120,87 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     }
   }, [service]);
 
-  // Clean state when modal opens or closes - ensure fields remain empty for new bookings
+  // Clean state when modal opens or closes
   useEffect(() => {
     if (!isOpen) {
       setConfirmedBookingData(null);
       setLoading(false);
+      setHouseName('');
+      setStreet('');
+      setLandmark('');
       setAddress('');
+      setCoordinates(getInitialCoords(effectiveCity));
+      setGpsStatusMsg('');
       setDate('');
       setTimeSlot('');
       setNote('');
       setTouched({ address: false, date: false, timeSlot: false });
     }
-  }, [isOpen]);
+  }, [isOpen, effectiveCity]);
+
+  // Helper to compose full address string
+  const getFullAddress = () => {
+    if (address && address.trim().length > 0) return address.trim();
+    const parts = [
+      houseName.trim(),
+      street.trim(),
+      landmark.trim() ? `Near ${landmark.trim()}` : '',
+      cleanCity
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
+
+  // High accuracy live GPS detector
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) {
+      setGpsStatusMsg('Geolocation not supported by this browser.');
+      return;
+    }
+    setIsGpsLocating(true);
+    setGpsStatusMsg('Detecting live GPS coordinates from device...');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setCoordinates({ lat, lng });
+        setIsGpsLocating(false);
+        setGpsStatusMsg(`GPS Lock Active (±${Math.round(pos.coords.accuracy || 10)}m accuracy)`);
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            { headers: { 'Accept': 'application/json', 'User-Agent': 'JobitHomeServicesWeb/1.0' } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || '';
+            const lm = addr.amenity || addr.building || addr.landmark || '';
+            if (!street && road) setStreet(road);
+            if (!landmark && lm) setLandmark(lm);
+          }
+        } catch {
+          // Reverse geocoding optional fallback
+        }
+      },
+      (err) => {
+        setIsGpsLocating(false);
+        if (err.code === 1) {
+          setGpsStatusMsg('Location permission denied in browser.');
+        } else {
+          setGpsStatusMsg('Unable to retrieve GPS. You can adjust the pin manually.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const nudgeCoordinates = (deltaLat, deltaLng) => {
+    setCoordinates(prev => ({
+      lat: Number((prev.lat + deltaLat).toFixed(6)),
+      lng: Number((prev.lng + deltaLng).toFixed(6))
+    }));
+  };
 
   if (!isOpen || !service) return null;
 
@@ -99,6 +212,8 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     }
     if (loading) return;
     setLoading(true);
+
+    const finalAddress = getFullAddress();
 
     // Strictly enforce requirement: In non-portfolio trades, NEVER assign worker prematurely
     const workerId = hasPreselectedWorker ? service.workerId : null;
@@ -127,7 +242,24 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
       totalWorkFee: 99,
       advancePaid: 99,
       remainingDue: 0,
-      address,
+      address: finalAddress,
+      houseName: houseName.trim(),
+      street: street.trim(),
+      landmark: landmark.trim(),
+      detailedAddress: {
+        houseName: houseName.trim(),
+        street: street.trim(),
+        landmark: landmark.trim(),
+        fullAddress: finalAddress
+      },
+      latitude: Number(coordinates.lat),
+      longitude: Number(coordinates.lng),
+      lat: Number(coordinates.lat),
+      lng: Number(coordinates.lng),
+      coordinates: {
+        lat: Number(coordinates.lat),
+        lng: Number(coordinates.lng)
+      },
       dateTime: `${date} at ${timeSlot}`,
       note: note.trim() 
         ? `Issue: ${selectedSubCategory}. Note: ${note.trim()}`
@@ -289,6 +421,24 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                 <span className="font-medium">Address:</span>
                 <span className="font-semibold text-slate-800 text-right truncate max-w-[200px]">{confirmedBookingData.address}</span>
               </div>
+              {confirmedBookingData.latitude && confirmedBookingData.longitude && (
+                <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/60">
+                  <span className="font-medium flex items-center gap-1 text-emerald-700 font-bold">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Doorstep GPS Pin:</span>
+                  </span>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${confirmedBookingData.latitude},${confirmedBookingData.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#0EA5E0] hover:underline font-mono font-bold flex items-center gap-1 text-[11px]"
+                    title="Open Pin in Google Maps"
+                  >
+                    <span>{Number(confirmedBookingData.latitude).toFixed(4)}°, {Number(confirmedBookingData.longitude).toFixed(4)}°</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Redirect / Finish Button */}
@@ -368,37 +518,183 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
               </div>
             )}
 
-            {/* Address Input - Strictly required with no pre-fill */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            {/* ======================================================= */}
+            {/* SERVICE ADDRESS & EXACT MAP PIN COORDINATES             */}
+            {/* ======================================================= */}
+            <div className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-[#111827] flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                  <span>Service Address <span className="text-rose-500">*</span></span>
+                  <span>Service Address & Doorstep GPS Pin <span className="text-rose-500">*</span></span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-semibold">{cleanCity}</span>
+                <span className="text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                  {cleanCity}
+                </span>
               </div>
-              <textarea
-                rows="2"
-                required
-                value={address}
-                onChange={(e) => {
-                  setAddress(e.target.value);
-                  if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
-                }}
-                onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
-                className={`w-full p-3 bg-[#F8FAFC] border rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none transition-colors ${
-                  touched.address && !isAddressValid
-                    ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
-                    : 'border-slate-200 focus:border-[#4B6EF5] focus:bg-white'
-                }`}
-                placeholder="Enter complete street, house no., building name, and landmark"
-              />
-              {touched.address && !isAddressValid && (
-                <p className="text-[11px] font-bold text-rose-500 mt-1 flex items-center gap-1 animate-fade-in">
-                  <AlertCircle className="w-3 h-3 shrink-0" />
-                  <span>Please enter your service address</span>
-                </p>
-              )}
+
+              {/* A. Detailed Text Address Fields */}
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
+                    House Name / Flat / Building No. <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={houseName}
+                    onChange={(e) => {
+                      setHouseName(e.target.value);
+                      if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
+                    }}
+                    onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
+                    placeholder="e.g. Rose Villa, Flat 2B / Building 4"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
+                      Street / Road / Area <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={street}
+                      onChange={(e) => {
+                        setStreet(e.target.value);
+                        if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
+                      }}
+                      onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
+                      placeholder="e.g. Station Road, Town Center"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
+                      Landmark (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="e.g. Near Town Mosque"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
+                    />
+                  </div>
+                </div>
+
+                {touched.address && !isAddressValid && (
+                  <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-fade-in">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>Please enter house name and street address</span>
+                  </p>
+                )}
+              </div>
+
+              {/* B. Exact Map Pin Section */}
+              <div className="pt-2 border-t border-slate-200/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-extrabold text-slate-800 block">
+                      Doorstep GPS Map Pin
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Technician opens Google Maps directly to this pin
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDetectGPS}
+                    disabled={isGpsLocating}
+                    className="px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[11px] font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer border border-sky-100 disabled:opacity-50"
+                  >
+                    <Compass className={`w-3.5 h-3.5 ${isGpsLocating ? 'animate-spin' : ''}`} />
+                    <span>{isGpsLocating ? 'Locating...' : 'Use My GPS Pin'}</span>
+                  </button>
+                </div>
+
+                {gpsStatusMsg && (
+                  <p className="text-[10px] font-bold text-sky-700 bg-sky-50/90 py-1 px-2 rounded-lg border border-sky-100">
+                    {gpsStatusMsg}
+                  </p>
+                )}
+
+                {/* Live Embedded Map with Interactive Crosshair & Pin */}
+                <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shadow-2xs">
+                  <iframe
+                    title="Doorstep Map Pin"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.lng - 0.005}%2C${coordinates.lat - 0.003}%2C${coordinates.lng + 0.005}%2C${coordinates.lat + 0.003}&layer=mapnik&marker=${coordinates.lat}%2C${coordinates.lng}`}
+                    className="w-full h-32 border-0 pointer-events-none block"
+                  />
+
+                  {/* Pin Overlay Badge with Live Coordinates */}
+                  <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1 text-[10px] font-mono font-bold text-slate-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>{coordinates.lat.toFixed(4)}°, {coordinates.lng.toFixed(4)}°</span>
+                  </div>
+
+                  {/* Google Maps External Verify Link */}
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${coordinates.lat},${coordinates.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute top-2 right-2 bg-white/95 hover:bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs text-[10px] font-bold text-[#0EA5E0] flex items-center gap-1 transition"
+                    title="Preview exact destination in Google Maps"
+                  >
+                    <span>Verify in Maps</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+
+                  {/* Fine-Tuning Nudge Controls Overlay */}
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-xl border border-slate-200 shadow-xs">
+                    <span className="text-[9px] font-bold text-slate-500 px-1">Nudge Pin:</span>
+                    <button
+                      type="button"
+                      onClick={() => nudgeCoordinates(0.0003, 0)}
+                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
+                      title="Nudge North"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => nudgeCoordinates(-0.0003, 0)}
+                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
+                      title="Nudge South"
+                    >
+                      ▼
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => nudgeCoordinates(0, -0.0003)}
+                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
+                      title="Nudge West"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => nudgeCoordinates(0, 0.0003)}
+                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center cursor-pointer"
+                      title="Nudge East"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5">
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Exact Map Coordinates attached to booking</span>
+                  </span>
+                  <span className="font-mono text-slate-400">
+                    {coordinates.lat.toFixed(5)}, {coordinates.lng.toFixed(5)}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Date Picker - Strictly required with no pre-selection */}
