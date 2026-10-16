@@ -9,15 +9,20 @@ export function AllCategoriesModal({
   onClose,
   onSelectCategory,
   currentLocation = 'Melattur, Kerala',
-  workers = []
+  workers = [],
+  categories: propCategories = []
 }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
 
-  const filteredCategories = ALL_MAIN_CATEGORIES.filter(cat => 
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-    cat.subCategories.some(sub => sub.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+  const activeCategories = (propCategories && propCategories.length > 0)
+    ? propCategories
+    : ALL_MAIN_CATEGORIES;
+
+  const filteredCategories = activeCategories.filter(cat => 
+    (cat.name || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+    (Array.isArray(cat.subCategories) && cat.subCategories.some(sub => sub.toLowerCase().includes(searchQuery.toLowerCase().trim())))
   );
 
   return (

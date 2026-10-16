@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   Plus, 
@@ -9,6 +9,7 @@ import {
   Tag, 
   ShieldCheck, 
   CheckCircle2, 
+  CheckCircle,
   X, 
   Users, 
   User,
@@ -36,6 +37,9 @@ import {
   DollarSign,
   Activity,
   Camera,
+  Upload,
+  RefreshCw,
+  FileImage,
   ZoomIn,
   ZoomOut,
   Maximize2,
@@ -62,6 +66,7 @@ import {
   adminAddCategory,
   adminUpdateCategory,
   adminDeleteCategory,
+  uploadCategoryImage,
   subscribeDailyGigs,
   updateDailyGigStatus
 } from '../data/bookingService';
@@ -81,6 +86,24 @@ const TECHNICIAN_PRESETS = [
   { label: 'Wall Painter', url: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=600&q=80' },
   { label: 'Car Mechanic', url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80' },
   { label: 'Electronics Tech', url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80' }
+];
+
+// Curated Category Image Presets for rapid 1-click image assignment
+const CATEGORY_IMAGE_PRESETS = [
+  { label: 'AC Jet Cleaning', url: '/assets/images/ac_repair.jpg' },
+  { label: 'AC Pro Service', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Electrician Diagnostic', url: '/assets/images/electrical_diagnosis.jpg' },
+  { label: 'Electrical Switchboard', url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Plumbing Expert', url: '/assets/images/european_plumber_pro_1791797259590.jpg' },
+  { label: 'Coconut Climbing', url: '/assets/images/coconut_climber.jpg' },
+  { label: 'Woodwork Carpenter', url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Wall Painting', url: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Lawn & Garden', url: '/assets/images/lawn_and_garden.jpg' },
+  { label: 'Mehndi & Henna', url: '/assets/images/mehndi_henna_artist_1791804672044.jpg' },
+  { label: 'Private Driver', url: '/assets/images/driver_service.jpg' },
+  { label: 'Home Support / Cleaning', url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Pest Control', url: 'https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Automobile Repair', url: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80' }
 ];
 
 export function AdminScreen({ onBack, onLogout }) {
@@ -162,8 +185,34 @@ export function AdminScreen({ onBack, onLogout }) {
   const [newCatBasePrice, setNewCatBasePrice] = useState('300');
   const [newCatSubText, setNewCatSubText] = useState('');
   const [newCatImg, setNewCatImg] = useState('');
+
+  // Category Edit Modal State
   const [editingCategory, setEditingCategory] = useState(null);
-  const [editCatPrice, setEditCatPrice] = useState('');
+  const [editCatForm, setEditCatForm] = useState({
+    name: '',
+    price: '',
+    icon: '⚡',
+    subCategories: '',
+    imageUrl: ''
+  });
+  const [editCatImageFile, setEditCatImageFile] = useState(null);
+  const [editCatImagePreview, setEditCatImagePreview] = useState('');
+  const [isUploadingCatImage, setIsUploadingCatImage] = useState(false);
+  const [catImageError, setCatImageError] = useState('');
+  const [categoryModalTab, setCategoryModalTab] = useState('image_only'); // 'image_only' | 'details'
+  const catFileInputRef = useRef(null);
+
+  // Global Admin Toast System
+  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = (message, type = 'success') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
 
   // Banners Form State
   const [newBannerTitle, setNewBannerTitle] = useState('');
@@ -388,7 +437,8 @@ export function AdminScreen({ onBack, onLogout }) {
       icon: newCatIcon.trim() || '🛠️',
       basePrice: Number(newCatBasePrice) || 300,
       subCategoryText: newCatSubText.trim(),
-      image: newCatImg.trim()
+      image: newCatImg.trim(),
+      imageUrl: newCatImg.trim()
     });
 
     setNewCatName('');
@@ -396,18 +446,115 @@ export function AdminScreen({ onBack, onLogout }) {
     setNewCatBasePrice('300');
     setNewCatSubText('');
     setNewCatImg('');
+    showToast(`Category "${newCatName.trim()}" created successfully!`, 'success');
   };
 
-  const handleUpdateCategoryPrice = async (catId) => {
-    if (!editCatPrice) return;
-    await adminUpdateCategory(catId, { basePrice: Number(editCatPrice) });
-    setEditingCategory(null);
-    setEditCatPrice('');
+  const handleOpenEditCategory = (cat, defaultTab = 'image_only') => {
+    setEditingCategory(cat);
+    setCategoryModalTab(defaultTab);
+    setEditCatForm({
+      name: cat.name || '',
+      price: String(cat.basePrice || 300),
+      icon: cat.icon || '🛠️',
+      subCategories: Array.isArray(cat.subCategories) ? cat.subCategories.join(', ') : (cat.subCategoryText || ''),
+      imageUrl: cat.image || cat.imageUrl || ''
+    });
+    setEditCatImageFile(null);
+    setEditCatImagePreview(cat.image || cat.imageUrl || '');
+    setCatImageError('');
+  };
+
+  const handleCatImageFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      setCatImageError('Image file is too large (max 20MB). Please choose a smaller photo.');
+      return;
+    }
+
+    setCatImageError('');
+    setEditCatImageFile(file);
+
+    try {
+      const previewUrl = URL.createObjectURL(file);
+      setEditCatImagePreview(previewUrl);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (evt) => setEditCatImagePreview(evt.target?.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveCategory = async (e, updateImageOnly = false) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingCategory) return;
+
+    setIsUploadingCatImage(true);
+    setCatImageError('');
+
+    try {
+      let finalImageUrl = (editCatForm.imageUrl || '').trim();
+
+      // If a new image file was selected from device, upload it via uploadCategoryImage
+      if (editCatImageFile) {
+        finalImageUrl = await uploadCategoryImage(editCatImageFile, editingCategory.id);
+      } else if (editCatImagePreview && editCatImagePreview.startsWith('data:')) {
+        finalImageUrl = await uploadCategoryImage(editCatImagePreview, editingCategory.id);
+      } else if (editCatImagePreview && !editCatImageFile) {
+        finalImageUrl = editCatImagePreview.trim();
+      }
+
+      // Build updates payload:
+      // When updating ONLY the image (or if other fields are untouched):
+      // Safely preserve existing fields without validation errors!
+      const updates = {
+        image: finalImageUrl,
+        imageUrl: finalImageUrl
+      };
+
+      if (!updateImageOnly) {
+        if (editCatForm.name && editCatForm.name.trim()) {
+          updates.name = editCatForm.name.trim();
+        }
+        if (editCatForm.price && !isNaN(Number(editCatForm.price))) {
+          updates.basePrice = Number(editCatForm.price);
+        }
+        if (editCatForm.icon && editCatForm.icon.trim()) {
+          updates.icon = editCatForm.icon.trim();
+        }
+        if (editCatForm.subCategories && editCatForm.subCategories.trim()) {
+          updates.subCategories = editCatForm.subCategories.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+
+      await adminUpdateCategory(editingCategory.id, updates);
+
+      // Clean success toast
+      showToast(
+        updateImageOnly || !editCatForm.name.trim()
+          ? `Category image for "${editingCategory.name}" updated successfully! Saved to database.`
+          : `Category "${editingCategory.name}" updated successfully! Saved to database.`,
+        'success'
+      );
+
+      // Close modal
+      setEditingCategory(null);
+      setEditCatImageFile(null);
+      setEditCatImagePreview('');
+    } catch (err) {
+      console.error('Error updating category image:', err);
+      setCatImageError('Failed to upload/update category image. Please try again.');
+      showToast('Failed to update category image. Please try again.', 'error');
+    } finally {
+      setIsUploadingCatImage(false);
+    }
   };
 
   const handleDeleteCategory = async (id, name) => {
     if (window.confirm(`Delete category "${name}"?`)) {
       await adminDeleteCategory(id);
+      showToast(`Category "${name}" deleted.`, 'info');
     }
   };
 
@@ -1347,6 +1494,17 @@ export function AdminScreen({ onBack, onLogout }) {
               </div>
             </div>
 
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1">Category Image URL (Optional)</label>
+              <input
+                type="url"
+                value={newCatImg}
+                onChange={(e) => setNewCatImg(e.target.value)}
+                placeholder="https://images.unsplash.com/... or /assets/images/..."
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
+              />
+            </div>
+
             <button
               type="submit"
               className="w-full py-2.5 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
@@ -1357,52 +1515,88 @@ export function AdminScreen({ onBack, onLogout }) {
 
           {/* Categories List */}
           <div className="space-y-2.5">
-            {categories.map((c) => (
-              <div 
-                key={c.id || c.name} 
-                className="p-3.5 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-between shadow-xs hover:shadow-sm transition"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div 
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 border border-slate-100"
-                    style={{ backgroundColor: c.color || '#F1F5F9' }}
-                  >
-                    {c.icon || '🛠️'}
-                  </div>
-                  <div className="min-w-0">
-                    <h5 className="text-xs font-extrabold text-slate-900 truncate">{c.name}</h5>
-                    <p className="text-[11px] font-bold text-emerald-700">
-                      Base Rate: ₹{c.basePrice || 300}
-                    </p>
-                    {c.subCategories && (
-                      <p className="text-[10px] text-slate-400 truncate max-w-[200px]">
-                        {Array.isArray(c.subCategories) ? c.subCategories.slice(0, 3).join(', ') : ''}
-                      </p>
-                    )}
-                  </div>
-                </div>
+            {categories.map((c) => {
+              const catImg = c.image || c.imageUrl || '';
+              const hasCustomImg = Boolean(catImg && typeof catImg === 'string');
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={() => {
-                      setEditingCategory(c);
-                      setEditCatPrice(String(c.basePrice || 300));
-                    }}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-[#0EA5E0] transition cursor-pointer"
-                    title="Edit base price"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCategory(c.id, c.name)}
-                    className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition cursor-pointer"
-                    title="Delete category"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+              return (
+                <div 
+                  key={c.id || c.name} 
+                  className="p-3.5 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-between shadow-xs hover:shadow-sm transition gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div 
+                      className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200/80 relative flex items-center justify-center bg-slate-100 shadow-2xs group"
+                      style={{ backgroundColor: c.color || '#F1F5F9' }}
+                    >
+                      {hasCustomImg ? (
+                        <img 
+                          src={catImg} 
+                          alt={c.name} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span className="text-xl select-none" role="img" aria-label={c.name}>{c.icon || '🛠️'}</span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h5 className="text-xs font-black text-slate-900 truncate">{c.name}</h5>
+                        {hasCustomImg ? (
+                          <span className="text-[9px] bg-sky-50 text-[#0EA5E0] font-bold px-1.5 py-0.5 rounded-md border border-sky-100 shrink-0">
+                            Custom Image
+                          </span>
+                        ) : (
+                          <span className="text-[9px] bg-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-md shrink-0">
+                            Emoji Icon
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] font-bold text-emerald-700 mt-0.5">
+                        Base Rate: ₹{c.basePrice || 300}
+                      </p>
+
+                      {c.subCategories && (
+                        <p className="text-[10px] text-slate-400 truncate max-w-[200px]">
+                          {Array.isArray(c.subCategories) ? c.subCategories.slice(0, 3).join(', ') : ''}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCategory(c, 'image_only')}
+                      className="px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-[#0EA5E0] text-[#0EA5E0] hover:text-white transition text-[11px] font-bold flex items-center gap-1 border border-sky-100 hover:border-transparent cursor-pointer"
+                      title="Update category image"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Change Image</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCategory(c, 'details')}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+                      title="Edit Category Details"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCategory(c.id, c.name)}
+                      className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition cursor-pointer"
+                      title="Delete category"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -2461,47 +2655,353 @@ export function AdminScreen({ onBack, onLogout }) {
       )}
 
       {/* ========================================================= */}
-      {/* 11. MODAL: EDIT CATEGORY BASE PRICE */}
+      {/* 11. MODAL: EDIT CATEGORY & REPLACE CATEGORY IMAGE       */}
       {/* ========================================================= */}
       {editingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl relative border border-slate-100">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h4 className="text-sm font-extrabold text-slate-900">Edit {editingCategory.name} Rate</h4>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-5 sm:p-6 shadow-2xl relative border border-slate-100 my-8 space-y-4">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold border border-slate-200 overflow-hidden shrink-0 shadow-2xs relative bg-slate-100"
+                  style={{ backgroundColor: editingCategory.color || '#F1F5F9' }}
+                >
+                  {editCatImagePreview ? (
+                    <img
+                      src={editCatImagePreview}
+                      alt={editingCategory.name}
+                      className="w-full h-full object-cover"
+                      onError={() => setEditCatImagePreview('')}
+                    />
+                  ) : (
+                    <span role="img" aria-label={editingCategory.name}>{editCatForm.icon || '🛠️'}</span>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                    Edit {editingCategory.name}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    Update category icon, image, or pricing for customer listings
+                  </p>
+                </div>
+              </div>
+
               <button 
-                onClick={() => setEditingCategory(null)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                type="button"
+                onClick={() => {
+                  if (isUploadingCatImage) return;
+                  setEditingCategory(null);
+                  setEditCatImageFile(null);
+                  setEditCatImagePreview('');
+                }}
+                disabled={isUploadingCatImage}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition cursor-pointer shrink-0 disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="mt-3 space-y-3">
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Base Price (₹)</label>
-                <input
-                  type="number"
-                  value={editCatPrice}
-                  onChange={(e) => setEditCatPrice(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#0EA5E0]"
-                />
+            {/* Error Message Box (if any) */}
+            {catImageError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-rose-700 text-xs font-bold animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{catImageError}</span>
+              </div>
+            )}
+
+            {/* Hidden File Input for Device/Gallery Photo Pick */}
+            <input
+              type="file"
+              ref={catFileInputRef}
+              onChange={handleCatImageFileSelect}
+              accept="image/*"
+              className="hidden"
+            />
+
+            {/* ======================================================= */}
+            {/* SECTION 1: PROMINENT IMAGE REPLACEMENT CARD            */}
+            {/* ======================================================= */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50/70 via-slate-50/70 to-slate-50 border border-sky-100/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#0EA5E0]">
+                  <Camera className="w-4 h-4" />
+                  <span>Category Visual & Icon</span>
+                </div>
+                {editCatImagePreview ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Image Ready</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                    Default Emoji Icon
+                  </span>
+                )}
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingCategory(null)}
-                  className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold"
+              {/* Image Preview & Upload Controls */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                
+                {/* Large Preview Box */}
+                <div 
+                  className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border-2 border-slate-200 bg-slate-100 relative shadow-sm flex items-center justify-center group"
+                  style={{ backgroundColor: editingCategory.color || '#F1F5F9' }}
                 >
-                  Cancel
-                </button>
+                  {editCatImagePreview ? (
+                    <img
+                      src={editCatImagePreview}
+                      alt="Category Preview"
+                      className="w-full h-full object-cover block"
+                      onError={() => {
+                        setCatImageError('Could not load image from specified URL.');
+                      }}
+                    />
+                  ) : (
+                    <span className="text-3xl select-none" role="img">{editCatForm.icon || '🛠️'}</span>
+                  )}
+
+                  {isUploadingCatImage && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-2xs flex flex-col items-center justify-center text-white">
+                      <RefreshCw className="w-5 h-5 animate-spin text-white mb-1" />
+                      <span className="text-[9px] font-bold">Uploading</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload & Clear Action Buttons */}
+                <div className="space-y-2 flex-1 w-full text-center sm:text-left">
+                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                    <button
+                      type="button"
+                      disabled={isUploadingCatImage}
+                      onClick={() => catFileInputRef.current?.click()}
+                      className="px-3 py-2 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>{editCatImagePreview ? 'Replace Photo' : 'Upload Image'}</span>
+                    </button>
+
+                    {editCatImagePreview && (
+                      <button
+                        type="button"
+                        disabled={isUploadingCatImage}
+                        onClick={() => {
+                          setEditCatImageFile(null);
+                          setEditCatImagePreview('');
+                          setEditCatForm({ ...editCatForm, imageUrl: '' });
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition cursor-pointer"
+                        title="Remove custom image and reset to emoji"
+                      >
+                        Reset to Emoji
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    {editCatImageFile 
+                      ? `Selected: ${editCatImageFile.name} (${Math.round(editCatImageFile.size / 1024)} KB)`
+                      : 'Accepts PNG, JPG, WebP, SVG. Stored in Firebase/Supabase Storage.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Direct Image URL Input */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Or Paste Direct Image / Unsplash URL:
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    disabled={isUploadingCatImage}
+                    value={editCatForm.imageUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditCatForm({ ...editCatForm, imageUrl: val });
+                      if (!editCatImageFile) {
+                        setEditCatImagePreview(val);
+                      }
+                    }}
+                    placeholder="https://images.unsplash.com/... or /assets/images/..."
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] transition"
+                  />
+                  {editCatForm.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditCatForm({ ...editCatForm, imageUrl: '' });
+                        if (!editCatImageFile) setEditCatImagePreview('');
+                      }}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Image Presets Strip */}
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 block mb-1.5">
+                  1-Click Image Presets:
+                </span>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto no-scrollbar p-1 bg-white/70 rounded-xl border border-slate-200/70">
+                  {CATEGORY_IMAGE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      disabled={isUploadingCatImage}
+                      onClick={() => {
+                        setEditCatImageFile(null);
+                        setEditCatImagePreview(preset.url);
+                        setEditCatForm({ ...editCatForm, imageUrl: preset.url });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer border ${
+                        editCatImagePreview === preset.url
+                          ? 'bg-[#0EA5E0] text-white border-[#0EA5E0] shadow-xs'
+                          : 'bg-slate-50 text-slate-700 hover:bg-sky-50 hover:text-[#0EA5E0] border-slate-200/80'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* DEDICATED INDEPENDENT IMAGE UPDATE BUTTON */}
+              <div className="pt-2 border-t border-sky-100 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[11px] font-black text-slate-800 block">
+                    Fast Image-Only Update
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    Saves only the image independently (no other fields required)
+                  </span>
+                </div>
+
                 <button
-                  onClick={() => handleUpdateCategoryPrice(editingCategory.id)}
-                  className="flex-1 py-2 rounded-xl bg-[#0EA5E0] text-white text-xs font-bold shadow-xs"
+                  type="button"
+                  disabled={isUploadingCatImage}
+                  onClick={(e) => handleSaveCategory(e, true)}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-xs font-black shadow-md hover:shadow-lg active:scale-95 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                 >
-                  Update
+                  {isUploadingCatImage ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Image...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Update Image Only</span>
+                    </>
+                  )}
                 </button>
               </div>
+
             </div>
+
+            {/* ======================================================= */}
+            {/* SECTION 2: CATEGORY DETAILS (OPTIONAL FIELDS)           */}
+            {/* ======================================================= */}
+            <div className="p-4 rounded-2xl bg-white border border-slate-200/90 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-slate-700">
+                  Category Name & Pricing (Optional)
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Leave untouched to keep current values
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">Category Title</label>
+                  <input
+                    type="text"
+                    disabled={isUploadingCatImage}
+                    value={editCatForm.name}
+                    onChange={(e) => setEditCatForm({ ...editCatForm, name: e.target.value })}
+                    placeholder={editingCategory.name}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">Icon Emoji</label>
+                  <input
+                    type="text"
+                    disabled={isUploadingCatImage}
+                    value={editCatForm.icon}
+                    onChange={(e) => setEditCatForm({ ...editCatForm, icon: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-center focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">Base Price (₹)</label>
+                  <input
+                    type="number"
+                    disabled={isUploadingCatImage}
+                    value={editCatForm.price}
+                    onChange={(e) => setEditCatForm({ ...editCatForm, price: e.target.value })}
+                    placeholder="300"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 block mb-1">Sub-Categories / Issues</label>
+                  <input
+                    type="text"
+                    disabled={isUploadingCatImage}
+                    value={editCatForm.subCategories}
+                    onChange={(e) => setEditCatForm({ ...editCatForm, subCategories: e.target.value })}
+                    placeholder="Issue 1, Issue 2"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isUploadingCatImage}
+                onClick={() => {
+                  setEditingCategory(null);
+                  setEditCatImageFile(null);
+                  setEditCatImagePreview('');
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isUploadingCatImage}
+                onClick={(e) => handleSaveCategory(e, false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-extrabold shadow-sm active:scale-95 transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isUploadingCatImage ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 stroke-[2.5]" />
+                    <span>Save All Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
@@ -3199,6 +3699,37 @@ export function AdminScreen({ onBack, onLogout }) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 16. TOAST NOTIFICATION                                   */}
+      {/* ========================================================= */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-[9999] flex items-center gap-3 px-4 py-3 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-slate-700/60 max-w-sm animate-fade-in">
+          {toast.type === 'success' ? (
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+            </div>
+          ) : toast.type === 'error' ? (
+            <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4 stroke-[2.5]" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 stroke-[2.5]" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold leading-tight">{toast.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="w-6 h-6 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-xs shrink-0 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 

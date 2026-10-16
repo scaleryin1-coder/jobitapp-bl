@@ -263,6 +263,7 @@ export function CustomerDashboard({
         onClose={() => setIsAllCategoriesOpen(false)}
         currentLocation={locationName}
         workers={workers}
+        categories={categories}
         onSelectCategory={(cat, isLive) => onSelectCategory?.(cat, isLive)}
       />
 

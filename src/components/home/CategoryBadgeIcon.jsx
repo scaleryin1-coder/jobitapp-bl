@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ALL_MAIN_CATEGORIES } from '../../data/categoriesData';
 
 /**
  * CategoryBadgeIcon:
- * Renders vibrant 3D emoji / colorful vector icons inside rounded soft-background
- * badge containers matching the exact design of image_3.png for all 20 categories:
+ * Renders vibrant custom category images (when set via Admin panel),
+ * 3D emoji, or colorful vector icons inside rounded soft-background
+ * badge containers matching the design for all categories:
  *
  * 1. Electrician: ⚡ Lightning Bolt
  * 2. AC Service: ❄️ Snowflake / AC icon
@@ -252,6 +253,7 @@ export function CategoryBadgeIcon({
   size = 'md', 
   className = '' 
 }) {
+  const [imgError, setImgError] = useState(false);
   const rawName = (category?.name || categoryName || '').toLowerCase().trim();
 
   // Find direct match or keyword match in CATEGORY_MAP
@@ -275,16 +277,34 @@ export function CategoryBadgeIcon({
   const isSm = size === 'sm';
   const isWashingMachine = config?.isWashingMachineSvg || rawName.includes('electron');
 
+  // Check for custom image
+  const rawImage = category?.image || category?.imageUrl || '';
+  const isIconAnImage = typeof category?.icon === 'string' && (category.icon.startsWith('http') || category.icon.startsWith('data:') || category.icon.startsWith('/'));
+  const customImgSrc = rawImage || (isIconAnImage ? category.icon : '');
+  const hasCustomImage = Boolean(customImgSrc && !imgError);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [category?.image, category?.imageUrl, category?.icon]);
+
   return (
     <div
-      className={`shrink-0 flex items-center justify-center select-none transition-transform ${
+      className={`shrink-0 flex items-center justify-center select-none transition-transform overflow-hidden relative ${
         isSm
           ? 'w-6 h-6 rounded-lg text-xs'
           : 'w-11 h-11 sm:w-12 sm:h-12 rounded-2xl text-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
       } ${className}`}
       style={{ backgroundColor: bgColor }}
     >
-      {isWashingMachine ? (
+      {hasCustomImage ? (
+        <img
+          src={customImgSrc}
+          alt={category?.name || categoryName || 'Category'}
+          className="w-full h-full object-cover rounded-[inherit] block select-none pointer-events-none"
+          loading="lazy"
+          onError={() => setImgError(true)}
+        />
+      ) : isWashingMachine ? (
         <WashingMachineGraphic isSm={isSm} />
       ) : (
         <span 

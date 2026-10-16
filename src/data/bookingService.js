@@ -1,4 +1,4 @@
-import { db, isFirebaseConfigured } from '../firebase';
+import { db, storage, isFirebaseConfigured } from '../firebase';
 import { 
   collection, 
   onSnapshot, 
@@ -9,8 +9,10 @@ import {
   deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { initialWorkers, initialServices, initialCategories, initialDailyGigs, initialPortfolios } from './seedData';
 import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from './categoriesData';
+import { compressImage } from '../utils/imageUtils';
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
 const STORAGE_KEY_WORKERS = 'jobit_workers';
@@ -795,10 +797,21 @@ export function getLocalCategories() {
     
     if (Array.isArray(parsed) && parsed.length > 0) {
       parsed.forEach(c => {
-        const key = (c.name || '').toLowerCase();
-        if (key) {
-          const existing = map.get(key);
-          map.set(key, { ...existing, ...c });
+        const nameKey = (c.name || '').toLowerCase();
+        const idKey = (c.id || '').toLowerCase();
+        let existing = map.get(nameKey);
+        if (!existing && idKey) {
+          for (const item of map.values()) {
+            if ((item.id || '').toLowerCase() === idKey) {
+              existing = item;
+              break;
+            }
+          }
+        }
+        if (existing) {
+          map.set(existing.name.toLowerCase(), { ...existing, ...c });
+        } else if (nameKey) {
+          map.set(nameKey, c);
         }
       });
     }
@@ -851,6 +864,97 @@ export function subscribeCategories(callback) {
   };
 }
 
+/**
+ * Upload category icon or image to Firebase Storage / Supabase Storage with local compression fallback
+ * Returns a permanent HTTPS download URL or high-resolution optimized Data URL
+ */
+export async function uploadCategoryImage(fileOrDataUrl, categoryId = 'category') {
+  if (!fileOrDataUrl) return '';
+
+  // If already a remote web URL (Unsplash, external CDN, etc.), return as is
+  if (typeof fileOrDataUrl === 'string' && (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://'))) {
+    return fileOrDataUrl;
+  }
+
+  // 1. Optimize & compress the image (max 800x800, JPEG 85% quality)
+  let compressedDataUrl = '';
+  try {
+    compressedDataUrl = await compressImage(fileOrDataUrl, 800, 800, 0.85);
+  } catch (err) {
+    console.warn('Compression failed, using source:', err);
+    compressedDataUrl = typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '';
+  }
+
+  // 2. Try Firebase Storage upload if storage is initialized
+  if (storage && isFirebaseConfigured) {
+    try {
+      const sanitizedCatId = String(categoryId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      const filename = `categories/${sanitizedCatId}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, filename);
+
+      let blobToUpload = null;
+      if (compressedDataUrl && compressedDataUrl.startsWith('data:')) {
+        const res = await fetch(compressedDataUrl);
+        blobToUpload = await res.blob();
+      } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+        blobToUpload = fileOrDataUrl;
+      }
+
+      if (blobToUpload) {
+        const uploadSnapshot = await uploadBytes(storageRef, blobToUpload, {
+          contentType: 'image/jpeg',
+          customMetadata: {
+            categoryId: String(categoryId),
+            uploadedAt: new Date().toISOString()
+          }
+        });
+        const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+        if (downloadUrl) {
+          return downloadUrl;
+        }
+      }
+    } catch (storageErr) {
+      console.warn('Firebase Storage upload notice (using optimized fallback):', storageErr);
+    }
+  }
+
+  // 3. Try Supabase Storage if configured
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || (typeof window !== 'undefined' && window.__SUPABASE_URL);
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof window !== 'undefined' && window.__SUPABASE_ANON_KEY);
+    if (supabaseUrl && supabaseKey) {
+      const sanitizedCatId = String(categoryId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      const filename = `categories/${sanitizedCatId}_${Date.now()}.jpg`;
+      let blobToUpload = null;
+      if (compressedDataUrl && compressedDataUrl.startsWith('data:')) {
+        const res = await fetch(compressedDataUrl);
+        blobToUpload = await res.blob();
+      } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+        blobToUpload = fileOrDataUrl;
+      }
+
+      if (blobToUpload) {
+        const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/categories/${filename}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'image/jpeg'
+          },
+          body: blobToUpload
+        });
+        if (uploadRes.ok) {
+          return `${supabaseUrl}/storage/v1/object/public/categories/${filename}`;
+        }
+      }
+    }
+  } catch (sbErr) {
+    console.warn('Supabase storage notice:', sbErr);
+  }
+
+  // 4. Resilient Fallback: return optimized compressed data URL
+  return compressedDataUrl || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
+}
+
 export async function adminAddCategory(catData) {
   const current = getLocalCategories();
   const newId = catData.id || `cat_${Date.now()}`;
@@ -861,6 +965,7 @@ export async function adminAddCategory(catData) {
     color: catData.color || '#E0F2FE',
     basePrice: Number(catData.basePrice) || 300,
     image: catData.image || catData.imageUrl || '',
+    imageUrl: catData.image || catData.imageUrl || '',
     subCategories: Array.isArray(catData.subCategories) 
       ? catData.subCategories 
       : (catData.subCategoryText ? catData.subCategoryText.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -875,7 +980,7 @@ export async function adminAddCategory(catData) {
       await setDoc(doc(db, 'categories', formatted.id), {
         ...formatted,
         serverTimestamp: serverTimestamp()
-      });
+      }, { merge: true });
     } catch (e) {
       console.warn('Firestore adminAddCategory fallback', e);
     }
@@ -886,16 +991,43 @@ export async function adminAddCategory(catData) {
 
 export async function adminUpdateCategory(catId, updates) {
   const current = getLocalCategories();
-  const updated = current.map(c => c.id === catId ? { ...c, ...updates } : c);
+  const normalizedUpdates = { ...updates };
+  if (normalizedUpdates.image && !normalizedUpdates.imageUrl) {
+    normalizedUpdates.imageUrl = normalizedUpdates.image;
+  } else if (normalizedUpdates.imageUrl && !normalizedUpdates.image) {
+    normalizedUpdates.image = normalizedUpdates.imageUrl;
+  }
+
+  let found = false;
+  let targetCat = null;
+  const updated = current.map(c => {
+    if (c.id === catId || (c.name && updates.name && c.name.toLowerCase() === updates.name.toLowerCase())) {
+      found = true;
+      targetCat = { ...c, ...normalizedUpdates, updatedAt: new Date().toISOString() };
+      return targetCat;
+    }
+    return c;
+  });
+
+  if (!found) {
+    targetCat = { id: catId, ...normalizedUpdates, updatedAt: new Date().toISOString() };
+    updated.push(targetCat);
+  }
+
   saveLocalCategories(updated);
 
   if (isFirebaseConfigured && db) {
     try {
-      await updateDoc(doc(db, 'categories', catId), updates);
+      await setDoc(doc(db, 'categories', catId), {
+        ...(targetCat || normalizedUpdates),
+        serverTimestamp: serverTimestamp()
+      }, { merge: true });
     } catch (e) {
-      console.warn('Firestore adminUpdateCategory fallback', e);
+      console.warn('Firestore adminUpdateCategory setDoc fallback', e);
     }
   }
+
+  return targetCat;
 }
 
 export async function adminDeleteCategory(catId) {
