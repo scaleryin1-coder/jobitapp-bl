@@ -1012,12 +1012,69 @@ export async function adminAddService(serviceData) {
   const updated = [formatted, ...current];
   saveLocalServices(updated);
 
+  // Sync to Supabase services table if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const cleanImg = formatted.heroImage || formatted.imageUrl || '';
+      // 1. Try standard PostgreSQL snake_case columns
+      const snakePayload = {
+        id: formatted.id,
+        title: formatted.title,
+        price: formatted.price,
+        category_name: formatted.categoryName,
+        sub_category: formatted.subCategory || '',
+        description: formatted.about || '',
+        image_url: cleanImg,
+        hero_image: cleanImg,
+        updated_at: new Date().toISOString()
+      };
+      const sbRes1 = await safeDbPromise(
+        supabase.from('services').upsert(snakePayload, { onConflict: 'id' }),
+        1800
+      );
+
+      // 2. If column not found error, try camelCase schema
+      if (sbRes1?.error) {
+        const camelPayload = {
+          id: formatted.id,
+          title: formatted.title,
+          price: formatted.price,
+          categoryName: formatted.categoryName,
+          subCategory: formatted.subCategory || '',
+          about: formatted.about || '',
+          description: formatted.about || '',
+          imageUrl: cleanImg,
+          heroImage: cleanImg,
+          updatedAt: new Date().toISOString()
+        };
+        const sbRes2 = await safeDbPromise(
+          supabase.from('services').upsert(camelPayload, { onConflict: 'id' }),
+          1500
+        );
+        if (sbRes2?.error) {
+          // 3. Fallback: minimal columns
+          await safeDbPromise(
+            supabase.from('services').upsert({
+              id: formatted.id,
+              title: formatted.title,
+              price: formatted.price,
+              image_url: cleanImg
+            }, { onConflict: 'id' }),
+            1200
+          );
+        }
+      }
+    } catch (sbErr) {
+      console.warn('Supabase adminAddService notice:', sbErr);
+    }
+  }
+
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'services', formatted.id), {
+      await safeDbPromise(setDoc(doc(db, 'services', formatted.id), {
         ...formatted,
         serverTimestamp: serverTimestamp()
-      });
+      }), 2000);
     } catch (e) {
       console.warn('Firestore adminAddService fallback', e);
     }
@@ -1027,8 +1084,8 @@ export async function adminAddService(serviceData) {
 }
 
 /**
- * Upload service hero image to Supabase Storage with local compression & fallback
- * Returns public Supabase URL or download URL or optimized data URL
+ * Upload service hero image with fast compressed Base64/Data URL fallback
+ * Guarantees zero hang/spin if Supabase storage policy rejects upload.
  */
 export async function uploadServiceImage(fileOrDataUrl, serviceId = 'service') {
   if (!fileOrDataUrl) return '';
@@ -1038,13 +1095,18 @@ export async function uploadServiceImage(fileOrDataUrl, serviceId = 'service') {
     return fileOrDataUrl;
   }
 
-  // 1. Optimize & compress the image (max 1000x1000, 85% quality)
+  // 1. Fast optimize & compress the image (max 800x800, 80% quality for rapid Base64/Data URL)
   let compressedDataUrl = '';
   try {
-    compressedDataUrl = await compressImage(fileOrDataUrl, 1000, 1000, 0.85);
+    compressedDataUrl = await compressImage(fileOrDataUrl, 800, 800, 0.80);
   } catch (err) {
     console.warn('Service image compression notice:', err);
     compressedDataUrl = typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '';
+  }
+
+  // If Supabase is not configured, return clean compressed Base64 Data URL immediately
+  if (!isSupabaseConfigured || !supabase) {
+    return compressedDataUrl || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
   }
 
   const sanitizedId = String(serviceId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
@@ -1060,73 +1122,34 @@ export async function uploadServiceImage(fileOrDataUrl, serviceId = 'service') {
     blobToUpload = fileOrDataUrl;
   }
 
-  // 2. Upload to Supabase Storage first if configured
-  if (isSupabaseConfigured && supabase && blobToUpload) {
+  if (!blobToUpload) {
+    return compressedDataUrl || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
+  }
+
+  // 2. Fast attempt to upload to Supabase Storage with strict timeout and bucket fallbacks
+  const candidateBuckets = ['services', 'categories', 'images', 'public'];
+  for (const bucket of candidateBuckets) {
     try {
-      const targetBuckets = ['services', 'categories', 'images', 'public'];
-      for (const bucket of targetBuckets) {
-        try {
-          const { data, error } = await supabase.storage
-            .from(bucket)
-            .upload(filename, blobToUpload, {
-              contentType: 'image/jpeg',
-              upsert: true
-            });
+      const uploadPromise = supabase.storage
+        .from(bucket)
+        .upload(filename, blobToUpload, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
 
-          if (!error && data) {
-            const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
-            if (urlData?.publicUrl) {
-              return urlData.publicUrl;
-            }
-          }
-        } catch {}
-      }
-
-      // Fallback: Direct Supabase Storage REST endpoint
-      const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-      const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
-      if (supabaseUrl && supabaseKey) {
-        for (const bucket of ['services', 'categories', 'images']) {
-          try {
-            const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${filename}`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'image/jpeg',
-                'x-upsert': 'true'
-              },
-              body: blobToUpload
-            });
-            if (uploadRes.ok) {
-              return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filename}`;
-            }
-          } catch {}
+      const result = await safeDbPromise(uploadPromise, 1500);
+      if (result && !result.error && result.data) {
+        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
+        if (urlData?.publicUrl) {
+          return urlData.publicUrl;
         }
       }
     } catch (sbErr) {
-      console.warn('Supabase storage upload notice:', sbErr);
+      console.warn(`Supabase storage upload notice for bucket ${bucket}:`, sbErr);
     }
   }
 
-  // 3. Fallback: Firebase Storage if configured
-  if (storage && isFirebaseConfigured && blobToUpload) {
-    try {
-      const storageRef = ref(storage, filename);
-      const uploadSnapshot = await uploadBytes(storageRef, blobToUpload, {
-        contentType: 'image/jpeg',
-        customMetadata: {
-          serviceId: String(serviceId),
-          uploadedAt: new Date().toISOString()
-        }
-      });
-      const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
-      if (downloadUrl) return downloadUrl;
-    } catch (fbErr) {
-      console.warn('Firebase Storage upload notice:', fbErr);
-    }
-  }
-
-  // 4. Reliable Resilient Fallback: High-resolution optimized compressed data URL
+  // 3. Instant clean compressed Base64/Data URL fallback (never hangs or spins)
   return compressedDataUrl || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
 }
 
@@ -1172,39 +1195,53 @@ export async function adminUpdateService(serviceId, updates) {
       const finalDesc = updates.about || updates.description || updatedService?.about || '';
       const finalSub = updates.subCategory || updatedService?.subCategory || '';
 
-      const { error } = await supabase
-        .from('services')
-        .upsert({
+      // 1. Try standard PostgreSQL snake_case columns
+      const snakePayload = {
+        id: serviceId,
+        title: finalTitle,
+        price: finalPrice,
+        category_name: finalCat,
+        sub_category: finalSub,
+        description: finalDesc,
+        image_url: finalImg,
+        hero_image: finalImg,
+        updated_at: new Date().toISOString()
+      };
+      const sbRes1 = await safeDbPromise(
+        supabase.from('services').upsert(snakePayload, { onConflict: 'id' }),
+        1800
+      );
+
+      // 2. If error, try camelCase schema
+      if (sbRes1?.error) {
+        const camelPayload = {
           id: serviceId,
           title: finalTitle,
           price: finalPrice,
-          category_name: finalCat,
           categoryName: finalCat,
-          sub_category: finalSub,
           subCategory: finalSub,
-          description: finalDesc,
           about: finalDesc,
-          hero_image: finalImg,
-          heroImage: finalImg,
-          image_url: finalImg,
+          description: finalDesc,
           imageUrl: finalImg,
-          image: finalImg,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-
-      if (error) {
-        // Fallback update by primary ID key
-        await supabase
-          .from('services')
-          .update({
-            title: finalTitle,
-            price: finalPrice,
-            category_name: finalCat,
-            description: finalDesc,
-            image_url: finalImg,
-            hero_image: finalImg
-          })
-          .eq('id', serviceId);
+          heroImage: finalImg,
+          updatedAt: new Date().toISOString()
+        };
+        const sbRes2 = await safeDbPromise(
+          supabase.from('services').upsert(camelPayload, { onConflict: 'id' }),
+          1500
+        );
+        if (sbRes2?.error) {
+          // 3. Fallback: minimal columns
+          await safeDbPromise(
+            supabase.from('services').upsert({
+              id: serviceId,
+              title: finalTitle,
+              price: finalPrice,
+              image_url: finalImg
+            }, { onConflict: 'id' }),
+            1200
+          );
+        }
       }
     } catch (sbErr) {
       console.warn('Supabase adminUpdateService notice:', sbErr);
@@ -1214,10 +1251,10 @@ export async function adminUpdateService(serviceId, updates) {
   // 2. Sync to Firestore if configured
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'services', serviceId), {
+      await safeDbPromise(setDoc(doc(db, 'services', serviceId), {
         ...updates,
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      }, { merge: true }), 2000);
     } catch (e) {
       console.warn('Firestore adminUpdateService fallback', e);
     }

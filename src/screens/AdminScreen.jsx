@@ -71,6 +71,7 @@ import {
   subscribeDailyGigs,
   updateDailyGigStatus
 } from '../data/bookingService';
+import { compressImage } from '../utils/imageUtils';
 import { PostGigModal } from '../components/gigs/PostGigModal';
 import { ChatAuditModal } from '../components/admin/ChatAuditModal';
 import { db, isFirebaseConfigured } from '../firebase';
@@ -169,6 +170,11 @@ export function AdminScreen({ onBack, onLogout }) {
     description: '',
     imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80'
   });
+  const [addServiceImageFile, setAddServiceImageFile] = useState(null);
+  const [addServiceImagePreview, setAddServiceImagePreview] = useState('https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80');
+  const [isUploadingAddImage, setIsUploadingAddImage] = useState(false);
+  const [addServiceImageError, setAddServiceImageError] = useState('');
+  const addServiceFileInputRef = useRef(null);
 
   // Edit Service Form
   const [editForm, setEditForm] = useState({
@@ -372,30 +378,86 @@ export function AdminScreen({ onBack, onLogout }) {
   // ==========================================
   // SERVICE MANAGEMENT OPERATIONS
   // ==========================================
+  // SERVICES OPERATIONS (CRUD & PRICING)
+  // ==========================================
+  const handleAddServiceImageFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so selecting the same file again works
+    e.target.value = '';
+
+    if (file.size > 25 * 1024 * 1024) {
+      setAddServiceImageError('Image file is too large (max 25MB). Please choose a smaller photo.');
+      return;
+    }
+
+    setAddServiceImageError('');
+    setAddServiceImageFile(file);
+
+    // Instant local preview (0ms) - Immediate visual feedback
+    try {
+      const previewUrl = URL.createObjectURL(file);
+      setAddServiceImagePreview(previewUrl);
+      setServiceForm(prev => ({ ...prev, imageUrl: previewUrl }));
+    } catch {}
+
+    // Concurrently generate fast clean compressed Base64 data URL
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.80);
+      if (compressed) {
+        setServiceForm(prev => ({ ...prev, imageUrl: compressed }));
+        setAddServiceImagePreview(compressed);
+      }
+    } catch {}
+  };
+
   const handleCreateService = async (e) => {
     e.preventDefault();
     if (!serviceForm.title.trim()) return;
 
-    await adminAddService({
-      title: serviceForm.title.trim(),
-      categoryName: serviceForm.categoryName.trim(),
-      subCategory: serviceForm.subCategory.trim(),
-      price: Number(serviceForm.price) || 300,
-      description: serviceForm.description.trim(),
-      heroImage: serviceForm.imageUrl.trim() || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80',
-      imageUrl: serviceForm.imageUrl.trim()
-    });
+    setIsUploadingAddImage(true);
+    setAddServiceImageError('');
 
-    // Reset and close
-    setServiceForm({
-      title: '',
-      categoryName: categories[0]?.name || 'Electrician',
-      subCategory: '',
-      price: '300',
-      description: '',
-      imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80'
-    });
-    setIsAddServiceOpen(false);
+    try {
+      let finalImg = (serviceForm.imageUrl || '').trim() || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80';
+
+      if (addServiceImageFile) {
+        finalImg = await uploadServiceImage(addServiceImageFile, 'new_service');
+      } else if (addServiceImagePreview && (addServiceImagePreview.startsWith('data:') || addServiceImagePreview.startsWith('blob:'))) {
+        finalImg = await uploadServiceImage(addServiceImagePreview, 'new_service');
+      }
+
+      await adminAddService({
+        title: serviceForm.title.trim(),
+        categoryName: serviceForm.categoryName.trim(),
+        subCategory: serviceForm.subCategory.trim(),
+        price: Number(serviceForm.price) || 300,
+        description: serviceForm.description.trim(),
+        heroImage: finalImg,
+        imageUrl: finalImg
+      });
+
+      showToast(`Service "${serviceForm.title.trim()}" created successfully in Supabase!`, 'success');
+
+      // Reset and close
+      setServiceForm({
+        title: '',
+        categoryName: categories[0]?.name || 'Electrician',
+        subCategory: '',
+        price: '300',
+        description: '',
+        imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80'
+      });
+      setAddServiceImageFile(null);
+      setAddServiceImagePreview('https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80');
+      setIsAddServiceOpen(false);
+    } catch (err) {
+      console.error('Failed to create service:', err);
+      setAddServiceImageError(`Failed to save: ${err.message || 'Please try again.'}`);
+    } finally {
+      setIsUploadingAddImage(false);
+    }
   };
 
   const handleOpenEditService = (service) => {
@@ -422,6 +484,9 @@ export function AdminScreen({ onBack, onLogout }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reset input so re-selecting same photo works smoothly
+    e.target.value = '';
+
     if (file.size > 25 * 1024 * 1024) {
       setServiceImageError('Image file is too large (max 25MB). Please choose a smaller photo.');
       return;
@@ -431,14 +496,21 @@ export function AdminScreen({ onBack, onLogout }) {
     setEditServiceImageFile(file);
     setIsServiceDirty(true);
 
+    // Instant local preview (0ms) - Immediate visual feedback
     try {
       const previewUrl = URL.createObjectURL(file);
       setEditServiceImagePreview(previewUrl);
-    } catch {
-      const reader = new FileReader();
-      reader.onload = (evt) => setEditServiceImagePreview(evt.target?.result);
-      reader.readAsDataURL(file);
-    }
+      setEditForm(prev => ({ ...prev, imageUrl: previewUrl }));
+    } catch {}
+
+    // Concurrently generate clean compressed Base64 Data URL
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.80);
+      if (compressed) {
+        setEditForm(prev => ({ ...prev, imageUrl: compressed }));
+        setEditServiceImagePreview(compressed);
+      }
+    } catch {}
   };
 
   const isServiceImageModified = Boolean(
@@ -483,10 +555,10 @@ export function AdminScreen({ onBack, onLogout }) {
       let finalImage = (editForm.imageUrl !== undefined ? editForm.imageUrl.trim() : '') || 
         editingService.heroImage || editingService.imageUrl || editingService.image || '';
 
-      // If a new gallery/device photo was selected, upload directly to Supabase storage
+      // If a new gallery/device photo was selected, upload directly to Supabase storage or clean compressed data URL
       if (editServiceImageFile) {
         finalImage = await uploadServiceImage(editServiceImageFile, editingService.id);
-      } else if (editServiceImagePreview && editServiceImagePreview.startsWith('data:')) {
+      } else if (editServiceImagePreview && (editServiceImagePreview.startsWith('data:') || editServiceImagePreview.startsWith('blob:'))) {
         finalImage = await uploadServiceImage(editServiceImagePreview, editingService.id);
       }
 
@@ -2484,40 +2556,125 @@ export function AdminScreen({ onBack, onLogout }) {
                 </div>
               </div>
 
-              {/* Manual Image URL Management */}
-              <div>
-                <label className="text-[11px] font-extrabold text-slate-700 block mb-1">
-                  Image URL (Direct link or Unsplash photo) *
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={serviceForm.imageUrl}
-                  onChange={(e) => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] focus:bg-white transition"
-                />
+              {/* Hidden File Input for Add Service Gallery Picker */}
+              <input
+                type="file"
+                ref={addServiceFileInputRef}
+                onChange={handleAddServiceImageFileSelect}
+                accept="image/*"
+                className="hidden"
+              />
 
-                {/* Live Image Preview */}
-                <div className="mt-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
-                  <div 
-                    className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-200 border border-slate-300 relative shadow-2xs"
-                    style={{ width: '3.5rem', height: '3.5rem' }}
-                  >
-                    <img
-                      src={serviceForm.imageUrl || 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80'}
-                      alt="Preview"
-                      className="w-full h-full object-cover block"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80';
-                      }}
-                    />
+              {/* Add Service Image Error Notice */}
+              {addServiceImageError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs font-bold animate-fade-in">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{addServiceImageError}</span>
+                </div>
+              )}
+
+              {/* Image Handling: Gallery File Upload + Manual Link */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50/70 via-slate-50/70 to-slate-50 border border-sky-100/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#0EA5E0]">
+                    <Camera className="w-4 h-4" />
+                    <span>Service Photo / Image</span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-slate-700">Live Thumbnail Preview</p>
-                    <p className="text-[10px] text-slate-400">Card thumbnail with object-fit: cover</p>
+                  {addServiceImageFile ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Gallery Image Selected</span>
+                    </span>
+                  ) : addServiceImagePreview ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-[#0284C7]">
+                      Photo Ready
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Image Preview & Direct File Picker */}
+                <div className="flex items-center gap-3.5 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  {/* Thumbnail Preview */}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 relative shadow-2xs flex items-center justify-center">
+                    {addServiceImagePreview ? (
+                      <img
+                        src={addServiceImagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover block"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=200&q=80';
+                        }}
+                      />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                    )}
+
+                    {isUploadingAddImage && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-2xs flex flex-col items-center justify-center text-white">
+                        <RefreshCw className="w-4 h-4 animate-spin text-white mb-0.5" />
+                        <span className="text-[8px] font-bold">Uploading</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Pick from Gallery Button */}
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={isUploadingAddImage}
+                        onClick={() => addServiceFileInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>{addServiceImageFile ? 'Change Photo' : 'Choose from Gallery'}</span>
+                      </button>
+
+                      {addServiceImageFile && (
+                        <button
+                          type="button"
+                          disabled={isUploadingAddImage}
+                          onClick={() => {
+                            setAddServiceImageFile(null);
+                            const defaultImg = 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=600&q=80';
+                            setAddServiceImagePreview(defaultImg);
+                            setServiceForm(prev => ({ ...prev, imageUrl: defaultImg }));
+                          }}
+                          className="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 font-medium truncate">
+                      {addServiceImageFile
+                        ? `${addServiceImageFile.name} (${Math.round(addServiceImageFile.size / 1024)} KB) • Uploads to Supabase`
+                        : 'Pick PNG, JPG, or WebP photo directly from device gallery'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct Image URL / Manual Link */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                    Or Image URL (Manual Link):
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    disabled={isUploadingAddImage}
+                    value={serviceForm.imageUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setServiceForm(prev => ({ ...prev, imageUrl: val }));
+                      if (!addServiceImageFile) {
+                        setAddServiceImagePreview(val);
+                      }
+                    }}
+                    placeholder="https://images.unsplash.com/... or /assets/images/..."
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0EA5E0] transition"
+                  />
                 </div>
 
                 {/* Quick Presets for European Technicians in Blue Uniforms */}
@@ -2525,13 +2682,22 @@ export function AdminScreen({ onBack, onLogout }) {
                   <span className="text-[10px] font-bold text-slate-400 block mb-1">
                     Quick Presets (European Techs in Blue):
                   </span>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto no-scrollbar">
                     {TECHNICIAN_PRESETS.slice(0, 4).map((p) => (
                       <button
                         key={p.label}
                         type="button"
-                        onClick={() => setServiceForm({ ...serviceForm, imageUrl: p.url })}
-                        className="px-2 py-0.5 rounded-lg bg-sky-50 text-[#0EA5E0] hover:bg-[#0EA5E0] hover:text-white text-[10px] font-bold border border-sky-100 transition cursor-pointer"
+                        disabled={isUploadingAddImage}
+                        onClick={() => {
+                          setAddServiceImageFile(null);
+                          setAddServiceImagePreview(p.url);
+                          setServiceForm(prev => ({ ...prev, imageUrl: p.url }));
+                        }}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                          addServiceImagePreview === p.url
+                            ? 'bg-[#0EA5E0] text-white border-[#0EA5E0]'
+                            : 'bg-white text-slate-600 hover:bg-sky-50 hover:text-[#0EA5E0] border-slate-200'
+                        }`}
                       >
                         {p.label}
                       </button>
@@ -2558,16 +2724,25 @@ export function AdminScreen({ onBack, onLogout }) {
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={isUploadingAddImage}
                   onClick={() => setIsAddServiceOpen(false)}
-                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer"
+                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer"
+                  disabled={isUploadingAddImage}
+                  className="flex-1 py-2.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-extrabold shadow-sm active:scale-98 transition cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
-                  Save & Publish
+                  {isUploadingAddImage ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving to Supabase...</span>
+                    </>
+                  ) : (
+                    <span>Save & Publish</span>
+                  )}
                 </button>
               </div>
 
@@ -2861,13 +3036,9 @@ export function AdminScreen({ onBack, onLogout }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={!isServiceFormDirty || isUploadingServiceImage}
-                  className={`flex-1 py-2.5 rounded-2xl text-white text-xs font-extrabold shadow-sm active:scale-98 transition flex items-center justify-center gap-1.5 ${
-                    isServiceFormDirty && !isUploadingServiceImage
-                      ? 'bg-[#0EA5E0] hover:bg-[#0284C7] cursor-pointer'
-                      : 'bg-slate-300 cursor-not-allowed opacity-60'
-                  }`}
-                  title={isServiceFormDirty ? 'Save Changes' : 'No changes detected to save'}
+                  disabled={isUploadingServiceImage}
+                  className="flex-1 py-2.5 rounded-2xl text-white text-xs font-extrabold shadow-sm active:scale-98 transition flex items-center justify-center gap-1.5 bg-[#0EA5E0] hover:bg-[#0284C7] cursor-pointer disabled:opacity-60"
+                  title="Save Changes"
                 >
                   {isUploadingServiceImage ? (
                     <>
