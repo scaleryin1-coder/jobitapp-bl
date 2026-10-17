@@ -85,6 +85,23 @@ const DEFAULT_BANNERS = [
     imageDirect: PLUMBER_HERO_DIRECT,
     imageFallback: PLUMBER_HERO_FALLBACK,
     alt: 'Plumber'
+  },
+  {
+    id: 'banner_puncher',
+    title: 'Puncher Work',
+    subtitle: 'Quick tubeless & tube tyre puncture repairs',
+    keyword: 'puncher',
+    bgStyle: 'bg-gradient-to-r from-[#FED7AA] via-[#FFEDD5] to-[#FFF7ED]',
+    bgColor: '#FED7AA',
+    isAcBanner: false,
+    titleColor: 'text-[#7C2D12]',
+    subtitleColor: 'text-amber-900',
+    buttonClass: 'bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold',
+    buttonArrowColor: 'text-white',
+    imagePrimary: '/src/assets/images/puncher_work_1792197565267.jpg',
+    imageDirect: '/assets/images/puncher_work.jpg',
+    imageFallback: 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=800&q=80',
+    alt: 'Puncher Work'
   }
 ];
 

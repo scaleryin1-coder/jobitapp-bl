@@ -97,6 +97,16 @@ export const initialBanners = [
     price: 499,
     order: 2,
     active: true
+  },
+  {
+    id: "banner_3",
+    title: "Puncher Work",
+    subtitle: "Quick tubeless & tube tyre puncture repairs at your doorstep.",
+    image: "/assets/images/puncher_work.jpg",
+    serviceName: "Puncher Work",
+    price: 199,
+    order: 3,
+    active: true
   }
 ];
 
@@ -444,6 +454,49 @@ export const initialServices = [
     heroImage: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80",
     details: ["Engine oil replacement & drain", "Brake tuning & shoe cleaning", "Chain lubrication & tensioning"],
     faqs: [{ q: "Do you provide original oils?", a: "Yes, Motul and Castrol genuine lubricants supplied." }]
+  },
+  {
+    id: "serv_puncher_1",
+    workerId: null,
+    categoryId: "cat_bike",
+    categoryName: "Puncher Work",
+    workerName: "Express Tyre & Puncher Care",
+    title: "Puncher Work & Tyre Repair",
+    badge: "Quick Roadside Specialist",
+    about: "Fast doorstep and on-road puncture repair for bikes, scooters, and cars. Specializes in tubeless puncture plugging, tube patch vulcanizing, valve core replacement, and air pressure filling.",
+    price: 199,
+    advancePaid: 99,
+    remainingDue: 100,
+    rating: 4.9,
+    reviewCount: 310,
+    ordersCompleted: 450,
+    city: "Melattur, Kerala",
+    available: true,
+    approved: true,
+    heroImage: "/assets/images/puncher_work.jpg",
+    imageUrl: "/assets/images/puncher_work.jpg",
+    image: "/assets/images/puncher_work.jpg",
+    gallery: [
+      "/assets/images/puncher_work.jpg",
+      "https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=800&q=80"
+    ],
+    details: [
+      "Tubeless tyre puncture strip & plug repair",
+      "Tube tyre removal, patch vulcanization & leak testing",
+      "Tyre valve pin replacement & rim bead inspection",
+      "Air pressure check & portable inflation"
+    ],
+    subCategories: [
+      "Tubeless Tyre Puncture Repair",
+      "Tube Tyre Puncture Patch & Air Check",
+      "Emergency Roadside Puncture Assistance",
+      "Tyre Valve & Pressure Check"
+    ],
+    tags: ["Puncher", "Puncture", "Tyre", "Bike", "Car", "Tube", "Tubeless"],
+    faqs: [
+      { q: "Do you come to breakdown locations on the road?", a: "Yes, our mobile puncture technicians reach your location quickly with portable kits." },
+      { q: "Can tubeless tyres be repaired without removing the wheel?", a: "Yes, standard tubeless punctures are sealed in minutes without removing the wheel." }
+    ]
   },
   {
     id: "serv_driver_1",

@@ -145,7 +145,8 @@ export function CustomerDashboard({
         (catLower.includes('alumin') && (sCat.includes('alumin') || sTitle.includes('fabricat') || sTitle.includes('window'))) ||
         (catLower.includes('garden') && (sCat.includes('garden') || sTitle.includes('garden') || sTitle.includes('lawn'))) ||
         (catLower.includes('pest') && (sCat.includes('pest') || sTitle.includes('pest') || sTitle.includes('termite'))) ||
-        (catLower.includes('bike') && (sCat.includes('bike') || sTitle.includes('bike') || sTitle.includes('wheeler'))) ||
+        (catLower.includes('bike') && (sCat.includes('bike') || sTitle.includes('bike') || sTitle.includes('wheeler') || sTitle.includes('puncher') || sTitle.includes('puncture') || sTitle.includes('tyre'))) ||
+        ((catLower.includes('puncher') || catLower.includes('puncture') || catLower.includes('tyre')) && (sCat.includes('puncher') || sCat.includes('puncture') || sTitle.includes('puncher') || sTitle.includes('puncture') || sTitle.includes('tyre'))) ||
         (catLower.includes('car') && (sCat.includes('car') || sTitle.includes('car') || sTitle.includes('mechanic'))) ||
         (catLower.includes('moving') && (sCat.includes('moving') || sTitle.includes('shift') || sTitle.includes('labour'))) ||
         (catLower.includes('secur') && (sCat.includes('secur') || sTitle.includes('cctv') || sTitle.includes('lock') || sTitle.includes('smart'))) ||
