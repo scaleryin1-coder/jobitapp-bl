@@ -26,6 +26,7 @@ export function ProfileScreen({
   const [name, setName] = useState(() => currentUser?.name || '');
   const [city, setCity] = useState(() => currentUser?.city || currentUser?.address || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
   const [email, setEmail] = useState(() => currentUser?.email || '');
+  const [radius, setRadius] = useState(() => currentUser?.serviceRadius || '15');
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -34,7 +35,8 @@ export function ProfileScreen({
       name: name.trim(), 
       city: city.trim(),
       address: city.trim(),
-      email: email.trim() 
+      email: email.trim(),
+      serviceRadius: String(radius || '15')
     });
     if (city.trim()) {
       localStorage.setItem('jobit_user_location', city.trim());
@@ -172,6 +174,29 @@ export function ProfileScreen({
                     placeholder="e.g. Melattur, Kerala"
                   />
                 </div>
+                {currentUser?.role === 'worker' && (
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                      Travel / Service Radius (KM)
+                    </label>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {['3', '5', '10', '15', '20', '25', '30'].map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setRadius(r)}
+                          className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer ${
+                            radius === r
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {r} KM
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <button
                   type="submit"
                   className="w-full py-2.5 rounded-full bg-[#0EA5E0] text-white text-xs font-bold shadow-sm cursor-pointer hover:bg-[#0284C7] transition"

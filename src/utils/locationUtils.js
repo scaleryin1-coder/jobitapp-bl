@@ -156,3 +156,87 @@ export async function reverseGeocodeNominatim(lat, lng) {
     };
   }
 }
+
+/**
+ * Baseline coordinates lookup for key service hubs
+ */
+export const CITY_COORDS = {
+  'melattur': { lat: 11.0607, lng: 76.2625 },
+  'pattikkad': { lat: 11.0267, lng: 76.2081 },
+  'pandikkad': { lat: 11.1118, lng: 76.2415 },
+  'perinthalmanna': { lat: 10.9760, lng: 76.2254 },
+  'manjeri': { lat: 11.1213, lng: 76.1213 },
+  'malappuram': { lat: 11.0732, lng: 76.0740 },
+  'kozhikode': { lat: 11.2588, lng: 75.7804 },
+  'kochi': { lat: 9.9312, lng: 76.2673 },
+  'bengaluru': { lat: 12.9716, lng: 77.5946 },
+  'palakkad': { lat: 10.7867, lng: 76.6548 },
+  'thrissur': { lat: 10.5276, lng: 76.2144 }
+};
+
+/**
+ * Calculate great-circle distance between two GPS coordinates using the Haversine Formula.
+ * Returns direct distance in kilometers (rounded to 2 decimal places) or null if inputs are invalid.
+ * 
+ * Formula:
+ * a = sin²(Δlat/2) + cos(lat1) * cos(lat2) * sin²(Δlon/2)
+ * c = 2 * atan2(√a, √(1−a))
+ * d = R * c
+ */
+export function calculateHaversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const nLat1 = Number(lat1);
+  const nLon1 = Number(lon1);
+  const nLat2 = Number(lat2);
+  const nLon2 = Number(lon2);
+
+  if (
+    lat1 === undefined || lat1 === null || lon1 === undefined || lon1 === null ||
+    lat2 === undefined || lat2 === null || lon2 === undefined || lon2 === null ||
+    isNaN(nLat1) || isNaN(nLon1) || isNaN(nLat2) || isNaN(nLon2)
+  ) {
+    return null;
+  }
+
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371; // Earth's mean radius in kilometers
+
+  const dLat = toRad(nLat2 - nLat1);
+  const dLon = toRad(nLon2 - nLon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(nLat1)) * Math.cos(toRad(nLat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  return Number(distance.toFixed(2));
+}
+
+/**
+ * Resolves coordinates for a worker from their GPS fields, address, or city.
+ */
+export function getWorkerCoordinates(worker) {
+  if (!worker) return null;
+  const lat = worker.latitude ?? worker.lat ?? worker.user_latitude ?? worker.coordinates?.lat;
+  const lng = worker.longitude ?? worker.lng ?? worker.user_longitude ?? worker.coordinates?.lng;
+
+  if (
+    lat !== undefined && lat !== null && !isNaN(Number(lat)) && Number(lat) !== 0 &&
+    lng !== undefined && lng !== null && !isNaN(Number(lng)) && Number(lng) !== 0
+  ) {
+    return { lat: Number(Number(lat).toFixed(6)), lng: Number(Number(lng).toFixed(6)) };
+  }
+
+  // Lookup in city coordinates table
+  const locName = String(worker.city || worker.address || worker.serviceArea || worker.service_area || '').toLowerCase();
+  for (const [key, coords] of Object.entries(CITY_COORDS)) {
+    if (locName.includes(key)) {
+      return coords;
+    }
+  }
+
+  // Default baseline coordinates (Melattur, Kerala)
+  return { lat: 11.0607, lng: 76.2625 };
+}

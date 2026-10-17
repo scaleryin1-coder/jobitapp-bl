@@ -37,6 +37,11 @@ import {
   rejectJobAsWorker,
   updateBookingStatus, 
   toggleWorkerDuty,
+  updateWorkerServiceRadius,
+  doesWorkerMatchCategory,
+  doesWorkerCoverLocation,
+  calculateHaversineDistanceKm,
+  getWorkerCoordinates,
   subscribePortfolios,
   addWorkerPortfolio,
   deleteWorkerPortfolio,
@@ -182,8 +187,39 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     await toggleWorkerDuty(activeWorker.id, !isOnline);
   };
 
-  // Incoming unallocated jobs matching skill or broadcast (status: 'pending')
-  // Completely and permanently filters out rejected/declined jobs even after page refresh
+  // Update maximum travel radius for this specific worker
+  const handleUpdateRadius = async (newRadius) => {
+    if (!activeWorker?.id) return;
+    try {
+      await updateWorkerServiceRadius(activeWorker.id, newRadius);
+      showToast(`Coverage radius set to ${newRadius} KM. You will receive jobs within this distance.`);
+    } catch (err) {
+      console.warn('Failed to update service radius:', err);
+    }
+  };
+
+  // Helper to calculate exact distance from active worker base to a booking's doorstep pin
+  const calculateDistanceToJob = (job) => {
+    if (!activeWorker) return null;
+    const custLat = job.user_latitude ?? job.latitude ?? job.lat ?? job.coordinates?.lat;
+    const custLng = job.user_longitude ?? job.longitude ?? job.lng ?? job.coordinates?.lng;
+    if (
+      custLat !== undefined && custLat !== null && custLng !== undefined && custLng !== null &&
+      !isNaN(Number(custLat)) && !isNaN(Number(custLng)) && Number(custLat) !== 0
+    ) {
+      const workerCoords = getWorkerCoordinates(activeWorker);
+      if (workerCoords && workerCoords.lat && workerCoords.lng) {
+        return calculateHaversineDistanceKm(Number(custLat), Number(custLng), Number(workerCoords.lat), Number(workerCoords.lng));
+      }
+    }
+    return null;
+  };
+
+  // Proximity Matching Algorithm (Haversine Formula):
+  // Filter and broadcast unallocated jobs to this specific worker ONLY where:
+  // 1. Worker is online and active
+  // 2. Job matches worker's trade category
+  // 3. Direct Calculated_Distance <= Worker_Preferred_Radius (e.g. 5 KM vs 10 KM limit)
   const incomingBroadcastJobs = bookings.filter(b => {
     if (b.status !== 'pending') return false;
     if (b.status === 'rejected' || b.status === 'declined' || b.status === 'cancelled') return false;
@@ -200,7 +236,45 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
       if (Array.isArray(b.rejected_worker_ids) && b.rejected_worker_ids.includes(activeWorker.id)) return false;
     }
 
-    return b.workerId === null || b.workerId === activeWorker?.id || !b.workerId;
+    // If job was pre-assigned to another technician, ignore
+    if (b.workerId && b.workerId !== activeWorker?.id) return false;
+
+    // 1. Worker must be Online on duty to receive broadcast requests
+    if (!isOnline) return false;
+
+    // 2. Category matching: Worker must specialize in this trade
+    const bookingCategory = b.categoryId || b.categoryName || b.serviceTitle || b.service_type;
+    if (!doesWorkerMatchCategory(activeWorker, bookingCategory)) {
+      return false;
+    }
+
+    // 3. Proximity Matching Algorithm (Haversine Formula):
+    // Match and broadcast the job ONLY to workers where Calculated_Distance <= Worker_Preferred_Radius
+    const workerRadiusKm = Math.max(1, Number(activeWorker?.serviceRadius || activeWorker?.radius || 15));
+    const custLat = b.user_latitude ?? b.latitude ?? b.lat ?? b.coordinates?.lat;
+    const custLng = b.user_longitude ?? b.longitude ?? b.lng ?? b.coordinates?.lng;
+
+    if (
+      custLat !== undefined && custLat !== null && custLng !== undefined && custLng !== null &&
+      !isNaN(Number(custLat)) && !isNaN(Number(custLng)) && Number(custLat) !== 0
+    ) {
+      const workerCoords = getWorkerCoordinates(activeWorker);
+      if (workerCoords && workerCoords.lat && workerCoords.lng) {
+        const distanceKm = calculateHaversineDistanceKm(
+          Number(custLat), 
+          Number(custLng), 
+          Number(workerCoords.lat), 
+          Number(workerCoords.lng)
+        );
+        if (distanceKm !== null) {
+          // Strict condition: Calculated_Distance <= Worker_Preferred_Radius
+          return distanceKm <= workerRadiusKm;
+        }
+      }
+    }
+
+    // Fallback if coordinates missing: textual location coverage check
+    return doesWorkerCoverLocation(activeWorker, b.address || b.city);
   });
 
   // My accepted or ongoing jobs
@@ -690,6 +764,54 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             <span>{isOnline ? 'Go Offline' : 'Go Online'}</span>
           </button>
         </div>
+
+        {/* Worker-Specific Dynamic Travel / Service Radius Setting Card */}
+        <div className="mt-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-sky-100 text-[#0EA5E0] flex items-center justify-center shrink-0">
+                <Compass className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                  <span>Travel & Service Radius</span>
+                  <span className="text-[10px] font-bold text-slate-400 font-mono">(Dynamic GPS)</span>
+                </span>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Receive jobs within your preferred maximum distance
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <span className="text-xs font-black text-[#0EA5E0] bg-white px-2.5 py-0.5 rounded-full border border-sky-200 shadow-2xs">
+                {activeWorker?.serviceRadius || '15'} KM Limit
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Radius Selection Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+            {['3', '5', '10', '15', '20', '25', '30'].map((radiusOption) => {
+              const isSelected = String(activeWorker?.serviceRadius || '15') === radiusOption;
+              return (
+                <button
+                  key={radiusOption}
+                  type="button"
+                  onClick={() => handleUpdateRadius(radiusOption)}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-100'
+                  }`}
+                  title={`Set your service radius to ${radiusOption} km`}
+                >
+                  {radiusOption} KM
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* 2. Operations Metrics Bar - Strictly initialized to 0 for newly registered/logged-in workers */}
@@ -747,9 +869,17 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     <h4 className="text-base font-extrabold leading-tight text-white">
                       {job.customerName || 'Customer'}
                     </h4>
-                    <p className="text-xs text-sky-100 font-semibold mt-0.5">
-                      {job.serviceTitle}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <p className="text-xs text-sky-100 font-semibold">
+                        {job.serviceTitle}
+                      </p>
+                      {calculateDistanceToJob(job) !== null && (
+                        <span className="text-[10px] font-extrabold text-white bg-white/20 border border-white/25 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-amber-300 shrink-0" />
+                          <span>{calculateDistanceToJob(job)} km away</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className="text-[11px] text-sky-100 flex items-center gap-1 font-medium bg-white/10 px-2 py-0.5 rounded-full">
@@ -1088,10 +1218,16 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                   </div>
                 </div>
 
-                <div>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h5 className="text-sm font-extrabold text-slate-900 leading-snug">
                     {job.serviceTitle}
                   </h5>
+                  {calculateDistanceToJob(job) !== null && (
+                    <span className="text-[10px] font-extrabold text-[#0EA5E0] bg-sky-50 border border-sky-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs">
+                      <MapPin className="w-3 h-3 text-[#0EA5E0] shrink-0" />
+                      <span>{calculateDistanceToJob(job)} km away</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Middle: Full, clearly readable Customer Address & Navigation */}

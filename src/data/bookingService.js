@@ -14,6 +14,9 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { initialWorkers, initialServices, initialCategories, initialDailyGigs, initialPortfolios } from './seedData';
 import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from './categoriesData';
 import { compressImage } from '../utils/imageUtils';
+import { calculateHaversineDistanceKm, getWorkerCoordinates, CITY_COORDS } from '../utils/locationUtils';
+
+export { calculateHaversineDistanceKm, getWorkerCoordinates, CITY_COORDS };
 
 const STORAGE_KEY_BOOKINGS = 'jobit_bookings';
 const STORAGE_KEY_WORKERS = 'jobit_workers';
@@ -635,6 +638,59 @@ export function subscribeWorkers(callback) {
   };
 }
 
+/**
+ * Proximity Matching Algorithm (Haversine Formula):
+ * When a customer creates a booking at Customer_Lat and Customer_Lng,
+ * calculate the direct distance to all online workers in that specific service category.
+ * Matches and broadcasts the job ONLY to workers where:
+ * Calculated_Distance <= Worker_Preferred_Radius (respecting individual worker limits, e.g. 5km for one worker and 10km for another).
+ */
+export function getMatchingOnlineWorkersForBooking(booking, workersList) {
+  if (!booking) return [];
+  const workers = (Array.isArray(workersList) && workersList.length > 0) ? workersList : getLocalWorkers();
+  const bookingCategory = booking.categoryId || booking.categoryName || booking.serviceTitle || booking.service_type;
+
+  const rawLat = booking.user_latitude ?? booking.latitude ?? booking.lat ?? booking.coordinates?.lat;
+  const rawLng = booking.user_longitude ?? booking.longitude ?? booking.lng ?? booking.coordinates?.lng;
+  const hasCustCoords = rawLat !== undefined && rawLat !== null && rawLng !== undefined && rawLng !== null &&
+    !isNaN(Number(rawLat)) && !isNaN(Number(rawLng)) && Number(rawLat) !== 0;
+
+  const custLat = hasCustCoords ? Number(rawLat) : null;
+  const custLng = hasCustCoords ? Number(rawLng) : null;
+
+  return (workers || []).filter((w) => {
+    if (!w || !w.id) return false;
+    if (DUMMY_WORKER_IDS.has(w.id)) return false;
+
+    // 1. Must be genuine worker approved by Admin
+    const isApproved = w.is_approved === true || w.status === 'approved' || w.workerStatus === 'approved';
+    if (!isApproved) return false;
+
+    // 2. Must be online and active for work
+    if (w.isAvailable === false || w.isOnline === false) return false;
+
+    // 3. Must match this trade / service category
+    if (!doesWorkerMatchCategory(w, bookingCategory)) return false;
+
+    // 4. Proximity matching using Haversine formula against Worker's specific preferred radius
+    const workerRadiusKm = Math.max(1, Number(w.serviceRadius || w.radius || 15));
+
+    if (custLat !== null && custLng !== null) {
+      const workerCoords = getWorkerCoordinates(w);
+      if (workerCoords && workerCoords.lat && workerCoords.lng) {
+        const distanceKm = calculateHaversineDistanceKm(custLat, custLng, workerCoords.lat, workerCoords.lng);
+        if (distanceKm !== null) {
+          // Rule: Calculated_Distance <= Worker_Preferred_Radius
+          return distanceKm <= workerRadiusKm;
+        }
+      }
+    }
+
+    // Fallback if coordinates missing: textual location coverage check
+    return doesWorkerCoverLocation(w, booking.address || booking.city || booking.location);
+  });
+}
+
 // Customer initiates booking -> Flat ₹99 visiting fee with broadcast dispatch
 export async function createBooking(payload) {
   // If payload already specifies a chosen worker (from a portfolio trade), keep it
@@ -681,6 +737,13 @@ export async function createBooking(payload) {
     paymentStatus: 'paid_visiting_fee_99',
     paymentId: payload.paymentId || ('pay_' + Date.now())
   };
+
+  // Proximity Matching Algorithm (Haversine Formula):
+  // Calculate direct distance to all online workers in that specific service category.
+  // Match and broadcast the job ONLY to workers where Calculated_Distance <= Worker_Preferred_Radius
+  const matchedWorkers = getMatchingOnlineWorkersForBooking(newBooking, getLocalWorkers());
+  newBooking.matchedWorkerIds = matchedWorkers.map(w => w.id);
+  newBooking.matchedCount = matchedWorkers.length;
 
   // 1. Immediately update local state & dispatch custom event for instant cross-component sync
   const current = getLocalBookings();
@@ -926,6 +989,40 @@ export async function toggleWorkerDuty(workerId, isOnline) {
       console.warn('Firestore toggle duty fallback', e);
     }
   }
+}
+
+/**
+ * Update a worker's personal maximum travel / service coverage radius
+ * Persists to local storage, Firestore (if configured), and active session.
+ */
+export async function updateWorkerServiceRadius(workerId, newRadius) {
+  if (!workerId) return;
+  const radiusStr = String(newRadius || '15');
+  const workers = getLocalWorkers();
+  const updated = workers.map(w => w.id === workerId ? { ...w, serviceRadius: radiusStr } : w);
+  saveLocalWorkers(updated);
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'workers', workerId), { serviceRadius: radiusStr });
+    } catch (e) {
+      console.warn('Firestore update worker radius fallback', e);
+    }
+  }
+
+  // Also sync current user session if worker is currently logged in
+  try {
+    const rawUser = localStorage.getItem('jobit_user');
+    if (rawUser) {
+      const parsed = JSON.parse(rawUser);
+      if (parsed && (parsed.uid === workerId || parsed.workerId === workerId)) {
+        parsed.serviceRadius = radiusStr;
+        localStorage.setItem('jobit_user', JSON.stringify(parsed));
+      }
+    }
+  } catch {}
+
+  return radiusStr;
 }
 
 // ==========================================
