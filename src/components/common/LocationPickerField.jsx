@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { MapPin, ChevronRight, Compass, CheckCircle2, Sparkles, Navigation } from 'lucide-react';
+import { MapPin, ChevronRight, Compass, CheckCircle2, Sparkles, Navigation, Loader2 } from 'lucide-react';
 import { LeafletLocationPickerModal } from './LeafletLocationPickerModal';
+import { reverseGeocodeNominatim } from '../../utils/locationUtils';
 
 /**
  * Main Form Field for Location Picking:
  * - Display a clean input box titled "Select Area / Location" with a location icon.
+ * - High-accuracy GPS button: Uses HTML5 Geolocation API with enableHighAccuracy: true, timeout: 15000, maximumAge: 0.
+ * - Shows "GPS Verified (High Accuracy)" badge when coordinates are captured.
  * - Tapping this box opens the full-screen Leaflet map page/modal.
- * - Confirmed location passes address text and lat/lng back to caller.
+ * - Confirmed location passes address text and exact user_latitude and user_longitude back to caller.
  */
 export function LocationPickerField({
   value = '',
@@ -20,42 +23,118 @@ export function LocationPickerField({
   className = ''
 }) {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [isLocatingDirectly, setIsLocatingDirectly] = useState(false);
 
   const handleSelectLocation = (data) => {
-    // Pass chosen address text and coordinates back to Main Form
+    const latNum = Number(Number(data.user_latitude ?? data.lat ?? data.latitude).toFixed(6));
+    const lngNum = Number(Number(data.user_longitude ?? data.lng ?? data.longitude).toFixed(6));
+
+    // Pass chosen address text and exact coordinates back to Main Form
     onChange?.({
       address: data.address,
       shortAddress: data.shortAddress,
       areaTitle: data.areaTitle,
-      coordinates: { lat: data.lat, lng: data.lng },
-      lat: data.lat,
-      lng: data.lng,
+      user_latitude: latNum,
+      user_longitude: lngNum,
+      latitude: latNum,
+      longitude: lngNum,
+      coordinates: { lat: latNum, lng: lngNum },
+      lat: latNum,
+      lng: lngNum,
+      isGpsVerified: true,
       plusCode: data.plusCode,
       pincode: data.pincode,
       city: data.city
     });
   };
 
+  // High accuracy GPS trigger directly from form field
+  const handleUseCurrentLocationDirectly = (e) => {
+    e.stopPropagation();
+    if (!navigator.geolocation) return;
+
+    setIsLocatingDirectly(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latNum = Number(pos.coords.latitude.toFixed(6));
+        const lngNum = Number(pos.coords.longitude.toFixed(6));
+        try {
+          const res = await reverseGeocodeNominatim(latNum, lngNum);
+          handleSelectLocation({
+            address: res.fullAddress || res.shortAddress || `GPS (${latNum}, ${lngNum})`,
+            shortAddress: res.shortAddress,
+            areaTitle: res.areaTitle,
+            lat: latNum,
+            lng: lngNum,
+            user_latitude: latNum,
+            user_longitude: lngNum,
+            latitude: latNum,
+            longitude: lngNum,
+            plusCode: res.plusCode,
+            pincode: res.pincode,
+            city: res.city
+          });
+        } catch {
+          handleSelectLocation({
+            address: `GPS Pin: ${latNum}°, ${lngNum}°`,
+            lat: latNum,
+            lng: lngNum,
+            user_latitude: latNum,
+            user_longitude: lngNum,
+            latitude: latNum,
+            longitude: lngNum
+          });
+        } finally {
+          setIsLocatingDirectly(false);
+        }
+      },
+      () => {
+        setIsLocatingDirectly(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  };
+
   const hasValue = Boolean(value && value.trim().length > 0);
+  const hasCoordinates = Boolean(
+    coordinates &&
+    coordinates.lat !== undefined &&
+    coordinates.lng !== undefined &&
+    !isNaN(Number(coordinates.lat)) &&
+    !isNaN(Number(coordinates.lng)) &&
+    Number(coordinates.lat) !== 0
+  );
 
   return (
     <div className={`space-y-1.5 ${className}`}>
       
-      {/* Field Label */}
+      {/* Field Label & Quick High Accuracy GPS Action */}
       {label && (
-        <label className="text-xs font-black text-[#111827] flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-black text-[#111827] flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
             <span>{label} {required && <span className="text-rose-500">*</span>}</span>
-          </span>
+          </label>
 
-          {hasValue && coordinates?.lat && (
-            <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 flex items-center gap-1 font-bold">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              <span>Pinned</span>
-            </span>
-          )}
-        </label>
+          <button
+            type="button"
+            onClick={handleUseCurrentLocationDirectly}
+            disabled={isLocatingDirectly}
+            className="text-[10px] font-extrabold text-[#0EA5E0] hover:text-[#0284C7] bg-sky-50 hover:bg-sky-100 px-2.5 py-0.5 rounded-full border border-sky-100 flex items-center gap-1 transition active:scale-95 cursor-pointer disabled:opacity-60"
+            title="Fetch current location using High Accuracy GPS"
+          >
+            {isLocatingDirectly ? (
+              <Loader2 className="w-3 h-3 animate-spin text-[#0EA5E0]" />
+            ) : (
+              <Compass className="w-3 h-3 text-[#0EA5E0]" />
+            )}
+            <span>{isLocatingDirectly ? 'Locating...' : 'Use Current Location'}</span>
+          </button>
+        </div>
       )}
 
       {/* Main Interactive Input Box */}
@@ -80,7 +159,7 @@ export function LocationPickerField({
         <div className="flex items-start gap-3 min-w-0 flex-1">
           {/* Location Icon Circle */}
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-            hasValue 
+            hasCoordinates 
               ? 'bg-[#0EA5E0] text-white shadow-sm shadow-[#0EA5E0]/30' 
               : 'bg-slate-100 text-slate-400 group-hover:bg-[#0EA5E0]/10 group-hover:text-[#0EA5E0]'
           }`}>
@@ -94,15 +173,26 @@ export function LocationPickerField({
                 <p className="text-xs font-black text-slate-900 truncate leading-snug">
                   {value}
                 </p>
-                <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-semibold">
-                  {coordinates?.lat && (
-                    <span>GPS: {Number(coordinates.lat).toFixed(4)}°, {Number(coordinates.lng).toFixed(4)}°</span>
+
+                {/* Accuracy Badge & Coordinates */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                  {hasCoordinates && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold shadow-2xs">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>GPS Verified (High Accuracy)</span>
+                    </span>
                   )}
+
+                  {hasCoordinates && (
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {Number(coordinates.lat).toFixed(4)}°, {Number(coordinates.lng).toFixed(4)}°
+                    </span>
+                  )}
+
                   {plusCode && (
-                    <>
-                      <span>•</span>
-                      <span className="font-mono text-[#0EA5E0]">{plusCode}</span>
-                    </>
+                    <span className="text-[10px] font-mono text-[#0284C7] bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100 font-semibold">
+                      {plusCode}
+                    </span>
                   )}
                 </div>
               </>

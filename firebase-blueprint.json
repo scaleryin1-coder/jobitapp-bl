@@ -94,6 +94,8 @@
         "commissionAmount": { "type": "number" },
         "paymentStatus": { "type": "string", "enum": ["PENDING", "PAID"] },
         "paymentMethod": { "type": "string", "enum": ["CASH"] },
+        "user_latitude": { "type": "number" },
+        "user_longitude": { "type": "number" },
         "createdAt": { "type": "string" }
       },
       "required": ["id", "customerId", "categoryId", "subServiceId", "taskPrice", "totalAmount", "status", "serviceAddress", "scheduledDate", "scheduledSlot"]

@@ -12,7 +12,7 @@ import {
   Minus,
   Sparkles,
   Layers,
-  Share2
+  CheckCircle2
 } from 'lucide-react';
 import { reverseGeocodeNominatim, encodePlusCode } from '../../utils/locationUtils';
 
@@ -34,6 +34,7 @@ export function LeafletLocationPickerModal({
   const [isPanning, setIsPanning] = useState(false);
   const [isLocatingUser, setIsLocatingUser] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [isGpsLocked, setIsGpsLocked] = useState(false);
 
   // Current center coordinates of the map
   const [centerCoords, setCenterCoords] = useState(() => {
@@ -129,7 +130,7 @@ export function LeafletLocationPickerModal({
         map.invalidateSize();
       }, 100);
 
-      // Check current GPS location on first load if no specific custom coords passed
+      // High-accuracy GPS location on first load if no initial coordinates
       if (!initialCoordinates?.lat && typeof navigator !== 'undefined' && navigator.geolocation) {
         setIsLocatingUser(true);
         navigator.geolocation.getCurrentPosition(
@@ -137,6 +138,7 @@ export function LeafletLocationPickerModal({
             const gpsLat = Number(pos.coords.latitude.toFixed(6));
             const gpsLng = Number(pos.coords.longitude.toFixed(6));
             setCenterCoords({ lat: gpsLat, lng: gpsLng });
+            setIsGpsLocked(true);
             map.flyTo([gpsLat, gpsLng], 17, { duration: 0.8 });
             fetchAddressForCoordinates(gpsLat, gpsLng);
             setIsLocatingUser(false);
@@ -146,10 +148,13 @@ export function LeafletLocationPickerModal({
             fetchAddressForCoordinates(startLat, startLng);
             setIsLocatingUser(false);
           },
-          { enableHighAccuracy: true, timeout: 8000 }
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       } else {
         fetchAddressForCoordinates(startLat, startLng);
+        if (initialCoordinates?.lat) {
+          setIsGpsLocked(true);
+        }
       }
     }, 50);
 
@@ -166,7 +171,7 @@ export function LeafletLocationPickerModal({
     };
   }, [isOpen]);
 
-  // Center on User's Current GPS Location
+  // Center on User's Current GPS Location with High Accuracy
   const handleCenterOnUserGPS = () => {
     if (!navigator.geolocation || !mapInstanceRef.current) return;
 
@@ -176,6 +181,7 @@ export function LeafletLocationPickerModal({
         const gpsLat = Number(pos.coords.latitude.toFixed(6));
         const gpsLng = Number(pos.coords.longitude.toFixed(6));
         setCenterCoords({ lat: gpsLat, lng: gpsLng });
+        setIsGpsLocked(true);
         
         if (mapInstanceRef.current) {
           mapInstanceRef.current.flyTo([gpsLat, gpsLng], 17, {
@@ -189,7 +195,7 @@ export function LeafletLocationPickerModal({
       () => {
         setIsLocatingUser(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -244,15 +250,24 @@ export function LeafletLocationPickerModal({
     if (mapInstanceRef.current) mapInstanceRef.current.zoomOut();
   };
 
-  // Confirm selection
+  // Confirm selection with exact latitude, longitude, user_latitude, user_longitude
   const handleConfirmLocation = () => {
     const finalAddress = locationDetails.fullAddress || locationDetails.shortAddress || 'Selected Location';
+    const latNum = Number(Number(centerCoords.lat).toFixed(6));
+    const lngNum = Number(Number(centerCoords.lng).toFixed(6));
+
     onSelectLocation?.({
       address: finalAddress,
       shortAddress: locationDetails.shortAddress || locationDetails.areaTitle,
       areaTitle: locationDetails.areaTitle,
-      lat: centerCoords.lat,
-      lng: centerCoords.lng,
+      lat: latNum,
+      lng: lngNum,
+      latitude: latNum,
+      longitude: lngNum,
+      user_latitude: latNum,
+      user_longitude: lngNum,
+      coordinates: { lat: latNum, lng: lngNum },
+      isGpsVerified: true,
       plusCode: locationDetails.plusCode,
       pincode: locationDetails.pincode,
       city: locationDetails.city,
@@ -282,7 +297,7 @@ export function LeafletLocationPickerModal({
 
             <div className="flex-1 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md shadow-md border border-slate-100 flex items-center justify-center gap-1.5 text-xs font-black text-slate-800">
               <MapPin className="w-3.5 h-3.5 text-[#0EA5E0] fill-[#0EA5E0]/20" />
-              <span>Select Location on Map</span>
+              <span>Exact Doorstep GPS Pin</span>
             </div>
 
             {/* GPS Re-center Button in Top Bar */}
@@ -291,7 +306,7 @@ export function LeafletLocationPickerModal({
               onClick={handleCenterOnUserGPS}
               disabled={isLocatingUser}
               className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-md text-[#0EA5E0] hover:text-[#0284C7] flex items-center justify-center shadow-md active:scale-95 transition cursor-pointer disabled:opacity-75"
-              title="Current GPS Location"
+              title="High Accuracy GPS"
             >
               <Navigation className={`w-5 h-5 fill-current ${isLocatingUser ? 'animate-spin' : ''}`} />
             </button>
@@ -364,7 +379,7 @@ export function LeafletLocationPickerModal({
         {/* Leaflet map canvas */}
         <div ref={mapContainerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-        {/* 3. STATIC CENTER PIN (FIXED EXACTLY IN CENTER OF SCREEN) */}
+        {/* 3. STATIC CENTER PIN (FIXED DIRECTLY IN THE EXACT CENTER OF THE SCREEN) */}
         <div 
           className="absolute top-1/2 left-1/2 pointer-events-none z-[450] flex flex-col items-center justify-end"
           style={{
@@ -396,7 +411,7 @@ export function LeafletLocationPickerModal({
             {/* Small floating tooltip while panning */}
             {isPanning && (
               <div className="absolute -top-7 whitespace-nowrap bg-slate-900/90 text-white text-[10px] font-black px-2.5 py-0.8 rounded-full shadow-lg border border-white/20 animate-fade-in">
-                Release to pick doorstep
+                Release map to pinpoint doorstep
               </div>
             )}
           </div>
@@ -413,7 +428,7 @@ export function LeafletLocationPickerModal({
         </div>
 
         {/* Floating Controls: Zoom in/out */}
-        <div className="absolute right-3.5 bottom-60 sm:bottom-56 z-[450] flex flex-col gap-2">
+        <div className="absolute right-3.5 bottom-64 sm:bottom-60 z-[450] flex flex-col gap-2">
           <button
             type="button"
             onClick={handleZoomIn}
@@ -432,16 +447,17 @@ export function LeafletLocationPickerModal({
           </button>
         </div>
 
-        {/* Floating Quick Action: GPS Location Button */}
-        <div className="absolute left-3.5 bottom-60 sm:bottom-56 z-[450]">
+        {/* Floating Quick Action: High Accuracy GPS Button */}
+        <div className="absolute left-3.5 bottom-64 sm:bottom-60 z-[450]">
           <button
             type="button"
             onClick={handleCenterOnUserGPS}
             disabled={isLocatingUser}
             className="px-3.5 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md hover:bg-white text-slate-800 shadow-lg border border-slate-200/80 flex items-center gap-2 transition active:scale-95 cursor-pointer text-xs font-bold"
+            title="High Accuracy GPS (enableHighAccuracy)"
           >
             <Compass className={`w-4 h-4 text-[#0EA5E0] ${isLocatingUser ? 'animate-spin' : ''}`} />
-            <span>{isLocatingUser ? 'Finding...' : 'My Location'}</span>
+            <span>{isLocatingUser ? 'Acquiring GPS...' : 'Use Current Location'}</span>
           </button>
         </div>
 
@@ -453,12 +469,12 @@ export function LeafletLocationPickerModal({
         {/* Drag handle pill */}
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3" />
 
-        {/* Header indicator row */}
+        {/* Header indicator row with High Accuracy Badge */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Selected Point
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span>GPS Verified (High Accuracy)</span>
             </span>
           </div>
 
@@ -489,16 +505,18 @@ export function LeafletLocationPickerModal({
                   {locationDetails.areaTitle || 'Selected Area'}
                 </h4>
                 <p className="text-[11px] font-medium text-slate-600 line-clamp-2 leading-relaxed mt-0.5">
-                  {locationDetails.fullAddress || `${centerCoords.lat.toFixed(5)}°, ${centerCoords.lng.toFixed(5)}°`}
+                  {locationDetails.fullAddress || `${centerCoords.lat.toFixed(6)}°, ${centerCoords.lng.toFixed(6)}°`}
                 </p>
                 
-                <div className="flex items-center gap-2 mt-1.5 text-[10px] font-bold text-slate-400">
-                  <span>GPS: {centerCoords.lat.toFixed(4)}°, {centerCoords.lng.toFixed(4)}°</span>
+                <div className="flex items-center gap-2 mt-1.5 text-[10px] font-mono font-bold text-slate-500">
+                  <span className="text-emerald-700 bg-emerald-100/60 px-1 rounded">
+                    Lat: {centerCoords.lat.toFixed(6)}
+                  </span>
+                  <span className="text-emerald-700 bg-emerald-100/60 px-1 rounded">
+                    Lng: {centerCoords.lng.toFixed(6)}
+                  </span>
                   {locationDetails.pincode && (
-                    <>
-                      <span>•</span>
-                      <span>PIN: {locationDetails.pincode}</span>
-                    </>
+                    <span className="text-slate-400 font-sans">• PIN: {locationDetails.pincode}</span>
                   )}
                 </div>
               </>

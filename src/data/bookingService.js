@@ -343,8 +343,23 @@ export function getLocalBookings() {
       .filter(b => b && typeof b === 'object' && b.id !== 'bk_sample_1' && b.id !== 'bk_sample_2')
       .map(b => {
         const status = b.status || 'pending';
+        const rawLat = b.user_latitude ?? b.latitude ?? b.lat ?? b.coordinates?.lat;
+        const rawLng = b.user_longitude ?? b.longitude ?? b.lng ?? b.coordinates?.lng;
+        const userLat = (rawLat !== undefined && rawLat !== null && !isNaN(Number(rawLat))) ? Number(Number(rawLat).toFixed(6)) : null;
+        const userLng = (rawLng !== undefined && rawLng !== null && !isNaN(Number(rawLng))) ? Number(Number(rawLng).toFixed(6)) : null;
+        const isGpsVerified = Boolean(userLat !== null && userLng !== null && userLat !== 0 && userLng !== 0);
+
         return {
           ...b,
+          user_latitude: userLat,
+          user_longitude: userLng,
+          latitude: userLat,
+          longitude: userLng,
+          lat: userLat,
+          lng: userLng,
+          coordinates: { lat: userLat, lng: userLng },
+          isGpsVerified,
+          is_gps_verified: isGpsVerified,
           price: b.price || 99,
           visitingFee: b.visitingFee || 99,
           totalServiceCharge: b.totalServiceCharge || 99,
@@ -446,9 +461,24 @@ export function subscribeBookings(callback) {
 
               const effectiveStatus = isLocallyRejected ? 'rejected' : (item.status || local.status || 'pending');
 
+              const rawLat = item.user_latitude ?? item.latitude ?? local.user_latitude ?? local.latitude;
+              const rawLng = item.user_longitude ?? item.longitude ?? local.user_longitude ?? local.longitude;
+              const userLat = (rawLat !== undefined && rawLat !== null && !isNaN(Number(rawLat))) ? Number(Number(rawLat).toFixed(6)) : null;
+              const userLng = (rawLng !== undefined && rawLng !== null && !isNaN(Number(rawLng))) ? Number(Number(rawLng).toFixed(6)) : null;
+              const isGpsVerified = Boolean(userLat !== null && userLng !== null && userLat !== 0 && userLng !== 0);
+
               currentMap.set(item.id, {
                 ...local,
                 ...item,
+                user_latitude: userLat,
+                user_longitude: userLng,
+                latitude: userLat,
+                longitude: userLng,
+                lat: userLat,
+                lng: userLng,
+                coordinates: { lat: userLat, lng: userLng },
+                isGpsVerified,
+                is_gps_verified: isGpsVerified,
                 serviceTitle: item.service_type || item.serviceTitle || local.serviceTitle || 'Home Service',
                 categoryName: item.service_type || item.categoryName || local.categoryName || 'Home Service',
                 dateTime: item.slot || item.dateTime || local.dateTime || 'Today',
@@ -493,18 +523,34 @@ export function subscribeBookings(callback) {
                 (idx >= 0 && current[idx].supabaseId && storedDeclined.includes(current[idx].supabaseId));
               const effectiveStatus = isLocallyRejected ? 'rejected' : (payload.new.status || (idx >= 0 ? current[idx].status : 'pending'));
 
+              const existingItem = idx >= 0 ? current[idx] : {};
+              const rawNewLat = payload.new.user_latitude ?? payload.new.latitude ?? existingItem.user_latitude ?? existingItem.latitude;
+              const rawNewLng = payload.new.user_longitude ?? payload.new.longitude ?? existingItem.user_longitude ?? existingItem.longitude;
+              const newLat = (rawNewLat !== undefined && rawNewLat !== null && !isNaN(Number(rawNewLat))) ? Number(Number(rawNewLat).toFixed(6)) : null;
+              const newLng = (rawNewLng !== undefined && rawNewLng !== null && !isNaN(Number(rawNewLng))) ? Number(Number(rawNewLng).toFixed(6)) : null;
+              const isNewGpsVerified = Boolean(newLat !== null && newLng !== null && newLat !== 0 && newLng !== 0);
+
               const updatedItem = {
-                ...(idx >= 0 ? current[idx] : {}),
+                ...existingItem,
                 ...payload.new,
-                serviceTitle: payload.new.service_type || payload.new.serviceTitle || (idx >= 0 ? current[idx].serviceTitle : 'Home Service'),
-                categoryName: payload.new.service_type || payload.new.categoryName || (idx >= 0 ? current[idx].categoryName : 'Home Service'),
-                dateTime: payload.new.slot || payload.new.dateTime || (idx >= 0 ? current[idx].dateTime : 'Today'),
-                customerName: payload.new.customer_name || payload.new.customerName || (idx >= 0 ? current[idx].customerName : 'Customer'),
-                workerId: payload.new.assigned_worker_id || payload.new.workerId || (idx >= 0 ? current[idx].workerId : null),
+                user_latitude: newLat,
+                user_longitude: newLng,
+                latitude: newLat,
+                longitude: newLng,
+                lat: newLat,
+                lng: newLng,
+                coordinates: { lat: newLat, lng: newLng },
+                isGpsVerified: isNewGpsVerified,
+                is_gps_verified: isNewGpsVerified,
+                serviceTitle: payload.new.service_type || payload.new.serviceTitle || existingItem.serviceTitle || 'Home Service',
+                categoryName: payload.new.service_type || payload.new.categoryName || existingItem.categoryName || 'Home Service',
+                dateTime: payload.new.slot || payload.new.dateTime || existingItem.dateTime || 'Today',
+                customerName: payload.new.customer_name || payload.new.customerName || existingItem.customerName || 'Customer',
+                workerId: payload.new.assigned_worker_id || payload.new.workerId || existingItem.workerId || null,
                 status: effectiveStatus,
-                declinedWorkerIds: payload.new.declined_worker_ids || payload.new.declinedWorkerIds || (idx >= 0 ? current[idx].declinedWorkerIds : []),
-                rejectedWorkerIds: payload.new.rejected_worker_ids || payload.new.rejectedWorkerIds || (idx >= 0 ? current[idx].rejectedWorkerIds : []),
-                rejectedBy: payload.new.rejected_by || payload.new.rejectedBy || (idx >= 0 ? current[idx].rejectedBy : null)
+                declinedWorkerIds: payload.new.declined_worker_ids || payload.new.declinedWorkerIds || existingItem.declinedWorkerIds || [],
+                rejectedWorkerIds: payload.new.rejected_worker_ids || payload.new.rejectedWorkerIds || existingItem.rejectedWorkerIds || [],
+                rejectedBy: payload.new.rejected_by || payload.new.rejectedBy || existingItem.rejectedBy || null
               };
 
               let nextList;
@@ -594,9 +640,29 @@ export async function createBooking(payload) {
   // If payload already specifies a chosen worker (from a portfolio trade), keep it
   const isPreAssigned = Boolean(payload.workerId && payload.workerName);
 
+  // High-accuracy GPS extraction and validation
+  const rawLat = payload.user_latitude ?? payload.latitude ?? payload.lat ?? payload.coordinates?.lat;
+  const rawLng = payload.user_longitude ?? payload.longitude ?? payload.lng ?? payload.coordinates?.lng;
+  const userLat = (rawLat !== undefined && rawLat !== null && !isNaN(Number(rawLat))) ? Number(Number(rawLat).toFixed(6)) : null;
+  const userLng = (rawLng !== undefined && rawLng !== null && !isNaN(Number(rawLng))) ? Number(Number(rawLng).toFixed(6)) : null;
+  const isGpsVerified = Boolean(userLat !== null && userLng !== null && userLat !== 0 && userLng !== 0);
+
   const newBooking = {
     id: 'bk_' + Date.now(),
     ...payload,
+    // Database schema: exact high accuracy coordinates
+    user_latitude: userLat,
+    user_longitude: userLng,
+    latitude: userLat,
+    longitude: userLng,
+    lat: userLat,
+    lng: userLng,
+    coordinates: {
+      lat: userLat,
+      lng: userLng
+    },
+    isGpsVerified: isGpsVerified,
+    is_gps_verified: isGpsVerified,
     // Status is 'pending' broadcast unless a portfolio-specific specialist was already selected
     status: payload.status || (isPreAssigned ? 'confirmed' : 'pending'),
     createdAt: new Date().toISOString(),
@@ -633,7 +699,9 @@ export async function createBooking(payload) {
         service_type: newBooking.serviceTitle || newBooking.categoryName || 'Home Service',
         slot: newBooking.dateTime || newBooking.timeSlot || 'Today',
         status: newBooking.status || 'pending',
-        assigned_worker_id: newBooking.workerId || null
+        assigned_worker_id: newBooking.workerId || null,
+        user_latitude: userLat,
+        user_longitude: userLng
       };
 
       if (isUuid) {

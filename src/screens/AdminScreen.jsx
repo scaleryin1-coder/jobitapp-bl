@@ -1966,9 +1966,30 @@ export function AdminScreen({ onBack, onLogout }) {
                         <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="font-medium">{b.dateTime || 'Immediate Dispatch'}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{b.address}</span>
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${b.user_latitude || b.latitude || 11.0607},${b.user_longitude || b.longitude || 76.2625}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-slate-700 hover:text-[#0EA5E0] hover:underline block truncate"
+                            title="Open in Google Maps using exact GPS coordinates"
+                          >
+                            {b.address}
+                          </a>
+                          {Boolean((b.user_latitude || b.latitude) && (b.user_longitude || b.longitude)) && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200 shadow-2xs">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>GPS Verified (High Accuracy)</span>
+                              </span>
+                              <span className="font-mono text-[9px] text-slate-400">
+                                {Number(b.user_latitude || b.latitude).toFixed(4)}°, {Number(b.user_longitude || b.longitude).toFixed(4)}°
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />

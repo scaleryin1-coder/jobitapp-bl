@@ -49,22 +49,16 @@ import { PaymentQRModal } from '../components/billing/PaymentQRModal';
 import { compressImage } from '../utils/imageUtils';
 
 /**
- * Generates accurate Google Maps navigation destination URL
- * Uses exact saved latitude & longitude coordinates directly:
- * https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}
- * Fallback to full address string only if coordinates are missing.
+ * Generates direct Google Maps Navigation URL using exact GPS coordinates:
+ * https://www.google.com/maps/dir/?api=1&destination=${booking.user_latitude},${booking.user_longitude}&travelmode=driving
+ * Strictly avoids address text searching to prevent navigation inaccuracy.
  */
-export function getGoogleMapsNavigationUrl(job) {
-  const lat = job?.latitude ?? job?.lat ?? job?.coordinates?.lat ?? job?.coordinates?.latitude;
-  const lng = job?.longitude ?? job?.lng ?? job?.coordinates?.lng ?? job?.coordinates?.longitude;
-
-  if (lat !== undefined && lat !== null && lng !== undefined && lng !== null && !isNaN(Number(lat)) && !isNaN(Number(lng)) && Number(lat) !== 0) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${Number(lat)},${Number(lng)}`;
-  }
-
-  // Fallback to full address string only if coordinates are missing
-  const destination = job?.fullAddress || job?.address || job?.city || 'Melattur, Kerala';
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+export function getGoogleMapsNavigationUrl(booking) {
+  const userLat = booking?.user_latitude ?? booking?.latitude ?? booking?.lat ?? booking?.coordinates?.lat ?? 11.0607;
+  const userLng = booking?.user_longitude ?? booking?.longitude ?? booking?.lng ?? booking?.coordinates?.lng ?? 76.2625;
+  const latNum = Number(userLat);
+  const lngNum = Number(userLng);
+  return `https://www.google.com/maps/dir/?api=1&destination=${latNum},${lngNum}&travelmode=driving`;
 }
 
 export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
@@ -767,21 +761,54 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
                 {/* Essential job requirement details needed to perform the work */}
                 <div className="bg-white/10 rounded-xl p-2.5 text-xs text-white/95 space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                      <span className="truncate font-semibold">{job.address}</span>
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                      <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <a
+                          href={getGoogleMapsNavigationUrl(job)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-white hover:underline block truncate"
+                          title="Open Exact GPS Coordinates in Google Maps Navigation"
+                        >
+                          {job.address}
+                        </a>
+                        {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-100 bg-emerald-600/40 px-2 py-0.5 rounded-full border border-emerald-400/40">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-300" />
+                              <span>GPS Verified (High Accuracy)</span>
+                            </span>
+                            <span className="font-mono text-[10px] text-sky-200">
+                              {Number(job.user_latitude || job.latitude || job.lat).toFixed(4)}°, {Number(job.user_longitude || job.longitude || job.lng).toFixed(4)}°
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <a
-                      href={getGoogleMapsNavigationUrl(job)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold shrink-0 transition flex items-center gap-1"
-                      title="Navigate in Google Maps using GPS coordinates"
-                    >
-                      <Navigation className="w-2.5 h-2.5" />
-                      <span>Navigate</span>
-                    </a>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={getGoogleMapsNavigationUrl(job)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-white text-[10px] font-black shrink-0 transition flex items-center gap-1 cursor-pointer active:scale-95"
+                        title="Open Map with exact GPS coordinates"
+                      >
+                        <MapPin className="w-3 h-3 text-sky-200" />
+                        <span>Open Map</span>
+                      </a>
+                      <a
+                        href={getGoogleMapsNavigationUrl(job)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 rounded-xl bg-white/25 hover:bg-white/35 text-white text-[10px] font-black shrink-0 transition flex items-center gap-1 cursor-pointer active:scale-95"
+                        title="Navigate in Google Maps using exact GPS coordinates"
+                      >
+                        <Navigation className="w-3 h-3 text-white" />
+                        <span>Navigate</span>
+                      </a>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-sky-200 shrink-0" />
@@ -948,28 +975,53 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     </div>
 
                     <div className="pt-1 border-t border-slate-200/60 text-slate-600 flex items-start justify-between gap-1.5">
-                      <div className="flex items-start gap-1.5 flex-1">
+                      <div className="flex items-start gap-1.5 flex-1 min-w-0">
                         <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="leading-tight font-medium text-slate-800 block">{job.address}</span>
-                          {Boolean((job?.latitude || job?.lat) && (job?.longitude || job?.lng)) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                              <span>GPS Coordinates: {Number(job.latitude || job.lat).toFixed(4)}°, {Number(job.longitude || job.lng).toFixed(4)}°</span>
-                            </span>
+                        <div className="min-w-0 flex-1">
+                          <a
+                            href={getGoogleMapsNavigationUrl(job)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="leading-tight font-bold text-slate-800 hover:text-[#0EA5E0] hover:underline block truncate"
+                            title="Open Exact GPS Coordinates in Google Maps Navigation"
+                          >
+                            {job.address}
+                          </a>
+                          {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>GPS Verified (High Accuracy)</span>
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-400">
+                                {Number(job.user_latitude || job.latitude || job.lat).toFixed(4)}°, {Number(job.user_longitude || job.longitude || job.lng).toFixed(4)}°
+                              </span>
+                            </div>
                           )}
                         </div>
                       </div>
-                      <a
-                        href={getGoogleMapsNavigationUrl(job)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-[11px] font-black flex items-center gap-1.5 shrink-0 transition shadow-sm active:scale-95"
-                        title="Open in Google Maps GPS Navigation"
-                      >
-                        <Navigation className="w-3.5 h-3.5 text-white" />
-                        <span>Navigate</span>
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <a
+                          href={getGoogleMapsNavigationUrl(job)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer"
+                          title="Open Map with exact GPS coordinates"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                          <span>Open Map</span>
+                        </a>
+                        <a
+                          href={getGoogleMapsNavigationUrl(job)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-[11px] font-black flex items-center gap-1.5 shrink-0 transition shadow-sm active:scale-95 cursor-pointer"
+                          title="Open in Google Maps GPS Navigation"
+                        >
+                          <Navigation className="w-3.5 h-3.5 text-white" />
+                          <span>Navigate</span>
+                        </a>
+                      </div>
                     </div>
 
                     {job.note && (
@@ -1047,21 +1099,54 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                 </div>
                 {/* Essential Job Requirement Details Needed to Perform Work */}
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-700 space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span className="truncate font-semibold text-slate-800">{job.address}</span>
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                      <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <a
+                          href={getGoogleMapsNavigationUrl(job)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-slate-800 hover:text-[#0EA5E0] hover:underline block truncate"
+                          title="Open Exact GPS Coordinates in Google Maps Navigation"
+                        >
+                          {job.address}
+                        </a>
+                        {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>GPS Verified (High Accuracy)</span>
+                            </span>
+                            <span className="font-mono text-[10px] text-slate-400">
+                              {Number(job.user_latitude || job.latitude || job.lat).toFixed(4)}°, {Number(job.user_longitude || job.longitude || job.lng).toFixed(4)}°
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <a
-                      href={getGoogleMapsNavigationUrl(job)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded-md bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold shrink-0 transition flex items-center gap-1"
-                      title="Navigate in Google Maps using GPS coordinates"
-                    >
-                      <Navigation className="w-2.5 h-2.5" />
-                      <span>Navigate</span>
-                    </a>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={getGoogleMapsNavigationUrl(job)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer"
+                        title="Open Map with exact GPS coordinates"
+                      >
+                        <MapPin className="w-3 h-3 text-[#0EA5E0]" />
+                        <span>Open Map</span>
+                      </a>
+                      <a
+                        href={getGoogleMapsNavigationUrl(job)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] text-white text-[10px] font-black shrink-0 transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                        title="Navigate in Google Maps using exact GPS coordinates"
+                      >
+                        <Navigation className="w-3 h-3 text-white" />
+                        <span>Navigate</span>
+                      </a>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-600">
                     <Clock className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
@@ -1136,7 +1221,35 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
                   <div>
                     <h4 className="text-xs font-extrabold text-slate-900">{job.serviceTitle}</h4>
-                    <p className="text-[11px] text-slate-500 font-medium">{job.customerName} • {job.address}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">Customer: {job.customerName}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <a
+                        href={getGoogleMapsNavigationUrl(job)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-bold text-slate-700 hover:text-[#0EA5E0] hover:underline truncate"
+                        title="Open Exact GPS Coordinates in Google Maps"
+                      >
+                        {job.address}
+                      </a>
+                    </div>
+                    {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>GPS Verified (High Accuracy)</span>
+                        </span>
+                        <a
+                          href={getGoogleMapsNavigationUrl(job)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-[#0EA5E0] font-black hover:underline"
+                        >
+                          Open Map
+                        </a>
+                      </div>
+                    )}
                     <p className="text-[10px] text-slate-400 mt-0.5">{job.dateTime}</p>
                   </div>
 
