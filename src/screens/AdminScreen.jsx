@@ -776,7 +776,12 @@ export function AdminScreen({ onBack, onLogout }) {
     if (!s) return false;
     const q = serviceSearch.toLowerCase().trim();
     const matchSearch = !q || (s.title || '').toLowerCase().includes(q) || (s.categoryName || '').toLowerCase().includes(q) || (s.subCategory || '').toLowerCase().includes(q);
-    const matchCat = serviceCategoryFilter === 'All' || (s.categoryName || '').toLowerCase().includes(serviceCategoryFilter.toLowerCase());
+    const sCatLower = (s.categoryName || '').toLowerCase();
+    const filterCatLower = serviceCategoryFilter.toLowerCase();
+    const matchCat = serviceCategoryFilter === 'All' || 
+      sCatLower.includes(filterCatLower) || 
+      filterCatLower.includes(sCatLower) ||
+      ((filterCatLower.includes('mehndi') || filterCatLower.includes('mehandhi')) && (sCatLower.includes('mehndi') || sCatLower.includes('mehandhi')));
     return matchSearch && matchCat;
   });
 

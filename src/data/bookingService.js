@@ -863,47 +863,85 @@ export async function toggleWorkerDuty(workerId, isOnline) {
 // ==========================================
 // DYNAMIC SERVICES DATA & OPERATIONS
 // ==========================================
+// DYNAMIC SERVICES DATA & OPERATIONS
+// ==========================================
 
 export function getLocalServices() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SERVICES);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(initialServices || []));
-      return initialServices || [];
+    let parsed = [];
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {}
     }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      // Gracefully sync local services if updated asset imagery/details are provided in seedData
-      const existingIds = new Set(parsed.map(s => s.id));
-      const synced = parsed.map(serv => {
-        const init = (initialServices || []).find(i => i.id === serv.id);
-        if (init) {
-          return {
-            ...serv,
-            title: init.title || serv.title,
-            categoryName: init.categoryName || serv.categoryName,
-            subCategories: init.subCategories || serv.subCategories,
-            tags: init.tags || serv.tags,
-            heroImage: (init.heroImage && init.heroImage.startsWith('/assets/images/')) ? init.heroImage : (serv.heroImage || init.heroImage)
-          };
-        }
-        return serv;
+    if (!Array.isArray(parsed)) parsed = [];
+
+    // Master map initialized with ALL baseline services (all 24+ services)
+    const map = new Map();
+    (initialServices || []).forEach(base => {
+      map.set(base.id, { ...base });
+    });
+
+    // Overlay user / admin modifications from localStorage onto baseline services
+    parsed.forEach(serv => {
+      if (!serv || !serv.id) return;
+      const base = map.get(serv.id) || {};
+      const hero = (serv.heroImage || serv.imageUrl || serv.image || base.heroImage || base.imageUrl || '').trim();
+
+      map.set(serv.id, {
+        ...base,
+        ...serv,
+        heroImage: hero,
+        imageUrl: hero,
+        image: hero,
+        price: serv.price !== undefined && serv.price !== null && !isNaN(Number(serv.price)) 
+          ? Number(serv.price) 
+          : (base.price || 300),
+        categoryName: serv.categoryName || base.categoryName || 'General',
+        title: serv.title || base.title || 'Home Service'
       });
-      // Add any new initialServices not yet present in localStorage
-      const missing = (initialServices || []).filter(s => !existingIds.has(s.id));
-      const merged = [...synced, ...missing];
-      return merged;
-    }
-    return initialServices || [];
-  } catch {
+    });
+
+    const allServices = Array.from(map.values());
+    return allServices;
+  } catch (err) {
+    console.warn('getLocalServices fallback:', err);
     return initialServices || [];
   }
 }
 
 export function saveLocalServices(servicesList) {
   try {
-    localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(servicesList));
-    window.dispatchEvent(new CustomEvent(EVENT_SERVICES_CHANGED, { detail: servicesList }));
+    // Master map initialized with ALL baseline services (all 24+ services)
+    const map = new Map();
+    (initialServices || []).forEach(base => {
+      map.set(base.id, { ...base });
+    });
+
+    if (Array.isArray(servicesList)) {
+      servicesList.forEach(s => {
+        if (!s || !s.id) return;
+        const base = map.get(s.id) || {};
+        const hero = (s.heroImage || s.imageUrl || s.image || base.heroImage || base.imageUrl || '').trim();
+        map.set(s.id, {
+          ...base,
+          ...s,
+          heroImage: hero,
+          imageUrl: hero,
+          image: hero,
+          price: s.price !== undefined && s.price !== null && !isNaN(Number(s.price))
+            ? Number(s.price)
+            : (base.price || 300),
+          categoryName: s.categoryName || base.categoryName || 'General',
+          title: s.title || base.title || 'Home Service'
+        });
+      });
+    }
+
+    const fullList = Array.from(map.values());
+    localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(fullList));
+    window.dispatchEvent(new CustomEvent(EVENT_SERVICES_CHANGED, { detail: fullList }));
   } catch (err) {
     console.warn('Failed to save local services', err);
   }
@@ -919,7 +957,7 @@ export function subscribeServices(callback) {
   window.addEventListener(EVENT_SERVICES_CHANGED, handleLocalChange);
   window.addEventListener('storage', handleLocalChange);
 
-  // Initial local state push
+  // Initial local state push with all 24+ services guaranteed
   callback(getLocalServices());
 
   // Supabase sync if configured
@@ -930,21 +968,23 @@ export function subscribeServices(callback) {
         .select('*')
         .then(({ data, error }) => {
           if (!error && Array.isArray(data) && data.length > 0) {
-            const current = getLocalServices();
-            const currentMap = new Map(current.map(s => [s.id, s]));
+            const currentServices = getLocalServices();
+            const currentMap = new Map(currentServices.map(s => [s.id, s]));
             data.forEach(item => {
               const id = item.id;
-              const local = currentMap.get(id) || {};
+              if (!id) return;
+              const existing = currentMap.get(id) || {};
+              const img = item.hero_image || item.heroImage || item.image_url || item.imageUrl || existing.heroImage || existing.imageUrl || '';
               currentMap.set(id, {
-                ...local,
+                ...existing,
                 ...item,
-                categoryName: item.category_name || item.categoryName || local.categoryName,
-                subCategory: item.sub_category || item.subCategory || local.subCategory,
-                heroImage: item.hero_image || item.heroImage || item.image_url || item.imageUrl || local.heroImage,
-                imageUrl: item.image_url || item.imageUrl || item.hero_image || item.heroImage || local.imageUrl,
-                image: item.image || item.hero_image || item.image_url || local.image,
-                price: item.price !== undefined ? Number(item.price) : local.price,
-                title: item.title || local.title
+                categoryName: item.category_name || item.categoryName || existing.categoryName,
+                subCategory: item.sub_category || item.subCategory || existing.subCategory,
+                heroImage: img,
+                imageUrl: img,
+                image: img,
+                price: item.price !== undefined && !isNaN(Number(item.price)) ? Number(item.price) : existing.price,
+                title: item.title || existing.title
               });
             });
             const merged = Array.from(currentMap.values());
@@ -960,11 +1000,33 @@ export function subscribeServices(callback) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'services'), (snap) => {
         if (!snap.empty) {
-          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          saveLocalServices(list);
-          callback(list);
+          const remoteDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          // CRITICAL FIX: Merge remoteDocs into all 24+ baseline services
+          // NEVER wipe out the services list with only Firestore docs!
+          const currentServices = getLocalServices();
+          const currentMap = new Map(currentServices.map(s => [s.id, s]));
+          remoteDocs.forEach(item => {
+            const id = item.id;
+            if (!id) return;
+            const existing = currentMap.get(id) || {};
+            const img = item.heroImage || item.imageUrl || item.image || item.hero_image || item.image_url || existing.heroImage || existing.imageUrl || '';
+            currentMap.set(id, {
+              ...existing,
+              ...item,
+              heroImage: img,
+              imageUrl: img,
+              image: img,
+              price: item.price !== undefined && !isNaN(Number(item.price)) ? Number(item.price) : existing.price,
+              categoryName: item.categoryName || item.category_name || existing.categoryName,
+              subCategory: item.subCategory || item.sub_category || existing.subCategory,
+              title: item.title || existing.title
+            });
+          });
+          const merged = Array.from(currentMap.values());
+          saveLocalServices(merged);
+          callback(merged);
         }
-      }, () => {});
+      }, (err) => console.warn('Firestore services subscription notice:', err));
     } catch {}
   }
 
@@ -1345,7 +1407,16 @@ export function subscribeCategories(callback) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'categories'), (snap) => {
         if (!snap.empty) {
-          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const remoteCats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const currentCats = getLocalCategories();
+          const catMap = new Map(currentCats.map(c => [(c.name || '').toLowerCase(), c]));
+          remoteCats.forEach(item => {
+            const key = (item.name || '').toLowerCase();
+            if (!key) return;
+            const existing = catMap.get(key) || {};
+            catMap.set(key, { ...existing, ...item });
+          });
+          const list = Array.from(catMap.values());
           list.sort((a, b) => (a.order || 0) - (b.order || 0));
           saveLocalCategories(list);
           callback(list);

@@ -153,7 +153,7 @@ export function CustomerDashboard({
         (catLower.includes('laund') && (sCat.includes('laund') || sTitle.includes('iron') || sTitle.includes('wash'))) ||
         (catLower.includes('support') && (sCat.includes('support') || sCat.includes('clean') || sTitle.includes('domestic') || sTitle.includes('elderly'))) ||
         (catLower.includes('beauty') && (sCat.includes('beauty') || sTitle.includes('salon') || sTitle.includes('spa'))) ||
-        (catLower.includes('mehndi') && (sCat.includes('mehndi') || sTitle.includes('henna') || sTitle.includes('mehndi'))) ||
+        ((catLower.includes('mehndi') || catLower.includes('mehandhi') || catLower.includes('henna')) && (sCat.includes('mehndi') || sCat.includes('mehandhi') || sCat.includes('henna') || sTitle.includes('henna') || sTitle.includes('mehndi') || sTitle.includes('mehandhi') || sId.includes('mehndi') || sId.includes('mehandhi'))) ||
         (catLower.includes('tank') && (sCat.includes('tank') || sTitle.includes('tank') || sTitle.includes('water'))) ||
         ((catLower.includes('coconut') || catLower.includes('തെങ്ങ്') || catLower.includes('tree')) && (sCat.includes('coconut') || sCat.includes('തെങ്ങ്') || sTitle.includes('coconut') || sTitle.includes('തെങ്ങ്')))
       );

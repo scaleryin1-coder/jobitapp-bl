@@ -117,7 +117,10 @@ export function ServiceListScreen({
     if (catLower.includes('laund') && (serviceCat.includes('laund') || serviceTitle.includes('laund'))) return true;
     if (catLower.includes('home support') && (serviceCat.includes('support') || serviceCat.includes('clean'))) return true;
     if (catLower.includes('beaut') && (serviceCat.includes('beaut') || serviceTitle.includes('beaut'))) return true;
-    if ((catLower.includes('mehndi') || catLower.includes('henna')) && (serviceCat.includes('mehndi') || serviceTitle.includes('mehndi'))) return true;
+    if ((catLower.includes('mehndi') || catLower.includes('mehandhi') || catLower.includes('henna')) && 
+        (serviceCat.includes('mehndi') || serviceCat.includes('mehandhi') || serviceCat.includes('henna') || 
+         serviceTitle.includes('mehndi') || serviceTitle.includes('mehandhi') || serviceTitle.includes('henna') ||
+         serviceId.includes('mehndi') || serviceId.includes('mehandhi'))) return true;
     if (catLower.includes('tank') && (serviceCat.includes('tank') || serviceTitle.includes('tank'))) return true;
 
     return (
