@@ -22,7 +22,7 @@ import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from 
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory, isPortfolioCategory } from '../data/categoriesData';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
-import { UrbanLocationPicker } from '../components/common/UrbanLocationPicker';
+import { LocationPickerField } from '../components/common/LocationPickerField';
 
 // Baseline coordinates lookup for key service hubs
 const DEFAULT_CITY_COORDS = {
@@ -50,95 +50,13 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
   const effectiveCity = currentCity || localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
   const cleanCity = effectiveCity.split(',')[0].trim();
   
-  // Detailed Text Address fields
+  // Detailed Address fields
   const [houseName, setHouseName] = useState('');
-  const [street, setStreet] = useState('');
-  const [landmark, setLandmark] = useState('');
   const [address, setAddress] = useState('');
+  const [plusCode, setPlusCode] = useState('');
 
   // Exact Map Pin Coordinates (Latitude & Longitude)
   const [coordinates, setCoordinates] = useState(() => getInitialCoords(effectiveCity));
-  const [isGpsLocating, setIsGpsLocating] = useState(false);
-  const [gpsStatusMsg, setGpsStatusMsg] = useState('');
-
-  // Dynamic geocoding search & auto-pinning states
-  const [isSearchingMapArea, setIsSearchingMapArea] = useState(false);
-  const [mapSearchNotice, setMapSearchNotice] = useState('');
-  const forwardGeocodeTimerRef = React.useRef(null);
-
-  const triggerDynamicGeocode = (streetVal, landmarkVal) => {
-    if (forwardGeocodeTimerRef.current) {
-      clearTimeout(forwardGeocodeTimerRef.current);
-    }
-
-    const s = (streetVal || '').trim();
-    const lm = (landmarkVal || '').trim();
-
-    // Trigger when user types in Street/Area or Landmark
-    if (s.length < 2 && lm.length < 2) {
-      return;
-    }
-
-    forwardGeocodeTimerRef.current = setTimeout(async () => {
-      setIsSearchingMapArea(true);
-      try {
-        const searchCandidates = [];
-        if (s && lm) {
-          searchCandidates.push(`${s}, ${lm}, ${cleanCity}`);
-          searchCandidates.push(`${s}, ${cleanCity}`);
-          searchCandidates.push(`${s}, Kerala`);
-        } else if (s) {
-          searchCandidates.push(`${s}, ${cleanCity}`);
-          searchCandidates.push(`${s}, Kerala`);
-          searchCandidates.push(s);
-        } else if (lm) {
-          searchCandidates.push(`${lm}, ${cleanCity}`);
-          searchCandidates.push(`${lm}, Kerala`);
-          searchCandidates.push(lm);
-        }
-
-        let foundMatch = null;
-        for (const query of searchCandidates) {
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
-              {
-                headers: {
-                  'Accept': 'application/json',
-                  'User-Agent': 'JobitHomeServicesWeb/2.0'
-                }
-              }
-            );
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.length > 0) {
-                foundMatch = data[0];
-                break;
-              }
-            }
-          } catch {
-            // Try next candidate
-          }
-        }
-
-        if (foundMatch) {
-          const newLat = Number(Number(foundMatch.lat).toFixed(6));
-          const newLng = Number(Number(foundMatch.lon).toFixed(6));
-          setCoordinates({ lat: newLat, lng: newLng });
-          
-          const placeLabel = foundMatch.display_name?.split(',').slice(0, 2).join(',') || s || lm;
-          setMapSearchNotice(`Pin centered on "${placeLabel}". Drag or tap map to adjust doorstep pin.`);
-          setTimeout(() => {
-            setMapSearchNotice('');
-          }, 4500);
-        }
-      } catch (err) {
-        console.warn('Geocoding search notice:', err);
-      } finally {
-        setIsSearchingMapArea(false);
-      }
-    }, 320);
-  };
 
   const [date, setDate] = useState('');
   const [timeSlot, setTimeSlot] = useState('');
@@ -154,10 +72,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     timeSlot: false
   });
 
-  const isAddressValid = Boolean(
-    (address && address.trim().length > 3) ||
-    (houseName && houseName.trim().length > 0 && street && street.trim().length > 0)
-  );
+  const isAddressValid = Boolean(address && address.trim().length > 2);
   const isCoordinatesValid = Boolean(
     coordinates &&
     coordinates.lat !== undefined &&
@@ -206,16 +121,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
       setConfirmedBookingData(null);
       setLoading(false);
       setHouseName('');
-      setStreet('');
-      setLandmark('');
       setAddress('');
-      if (forwardGeocodeTimerRef.current) {
-        clearTimeout(forwardGeocodeTimerRef.current);
-      }
-      setIsSearchingMapArea(false);
-      setMapSearchNotice('');
+      setPlusCode('');
       setCoordinates(getInitialCoords(effectiveCity));
-      setGpsStatusMsg('');
       setDate('');
       setTimeSlot('');
       setNote('');
@@ -225,66 +133,13 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
 
   // Helper to compose full address string
   const getFullAddress = () => {
-    if (address && address.trim().length > 0) return address.trim();
-    const parts = [
-      houseName.trim(),
-      street.trim(),
-      landmark.trim() ? `Near ${landmark.trim()}` : '',
-      cleanCity
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
-
-  // High accuracy live GPS detector
-  const handleDetectGPS = () => {
-    if (!navigator.geolocation) {
-      setGpsStatusMsg('Geolocation not supported by this browser.');
-      return;
+    if (address && address.trim().length > 0) {
+      if (houseName && houseName.trim()) {
+        return `${houseName.trim()}, ${address.trim()}`;
+      }
+      return address.trim();
     }
-    setIsGpsLocating(true);
-    setGpsStatusMsg('Detecting live GPS coordinates from device...');
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = Number(pos.coords.latitude.toFixed(6));
-        const lng = Number(pos.coords.longitude.toFixed(6));
-        setCoordinates({ lat, lng });
-        setIsGpsLocating(false);
-        setGpsStatusMsg(`GPS Lock Active (±${Math.round(pos.coords.accuracy || 10)}m accuracy)`);
-
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-            { headers: { 'Accept': 'application/json', 'User-Agent': 'JobitHomeServicesWeb/1.0' } }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || '';
-            const lm = addr.amenity || addr.building || addr.landmark || '';
-            if (!street && road) setStreet(road);
-            if (!landmark && lm) setLandmark(lm);
-          }
-        } catch {
-          // Reverse geocoding optional fallback
-        }
-      },
-      (err) => {
-        setIsGpsLocating(false);
-        if (err.code === 1) {
-          setGpsStatusMsg('Location permission denied in browser.');
-        } else {
-          setGpsStatusMsg('Unable to retrieve GPS. You can adjust the pin manually.');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  const nudgeCoordinates = (deltaLat, deltaLng) => {
-    setCoordinates(prev => ({
-      lat: Number((prev.lat + deltaLat).toFixed(6)),
-      lng: Number((prev.lng + deltaLng).toFixed(6))
-    }));
+    return cleanCity;
   };
 
   if (!isOpen || !service) return null;
@@ -329,13 +184,12 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
       remainingDue: 0,
       address: finalAddress,
       houseName: houseName.trim(),
-      street: street.trim(),
-      landmark: landmark.trim(),
+      plusCode: plusCode || '',
       detailedAddress: {
         houseName: houseName.trim(),
-        street: street.trim(),
-        landmark: landmark.trim(),
-        fullAddress: finalAddress
+        areaAddress: address.trim(),
+        fullAddress: finalAddress,
+        plusCode: plusCode || ''
       },
       latitude: Number(coordinates.lat),
       longitude: Number(coordinates.lng),
@@ -608,121 +462,57 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
             {/* ======================================================= */}
             <div className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl p-3.5 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-[#111827] flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[#4B6EF5]" />
-                  <span>Service Address & Doorstep GPS Pin <span className="text-rose-500">*</span></span>
-                </label>
                 <span className="text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 rounded-full border border-slate-200">
-                  {cleanCity}
+                  Region: {cleanCity}
                 </span>
-              </div>
-
-              {/* A. Detailed Text Address Fields */}
-              <div className="space-y-2">
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
-                    House Name / Flat / Building No. <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={houseName}
-                    onChange={(e) => {
-                      setHouseName(e.target.value);
-                      if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
-                    }}
-                    onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
-                    placeholder="e.g. Rose Villa, Flat 2B / Building 4"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
-                      Street / Road / Area <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={street}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setStreet(val);
-                        triggerDynamicGeocode(val, landmark);
-                        if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
-                      }}
-                      onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
-                      placeholder="e.g. Station Road, Town Center"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
-                      Landmark (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={landmark}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setLandmark(val);
-                        triggerDynamicGeocode(street, val);
-                      }}
-                      placeholder="e.g. Near Town Mosque"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#4B6EF5] transition"
-                    />
-                  </div>
-                </div>
-
-                {touched.address && !isAddressValid && (
-                  <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 animate-fade-in">
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    <span>Please enter house name and street address</span>
-                  </p>
+                {plusCode && (
+                  <span className="text-[10px] font-mono text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 font-bold">
+                    {plusCode}
+                  </span>
                 )}
               </div>
 
-              {/* B. Exact Map Pin Section */}
-              <div className="pt-2 border-t border-slate-200/70 space-y-2">
-                <div>
-                  <span className="text-[11px] font-extrabold text-slate-800 block">
-                    Doorstep GPS Map Pin
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    Drag or tap map to drop your exact doorstep pin
-                  </span>
-                </div>
+              {/* 1. Main Form Location Picker Field: Tapping opens full-screen Leaflet map */}
+              <LocationPickerField
+                label="Select Area / Location"
+                value={address}
+                coordinates={coordinates}
+                plusCode={plusCode}
+                onChange={({ address: resolvedAddress, coordinates: newCoords, plusCode: code }) => {
+                  setAddress(resolvedAddress);
+                  if (newCoords) setCoordinates(newCoords);
+                  if (code) setPlusCode(code);
+                  if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
+                }}
+                required
+                error={touched.address && !isAddressValid ? "Please tap above to pick your area/location on the map" : ""}
+              />
 
-                {/* Interactive Map with Doorstep Pinning */}
-                <UrbanLocationPicker
-                  coordinates={coordinates}
-                  onChangeCoordinates={(newCoords) => {
-                    setCoordinates(newCoords);
-                  }}
-                  onAddressResolved={({ road, locality, landmark: lm }) => {
-                    if (!street && road) {
-                      setStreet(road);
-                    }
-                    if (!landmark && lm) {
-                      setLandmark(lm);
-                    }
-                  }}
-                  cityContext={cleanCity}
-                  isSearchingArea={isSearchingMapArea}
-                  searchNotice={mapSearchNotice}
+              {/* 2. Optional Flat / House / Door Details */}
+              <div>
+                <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
+                  Flat / House No. / Building / Floor (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={houseName}
+                  onChange={(e) => setHouseName(e.target.value)}
+                  placeholder="e.g. Flat 302, Rose Villa, 2nd Floor"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0] transition"
                 />
+              </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5 pt-1 border-t border-slate-100">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Exact Map Coordinates saved for technician navigation</span>
+              {coordinates?.lat && (
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5 pt-1 border-t border-slate-200/60">
+                  <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Exact Doorstep GPS Pin Saved</span>
                   </span>
-                  <span className="font-mono text-slate-500 font-bold">
-                    {Number(coordinates.lat).toFixed(5)}°, {Number(coordinates.lng).toFixed(5)}°
+                  <span className="font-mono text-slate-400">
+                    {Number(coordinates.lat).toFixed(4)}°, {Number(coordinates.lng).toFixed(4)}°
                   </span>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Date Picker - Strictly required with no pre-selection */}

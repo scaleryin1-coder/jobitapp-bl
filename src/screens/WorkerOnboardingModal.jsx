@@ -31,6 +31,7 @@ import { useAuth } from '../context/AuthContext';
 import { registerWorkerOnboarding, getLocalCategories, subscribeCategories } from '../data/bookingService';
 import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { compressImage } from '../utils/imageUtils';
+import { LocationPickerField } from '../components/common/LocationPickerField';
 
 const POPULAR_LOCATIONS = [
   'Melattur, Kerala',
@@ -1050,6 +1051,18 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       Step 2: Service Coverage & Residential Address
                     </h4>
                   </div>
+
+                  {/* Location Picker Field: Tapping opens full-screen Leaflet map */}
+                  <LocationPickerField
+                    label="Select Workshop / Base Location"
+                    value={city ? `${city}${address ? ` (${address})` : ''}` : ''}
+                    placeholder="Tap to drop pin on map for your service hub..."
+                    onChange={({ address: resolvedAddr, city: resolvedCity, pincode: resolvedPin }) => {
+                      if (resolvedAddr) setAddress(resolvedAddr);
+                      if (resolvedCity) setCity(resolvedCity);
+                      if (resolvedPin) setPincode(resolvedPin);
+                    }}
+                  />
 
                   {/* Street Address */}
                   <div className="space-y-1">
