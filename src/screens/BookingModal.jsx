@@ -363,29 +363,20 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
               <div className="flex justify-between items-start text-slate-600 pt-1 border-t border-slate-200/60">
                 <span className="font-medium">Address:</span>
                 <div className="text-right max-w-[220px]">
-                  <span className="font-semibold text-slate-800 block truncate">{confirmedBookingData.address}</span>
-                  {Boolean(confirmedBookingData.user_latitude || confirmedBookingData.latitude) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold mt-0.5 shadow-2xs">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>GPS Verified (High Accuracy)</span>
-                    </span>
-                  )}
+                  <span className="font-semibold text-slate-800 block break-words whitespace-normal leading-relaxed">{confirmedBookingData.address}</span>
                 </div>
               </div>
               {Boolean((confirmedBookingData.user_latitude || confirmedBookingData.latitude) && (confirmedBookingData.user_longitude || confirmedBookingData.longitude)) && (
                 <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/60">
-                  <span className="font-medium flex items-center gap-1 text-emerald-700 font-bold">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Exact GPS Navigation:</span>
-                  </span>
+                  <span className="font-medium text-slate-600">Location:</span>
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${confirmedBookingData.user_latitude || confirmedBookingData.latitude},${confirmedBookingData.user_longitude || confirmedBookingData.longitude}&travelmode=driving`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#0EA5E0] hover:underline font-mono font-bold flex items-center gap-1 text-[11px]"
-                    title="Open Exact Coordinates in Google Maps Navigation"
+                    className="text-[#0EA5E0] hover:underline font-bold flex items-center gap-1 text-xs"
+                    title="Open in Google Maps"
                   >
-                    <span>{Number(confirmedBookingData.user_latitude || confirmedBookingData.latitude).toFixed(6)}°, {Number(confirmedBookingData.user_longitude || confirmedBookingData.longitude).toFixed(6)}°</span>
+                    <span>View in Google Maps</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -470,23 +461,36 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
             )}
 
             {/* ======================================================= */}
-            {/* SERVICE ADDRESS & EXACT MAP PIN COORDINATES             */}
+            {/* SERVICE ADDRESS & MAP PIN LOCATION                      */}
             {/* ======================================================= */}
-            <div className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl p-3.5 space-y-3">
+            <div className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl p-3.5 space-y-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                <span className="text-[10px] text-slate-500 font-bold bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
                   Region: {cleanCity}
                 </span>
-                {plusCode && (
-                  <span className="text-[10px] font-mono text-[#0EA5E0] bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 font-bold">
-                    {plusCode}
-                  </span>
-                )}
               </div>
 
-              {/* 1. Main Form Location Picker Field: Tapping opens full-screen Leaflet map */}
+              {/* 1. Address Text Input FIRST */}
+              <div>
+                <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5 mb-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                  <span>Address Details (House / Flat / Building) <span className="text-rose-500">*</span></span>
+                </label>
+                <input
+                  type="text"
+                  value={houseName}
+                  onChange={(e) => {
+                    setHouseName(e.target.value);
+                    if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
+                  }}
+                  placeholder="e.g. Flat 302, Rose Villa, 2nd Floor, Main Road"
+                  className="w-full px-3.5 py-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0] transition"
+                />
+              </div>
+
+              {/* 2. Followed by Area / Location selection on Map BENEATH it */}
               <LocationPickerField
-                label="Select Area / Location"
+                label="Area / Landmark on Map"
                 value={address}
                 coordinates={coordinates}
                 plusCode={plusCode}
@@ -497,34 +501,9 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                   if (!touched.address) setTouched((prev) => ({ ...prev, address: true }));
                 }}
                 required
-                error={touched.address && !isAddressValid ? "Please tap above to pick your area/location on the map" : ""}
+                placeholder="Tap to pinpoint location on map..."
+                error={touched.address && !isAddressValid ? "Please enter address or select location on map" : ""}
               />
-
-              {/* 2. Optional Flat / House / Door Details */}
-              <div>
-                <label className="text-[10px] font-extrabold text-slate-600 block mb-1">
-                  Flat / House No. / Building / Floor (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={houseName}
-                  onChange={(e) => setHouseName(e.target.value)}
-                  placeholder="e.g. Flat 302, Rose Villa, 2nd Floor"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0] transition"
-                />
-              </div>
-
-              {coordinates?.lat && (
-                <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold px-0.5 pt-1 border-t border-slate-200/60">
-                  <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Exact Doorstep GPS Pin Saved</span>
-                  </span>
-                  <span className="font-mono text-slate-400">
-                    {Number(coordinates.lat).toFixed(4)}°, {Number(coordinates.lng).toFixed(4)}°
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Date Picker - Strictly required with no pre-selection */}

@@ -1973,22 +1973,11 @@ export function AdminScreen({ onBack, onLogout }) {
                             href={`https://www.google.com/maps/dir/?api=1&destination=${b.user_latitude || b.latitude || 11.0607},${b.user_longitude || b.longitude || 76.2625}&travelmode=driving`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-slate-700 hover:text-[#0EA5E0] hover:underline block truncate"
-                            title="Open in Google Maps using exact GPS coordinates"
+                            className="font-bold text-slate-700 hover:text-[#0EA5E0] hover:underline block break-words whitespace-normal"
+                            title="Open in Google Maps"
                           >
                             {b.address}
                           </a>
-                          {Boolean((b.user_latitude || b.latitude) && (b.user_longitude || b.longitude)) && (
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200 shadow-2xs">
-                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-                                <span>GPS Verified (High Accuracy)</span>
-                              </span>
-                              <span className="font-mono text-[9px] text-slate-400">
-                                {Number(b.user_latitude || b.latitude).toFixed(4)}°, {Number(b.user_longitude || b.longitude).toFixed(4)}°
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">

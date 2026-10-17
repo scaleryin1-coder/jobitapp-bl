@@ -170,31 +170,12 @@ export function LocationPickerField({
           <div className="min-w-0 flex-1 py-0.5">
             {hasValue ? (
               <>
-                <p className="text-xs font-black text-slate-900 truncate leading-snug">
+                <p className="text-xs font-bold text-slate-900 truncate leading-snug">
                   {value}
                 </p>
-
-                {/* Accuracy Badge & Coordinates */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  {hasCoordinates && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold shadow-2xs">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>GPS Verified (High Accuracy)</span>
-                    </span>
-                  )}
-
-                  {hasCoordinates && (
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {Number(coordinates.lat).toFixed(4)}°, {Number(coordinates.lng).toFixed(4)}°
-                    </span>
-                  )}
-
-                  {plusCode && (
-                    <span className="text-[10px] font-mono text-[#0284C7] bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100 font-semibold">
-                      {plusCode}
-                    </span>
-                  )}
-                </div>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  Tap to adjust pin location on map
+                </p>
               </>
             ) : (
               <>
@@ -202,7 +183,7 @@ export function LocationPickerField({
                   {placeholder}
                 </p>
                 <p className="text-[10px] text-slate-300 font-medium mt-0.5">
-                  Tap to drop pin on full-screen map
+                  Tap to drop pin on map
                 </p>
               </>
             )}

@@ -46,12 +46,12 @@ export function LeafletLocationPickerModal({
 
   // Current reverse-geocoded location data
   const [locationDetails, setLocationDetails] = useState({
-    areaTitle: initialAddress ? initialAddress.split(',')[0] : 'Locating Area...',
-    fullAddress: initialAddress || 'Fetching address details...',
+    areaTitle: initialAddress ? initialAddress.split(',')[0].trim() : 'Locating...',
+    fullAddress: initialAddress || 'Centering on your current GPS position...',
     shortAddress: initialAddress || '',
-    plusCode: encodePlusCode(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
-    lat: DEFAULT_CENTER.lat,
-    lng: DEFAULT_CENTER.lng
+    plusCode: '',
+    lat: null,
+    lng: null
   });
 
   // Search input inside map view
@@ -72,12 +72,15 @@ export function LeafletLocationPickerModal({
       const data = await reverseGeocodeNominatim(lat, lng);
       setLocationDetails(data);
       setIsGeocoding(false);
-    }, 350);
+    }, 300);
   }, []);
 
-  // Initialize Full-Screen Leaflet Map
+  // Initialize Full-Screen Leaflet Map and ALWAYS Auto-Center on Live GPS
   useEffect(() => {
     if (!isOpen) return;
+
+    let isMounted = true;
+    setIsLocatingUser(true);
 
     // Small delay to ensure modal DOM is mounted
     const timer = setTimeout(() => {
@@ -89,6 +92,7 @@ export function LeafletLocationPickerModal({
         mapInstanceRef.current = null;
       }
 
+      // Initial camera placeholder until live GPS resolves
       const startLat = Number(centerCoords.lat) || DEFAULT_CENTER.lat;
       const startLng = Number(centerCoords.lng) || DEFAULT_CENTER.lng;
 
@@ -113,6 +117,7 @@ export function LeafletLocationPickerModal({
       });
 
       // On camera idle / move end: recalculate center and reverse geocode
+      // User can freely pan / drag the map to adjust pin position manually
       map.on('moveend', () => {
         setIsPanning(false);
         const center = map.getCenter();
@@ -127,38 +132,48 @@ export function LeafletLocationPickerModal({
 
       // Invalidate size once visible to prevent grey tiles
       setTimeout(() => {
-        map.invalidateSize();
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
       }, 100);
 
-      // High-accuracy GPS location on first load if no initial coordinates
-      if (!initialCoordinates?.lat && typeof navigator !== 'undefined' && navigator.geolocation) {
-        setIsLocatingUser(true);
+      // ALWAYS trigger HTML5 Geolocation immediately to center the map on user's CURRENT live GPS position
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            if (!isMounted) return;
             const gpsLat = Number(pos.coords.latitude.toFixed(6));
             const gpsLng = Number(pos.coords.longitude.toFixed(6));
             setCenterCoords({ lat: gpsLat, lng: gpsLng });
             setIsGpsLocked(true);
-            map.flyTo([gpsLat, gpsLng], 17, { duration: 0.8 });
+            setIsLocatingUser(false);
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setView([gpsLat, gpsLng], 17);
+            }
             fetchAddressForCoordinates(gpsLat, gpsLng);
-            setIsLocatingUser(false);
           },
-          () => {
-            // Default center fallback
-            fetchAddressForCoordinates(startLat, startLng);
+          (err) => {
+            console.warn('Live GPS prompt notice or denied:', err);
+            if (!isMounted) return;
             setIsLocatingUser(false);
+            // Fallback to initialCoordinates or default center only if GPS denied
+            const fallbackLat = Number(initialCoordinates?.lat) || startLat;
+            const fallbackLng = Number(initialCoordinates?.lng) || startLng;
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setView([fallbackLat, fallbackLng], 16);
+            }
+            fetchAddressForCoordinates(fallbackLat, fallbackLng);
           },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
       } else {
+        setIsLocatingUser(false);
         fetchAddressForCoordinates(startLat, startLng);
-        if (initialCoordinates?.lat) {
-          setIsGpsLocked(true);
-        }
       }
     }, 50);
 
     return () => {
+      isMounted = false;
       clearTimeout(timer);
       if (geocodeTimeoutRef.current) {
         clearTimeout(geocodeTimeoutRef.current);
@@ -463,72 +478,45 @@ export function LeafletLocationPickerModal({
 
       </div>
 
-      {/* 4. BOTTOM ADDRESS SHEET */}
-      <div className="relative z-[500] w-full bg-white rounded-t-[32px] shadow-[0_-10px_35px_rgba(0,0,0,0.18)] p-4 sm:p-5 border-t border-slate-100 flex flex-col shrink-0 max-w-md mx-auto">
+      {/* 4. CLEAN & SIMPLIFIED BOTTOM ADDRESS SHEET */}
+      <div className="relative z-[500] w-full bg-white rounded-t-[32px] shadow-[0_-10px_35px_rgba(0,0,0,0.18)] p-5 border-t border-slate-100 flex flex-col shrink-0 max-w-md mx-auto">
         
         {/* Drag handle pill */}
-        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3" />
+        <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-3.5" />
 
-        {/* Header indicator row with High Accuracy Badge */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              <span>GPS Verified (High Accuracy)</span>
-            </span>
-          </div>
-
-          {/* Plus Code Badge */}
-          {locationDetails.plusCode && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-100 text-[#0284C7] text-[10px] font-mono font-bold">
-              <span>Plus Code:</span>
-              <span className="font-extrabold">{locationDetails.plusCode}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Address Card Display */}
-        <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 mb-3">
-          <div className="w-9 h-9 rounded-xl bg-[#0EA5E0]/10 text-[#0EA5E0] flex items-center justify-center shrink-0 mt-0.5">
-            <MapPin className="w-5 h-5" />
+        {/* Clean, Elegant Location Card */}
+        <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-[#0EA5E0]/10 text-[#0EA5E0] flex items-center justify-center shrink-0 mt-0.5">
+            <MapPin className="w-5 h-5 fill-current" />
           </div>
 
           <div className="flex-1 min-w-0">
-            {isGeocoding ? (
-              <div className="space-y-1.5 py-1">
-                <div className="h-4 bg-slate-200 rounded-md animate-pulse w-3/4" />
-                <div className="h-3 bg-slate-200 rounded-md animate-pulse w-full" />
+            {isGeocoding || isLocatingUser ? (
+              <div className="space-y-2 py-1">
+                <div className="h-4 bg-slate-200 rounded-md animate-pulse w-2/3" />
+                <div className="h-3.5 bg-slate-200 rounded-md animate-pulse w-full" />
               </div>
             ) : (
               <>
+                {/* Header: Area / Landmark Name */}
                 <h4 className="text-sm font-extrabold text-slate-900 leading-snug truncate">
                   {locationDetails.areaTitle || 'Selected Area'}
                 </h4>
-                <p className="text-[11px] font-medium text-slate-600 line-clamp-2 leading-relaxed mt-0.5">
-                  {locationDetails.fullAddress || `${centerCoords.lat.toFixed(6)}°, ${centerCoords.lng.toFixed(6)}°`}
+                {/* Subtext: Clean Full Address */}
+                <p className="text-xs font-medium text-slate-600 line-clamp-2 leading-relaxed mt-1">
+                  {locationDetails.fullAddress || 'Address details resolving...'}
                 </p>
-                
-                <div className="flex items-center gap-2 mt-1.5 text-[10px] font-mono font-bold text-slate-500">
-                  <span className="text-emerald-700 bg-emerald-100/60 px-1 rounded">
-                    Lat: {centerCoords.lat.toFixed(6)}
-                  </span>
-                  <span className="text-emerald-700 bg-emerald-100/60 px-1 rounded">
-                    Lng: {centerCoords.lng.toFixed(6)}
-                  </span>
-                  {locationDetails.pincode && (
-                    <span className="text-slate-400 font-sans">• PIN: {locationDetails.pincode}</span>
-                  )}
-                </div>
               </>
             )}
           </div>
         </div>
 
-        {/* Primary Confirmation Button */}
+        {/* Action: Single prominent "Select Location" button at the bottom */}
         <button
           type="button"
           onClick={handleConfirmLocation}
-          className="w-full py-3.5 px-4 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] active:scale-[0.99] text-white text-sm font-black shadow-[0_8px_25px_-4px_rgba(14,165,224,0.45)] flex items-center justify-center gap-2 transition cursor-pointer"
+          disabled={isGeocoding || isLocatingUser}
+          className="w-full py-3.5 px-4 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] active:scale-[0.99] text-white text-sm font-black shadow-[0_8px_25px_-4px_rgba(14,165,224,0.45)] flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60"
         >
           <Check className="w-4 h-4 stroke-[3]" />
           <span>Select Location</span>

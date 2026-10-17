@@ -735,92 +735,82 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               </span>
             </div>
 
-            {/* Top pending broadcast item - Essential job details only, no pricing/billing breakdowns */}
+            {/* Top pending broadcast item - Clean Joboy style */}
             {incomingBroadcastJobs.slice(0, 1).map((job) => (
-              <div key={job.id} className="pt-3 space-y-2.5">
+              <div key={job.id} className="pt-3 space-y-3">
+                {/* Top: Customer Name & Service Category */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 text-sky-100 px-2.5 py-0.5 rounded-full inline-block mb-1">
                       {job.categoryName || 'Home Service'}
                     </span>
                     <h4 className="text-base font-extrabold leading-tight text-white">
-                      {job.serviceTitle}
+                      {job.customerName || 'Customer'}
                     </h4>
-                    <p className="text-xs text-sky-100 font-medium mt-0.5">
-                      Customer: {job.customerName || 'Valued Client'}
+                    <p className="text-xs text-sky-100 font-semibold mt-0.5">
+                      {job.serviceTitle}
                     </p>
                   </div>
-                  {/* Status label if advance payment was collected online */}
-                  {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/30 border border-emerald-300/40 text-emerald-100 text-[11px] font-black shrink-0">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                      <span>Advance ₹99 Collected</span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-[11px] text-sky-100 flex items-center gap-1 font-medium bg-white/10 px-2 py-0.5 rounded-full">
+                      <Clock className="w-3 h-3 text-sky-200 shrink-0" />
+                      <span>{job.dateTime || 'Today'}</span>
                     </span>
-                  )}
+                    {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-300/40 text-emerald-100 text-[10px] font-bold">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-300" />
+                        <span>Advance Paid</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                {/* Essential job requirement details needed to perform the work */}
-                <div className="bg-white/10 rounded-xl p-2.5 text-xs text-white/95 space-y-1.5">
-                  <div className="flex items-start justify-between gap-1.5">
-                    <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                      <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <a
-                          href={getGoogleMapsNavigationUrl(job)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold text-white hover:underline block truncate"
-                          title="Open Exact GPS Coordinates in Google Maps Navigation"
-                        >
-                          {job.address}
-                        </a>
-                        {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-100 bg-emerald-600/40 px-2 py-0.5 rounded-full border border-emerald-400/40">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-300" />
-                              <span>GPS Verified (High Accuracy)</span>
-                            </span>
-                            <span className="font-mono text-[10px] text-sky-200">
-                              {Number(job.user_latitude || job.latitude || job.lat).toFixed(4)}°, {Number(job.user_longitude || job.longitude || job.lng).toFixed(4)}°
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <a
-                        href={getGoogleMapsNavigationUrl(job)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-white text-[10px] font-black shrink-0 transition flex items-center gap-1 cursor-pointer active:scale-95"
-                        title="Open Map with exact GPS coordinates"
-                      >
-                        <MapPin className="w-3 h-3 text-sky-200" />
-                        <span>Open Map</span>
-                      </a>
-                      <a
-                        href={getGoogleMapsNavigationUrl(job)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1 rounded-xl bg-white/25 hover:bg-white/35 text-white text-[10px] font-black shrink-0 transition flex items-center gap-1 cursor-pointer active:scale-95"
-                        title="Navigate in Google Maps using exact GPS coordinates"
-                      >
-                        <Navigation className="w-3 h-3 text-white" />
-                        <span>Navigate</span>
-                      </a>
+                {/* Middle: Full, clearly readable Customer Address (wrap text properly) */}
+                <div className="bg-white/10 rounded-2xl p-3 text-white space-y-2.5 border border-white/15">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white leading-relaxed break-words whitespace-normal">
+                        {job.address}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-sky-200 shrink-0" />
-                    <span>{job.dateTime}</span>
+
+                  {/* Action Row: Clean, compact "Open Map" and "Navigate" buttons side-by-side */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <a
+                      href={getGoogleMapsNavigationUrl(job)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 border border-white/15"
+                      title="Open Map"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-sky-200" />
+                      <span>Open Map</span>
+                    </a>
+                    <a
+                      href={getGoogleMapsNavigationUrl(job)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl bg-white/25 hover:bg-white/35 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 border border-white/25"
+                      title="Navigate in Google Maps"
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-white" />
+                      <span>Navigate</span>
+                    </a>
                   </div>
+
+                  {/* Note / Issue: Display customer notes clearly at the bottom */}
                   {job.note && (
-                    <p className="text-[11px] text-sky-100 italic pt-0.5 border-t border-white/10">"{job.note}"</p>
+                    <div className="p-2 rounded-xl bg-black/20 border border-white/10 text-xs text-sky-100 leading-relaxed break-words whitespace-normal">
+                      <span className="font-bold text-amber-200">Note: </span>
+                      <span>{job.note}</span>
+                    </div>
                   )}
                 </div>
 
                 {/* Accept & Reject Buttons */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
                   <button
                     onClick={() => handleOpenRejectConfirm(job)}
                     className="py-2.5 px-3 rounded-full bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs transition active:scale-95 cursor-pointer text-center"
@@ -940,19 +930,17 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                     </div>
                   )}
 
-                  {/* Customer Card */}
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
+                  {/* Customer Card - Clean Joboy style */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3 text-xs">
+                    {/* Top: Customer Name & Service Details */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center font-bold">
-                          <User className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center font-bold shrink-0">
+                          <User className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-extrabold text-slate-800">{job.customerName || 'Customer'}</p>
-                          <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                            <span>In-App Protected Contact</span>
-                          </p>
+                          <p className="font-extrabold text-slate-900 text-sm">{job.customerName || 'Customer'}</p>
+                          <p className="text-[11px] text-slate-500 font-medium">{job.dateTime || 'Scheduled Task'}</p>
                         </div>
                       </div>
 
@@ -960,7 +948,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                         <button
                           onClick={() => setActiveVoiceCallBooking(job)}
                           className="w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition cursor-pointer"
-                          title="In-App Voice Call (Agora.io - Phone number protected)"
+                          title="Call Customer (Phone Protected)"
                         >
                           <Phone className="w-3.5 h-3.5" />
                         </button>
@@ -974,39 +962,25 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       </div>
                     </div>
 
-                    <div className="pt-1 border-t border-slate-200/60 text-slate-600 flex items-start justify-between gap-1.5">
-                      <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                        <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                        <div className="min-w-0 flex-1">
-                          <a
-                            href={getGoogleMapsNavigationUrl(job)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="leading-tight font-bold text-slate-800 hover:text-[#0EA5E0] hover:underline block truncate"
-                            title="Open Exact GPS Coordinates in Google Maps Navigation"
-                          >
+                    {/* Middle: Full, clearly readable Customer Address (wrapped properly) */}
+                    <div className="pt-2 border-t border-slate-200/60">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-800 leading-relaxed break-words whitespace-normal text-xs">
                             {job.address}
-                          </a>
-                          {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                <span>GPS Verified (High Accuracy)</span>
-                              </span>
-                              <span className="font-mono text-[10px] text-slate-400">
-                                {Number(job.user_latitude || job.latitude || job.lat).toFixed(4)}°, {Number(job.user_longitude || job.longitude || job.lng).toFixed(4)}°
-                              </span>
-                            </div>
-                          )}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+
+                      {/* Action Row: Clean, compact "Open Map" and "Navigate" buttons side-by-side */}
+                      <div className="grid grid-cols-2 gap-2 mt-2.5">
                         <a
                           href={getGoogleMapsNavigationUrl(job)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer"
-                          title="Open Map with exact GPS coordinates"
+                          className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-2xs active:scale-98"
+                          title="Open Map"
                         >
                           <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
                           <span>Open Map</span>
@@ -1015,8 +989,8 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                           href={getGoogleMapsNavigationUrl(job)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-[11px] font-black flex items-center gap-1.5 shrink-0 transition shadow-sm active:scale-95 cursor-pointer"
-                          title="Open in Google Maps GPS Navigation"
+                          className="py-2 px-3 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98"
+                          title="Navigate in Google Maps"
                         >
                           <Navigation className="w-3.5 h-3.5 text-white" />
                           <span>Navigate</span>
@@ -1024,10 +998,12 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       </div>
                     </div>
 
+                    {/* Note / Issue: Display customer notes clearly at the bottom */}
                     {job.note && (
-                      <p className="text-[11px] text-slate-500 bg-white p-2 rounded-xl border border-slate-100">
-                        <strong>Note:</strong> {job.note}
-                      </p>
+                      <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-100/90 text-xs text-amber-950 leading-relaxed break-words whitespace-normal">
+                        <span className="font-bold text-amber-800">Note: </span>
+                        <span>{job.note}</span>
+                      </div>
                     )}
                   </div>
 
@@ -1079,98 +1055,105 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
         {/* Available / Radar Tab */}
         {activeTab === 'available' && (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {incomingBroadcastJobs.map((job) => (
-              <div key={job.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full">
-                    {job.categoryName || 'Home Service'}
-                  </span>
-                  {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>Advance ₹99 Collected</span>
+              <div key={job.id} className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-sm space-y-3">
+                {/* Top: Customer Name & Service Category */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center font-bold shrink-0">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-sm leading-tight">
+                        {job.customerName || 'Customer'}
+                      </h4>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#0EA5E0]">
+                        {job.categoryName || 'Home Service'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                      <Clock className="w-3 h-3 text-[#0EA5E0] shrink-0" />
+                      <span>{job.dateTime || 'Today'}</span>
                     </span>
-                  )}
+                    {(Boolean(job.advancePaid && Number(job.advancePaid) > 0) || job.paymentStatus?.includes('paid') || job.visitingFee) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Advance Paid</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-extrabold text-slate-900">{job.serviceTitle}</h4>
+                  <h5 className="text-sm font-extrabold text-slate-900 leading-snug">
+                    {job.serviceTitle}
+                  </h5>
                 </div>
-                {/* Essential Job Requirement Details Needed to Perform Work */}
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-700 space-y-1.5">
-                  <div className="flex items-start justify-between gap-1.5">
-                    <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                      <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <a
-                          href={getGoogleMapsNavigationUrl(job)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold text-slate-800 hover:text-[#0EA5E0] hover:underline block truncate"
-                          title="Open Exact GPS Coordinates in Google Maps Navigation"
-                        >
-                          {job.address}
-                        </a>
-                        {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
-                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              <span>GPS Verified (High Accuracy)</span>
-                            </span>
-                            <span className="font-mono text-[10px] text-slate-400">
-                              {Number(job.user_latitude || job.latitude || job.lat).toFixed(4)}°, {Number(job.user_longitude || job.longitude || job.lng).toFixed(4)}°
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <a
-                        href={getGoogleMapsNavigationUrl(job)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 shrink-0 transition cursor-pointer"
-                        title="Open Map with exact GPS coordinates"
-                      >
-                        <MapPin className="w-3 h-3 text-[#0EA5E0]" />
-                        <span>Open Map</span>
-                      </a>
-                      <a
-                        href={getGoogleMapsNavigationUrl(job)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] text-white text-[10px] font-black shrink-0 transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
-                        title="Navigate in Google Maps using exact GPS coordinates"
-                      >
-                        <Navigation className="w-3 h-3 text-white" />
-                        <span>Navigate</span>
-                      </a>
+
+                {/* Middle: Full, clearly readable Customer Address & Navigation */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2.5 text-xs">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 leading-relaxed break-words whitespace-normal text-xs">
+                        {job.address}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-slate-600">
-                    <Clock className="w-3.5 h-3.5 text-[#0EA5E0] shrink-0" />
-                    <span>{job.dateTime}</span>
+
+                  {/* Action Row: Clean, compact "Open Map" and "Navigate" buttons side-by-side */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <a
+                      href={getGoogleMapsNavigationUrl(job)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-2xs active:scale-98"
+                      title="Open Map"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                      <span>Open Map</span>
+                    </a>
+                    <a
+                      href={getGoogleMapsNavigationUrl(job)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl bg-gradient-to-r from-[#0EA5E0] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98"
+                      title="Navigate in Google Maps"
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-white" />
+                      <span>Navigate</span>
+                    </a>
                   </div>
+
+                  {/* Note / Issue: Display customer notes clearly at the bottom */}
                   {job.note && (
-                    <p className="text-[11px] text-slate-500 bg-white p-2 rounded-xl border border-slate-100 italic">
-                      "{job.note}"
-                    </p>
+                    <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-100/90 text-xs text-amber-950 leading-relaxed break-words whitespace-normal">
+                      <span className="font-bold text-amber-800">Note: </span>
+                      <span>{job.note}</span>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 pt-1">
+                {/* Bottom Action Row: Accept & Reject */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
+                    type="button"
                     onClick={() => handleOpenRejectConfirm(job)}
-                    className="flex-1 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-rose-600 text-xs font-bold transition cursor-pointer"
+                    className="py-2.5 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-rose-600 text-xs font-bold transition active:scale-95 cursor-pointer text-center"
                   >
                     Reject
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleAcceptJob(job)}
-                    className="flex-1 py-2 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-black shadow-xs"
+                    className="py-2.5 px-3 rounded-full bg-gradient-to-r from-[#0EA5E0] to-[#38BDF8] text-white text-xs font-black shadow-xs hover:opacity-95 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    Accept Job
+                    <span>Accept Job</span>
+                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
@@ -1235,18 +1218,15 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
                       </a>
                     </div>
                     {Boolean((job?.user_latitude || job?.latitude || job?.lat) && (job?.user_longitude || job?.longitude || job?.lng)) && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>GPS Verified (High Accuracy)</span>
-                        </span>
+                      <div className="flex items-center gap-2 mt-1">
                         <a
                           href={getGoogleMapsNavigationUrl(job)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[10px] text-[#0EA5E0] font-black hover:underline"
+                          className="text-[11px] text-[#0EA5E0] font-bold hover:underline flex items-center gap-1"
                         >
-                          Open Map
+                          <MapPin className="w-3 h-3 text-[#0EA5E0]" />
+                          <span>View on Map</span>
                         </a>
                       </div>
                     )}
