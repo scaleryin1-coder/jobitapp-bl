@@ -1220,9 +1220,6 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                               <p className={`text-[11px] font-black leading-tight line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
                                 {c.name}
                               </p>
-                              <p className={`text-[9px] font-semibold mt-0.5 ${isSelected ? 'text-sky-100' : 'text-slate-400'}`}>
-                                Starts ₹{c.basePrice || 350}
-                              </p>
                             </div>
                           </button>
                         );

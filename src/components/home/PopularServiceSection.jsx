@@ -233,7 +233,7 @@ export function PopularServiceSection({
                 }
               }}
               data-image-url={service.imageUrl}
-              aria-label={`${service.title} • ${isLive ? 'Flat ₹99 Inspection & Service Booking' : 'Coming Soon to your area'}`}
+              aria-label={`${service.title} • ${isLive ? 'Available for Doorstep Service' : 'Coming Soon to your area'}`}
               className="group relative w-full min-w-0 aspect-[4/5] rounded-[16px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_28px_rgba(14,165,224,0.18)] cursor-pointer transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 border border-slate-100 hover:border-[#0EA5E0]/40 bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0EA5E0] focus:ring-offset-2"
               style={{
                 borderRadius: '16px',
@@ -250,39 +250,42 @@ export function PopularServiceSection({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent pointer-events-none transition-opacity duration-300 group-hover:from-black/70" />
               </div>
 
-              {/* Top Status/Price Badge */}
+              {/* Top Status Badge */}
               {isLive ? (
-                <div className="absolute top-2 left-2 z-10 bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  <Zap className="w-3 h-3 fill-slate-950 text-slate-950" />
-                  <span>Flat ₹99</span>
+                <div className="absolute top-2 left-2 z-10 bg-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <span>Live</span>
                 </div>
               ) : (
                 <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
                   <Clock className="w-3 h-3 text-white" />
-                  <span>Coming Soon</span>
+                  <span>Soon</span>
                 </div>
               )}
 
-              {/* Bottom Info Bar: Service Name, Starting Price & Action Button */}
+              {/* Bottom Info Bar: Service Name, Status & Action Button */}
               <div 
                 className="absolute inset-x-2 bottom-2 z-10 bg-white/95 backdrop-blur-md p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-1.5 transition-all duration-200 group-hover:bg-white"
                 style={{ borderRadius: '12px' }}
               >
-                {/* Price & Service Name */}
+                {/* Service Name & Status Badge */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1 text-[11px] font-black leading-none">
-                    {isLive ? (
-                      <span className="truncate tracking-tight text-[#0EA5E0]">Flat ₹99</span>
-                    ) : (
-                      <span className="truncate tracking-tight text-amber-600">Coming Soon</span>
-                    )}
-                  </div>
-                  <p className="text-[9px] font-bold text-slate-500 truncate leading-tight mt-0.5">
-                    {isLive ? 'Inspection & Booking' : `Soon in ${cleanCity}`}
-                  </p>
-                  <h3 className="text-xs font-black text-[#111827] truncate mt-1 leading-tight group-hover:text-[#0EA5E0] transition-colors" title={service.title}>
+                  <h3 className="text-xs sm:text-sm font-black text-[#111827] truncate leading-tight group-hover:text-[#0EA5E0] transition-colors" title={service.title}>
                     {service.title}
                   </h3>
+                  <div className="flex items-center gap-1 mt-1 text-[10px] font-bold leading-none">
+                    {isLive ? (
+                      <span className="text-emerald-600 truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>Verified Pros Available</span>
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 truncate flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-500" />
+                        <span>Coming Soon</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Action Button: Opens Details/Booking or Coming Soon */}
@@ -295,8 +298,8 @@ export function PopularServiceSection({
                   className={`w-8 h-8 rounded-full text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 group-hover:rotate-45 transition-all duration-200 cursor-pointer ${
                     isLive ? 'bg-[#0EA5E0] hover:bg-[#0284C7]' : 'bg-amber-500 hover:bg-amber-600'
                   }`}
-                  title={isLive ? `Book ${service.title} at Flat ₹99` : `${service.title} Coming Soon`}
-                  aria-label={isLive ? `Book ${service.title} at Flat ₹99` : `${service.title} Coming Soon`}
+                  title={isLive ? `Book ${service.title}` : `${service.title} Coming Soon`}
+                  aria-label={isLive ? `Book ${service.title}` : `${service.title} Coming Soon`}
                 >
                   <ArrowUpRight className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
                 </button>

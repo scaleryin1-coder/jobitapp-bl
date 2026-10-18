@@ -110,24 +110,19 @@ export function AllCategoriesModal({
                     )}
                   </div>
 
-                  <div className="mt-2.5">
-                    <h4 className="text-xs font-black text-[#111827] group-hover:text-[#4B6EF5] transition-colors leading-snug">
+                  <div className="mt-2.5 flex items-center justify-between gap-1">
+                    <h4 className="text-xs font-black text-[#111827] group-hover:text-[#4B6EF5] transition-colors leading-snug truncate">
                       {cat.name}
                     </h4>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <p className="text-[10px] text-slate-400 font-bold">
-                        Starts ₹{cat.basePrice}
-                      </p>
-                      {isLive ? (
-                        <span className="text-[10px] text-[#0EA5E0] font-bold">
-                          Book ➔
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-amber-600 font-bold">
-                          Notify ➔
-                        </span>
-                      )}
-                    </div>
+                    {isLive ? (
+                      <span className="text-[10px] text-[#0EA5E0] font-black shrink-0 flex items-center group-hover:translate-x-0.5 transition-transform">
+                        Book ➔
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-amber-600 font-black shrink-0 flex items-center group-hover:translate-x-0.5 transition-transform">
+                        Notify ➔
+                      </span>
+                    )}
                   </div>
                 </div>
               );

@@ -189,13 +189,13 @@ export function HomeSearchSection({
                         </span>
                       </div>
 
-                      {/* Uniform promotional price tag: Flat ₹99 and Inspection & Service Booking */}
+                      {/* Doorstep Inspection & Service */}
                       <div className="mt-1.5 flex flex-col">
-                        <span className="text-sm font-black text-[#00A3E0] tracking-tight">
-                          Flat ₹99
+                        <span className="text-xs font-black text-[#00A3E0] tracking-tight">
+                          Doorstep Service
                         </span>
-                        <span className="text-[10px] font-bold text-slate-500 leading-tight">
-                          Inspection & Service Booking
+                        <span className="text-[10px] font-medium text-slate-500 leading-tight">
+                          Verified Professional Dispatch
                         </span>
                       </div>
                     </div>
