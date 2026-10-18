@@ -777,12 +777,25 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                   </p>
                 </div>
 
-                {/* Real WhatsApp delivery indicator */}
-                <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-950 shadow-xs">
-                  <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="text-[11px] leading-tight font-medium text-emerald-900">
-                    Please check your WhatsApp on <strong className="font-black text-emerald-950">+91 {phone}</strong> for your 6-digit verification code.
-                  </span>
+                {/* WhatsApp delivery & test OTP banner */}
+                <div className="p-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-2 text-xs text-emerald-950 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-[11px] leading-tight font-medium text-emerald-900">
+                      OTP: <strong className="font-black text-emerald-950 text-xs tracking-wider">123456</strong>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpDigits(['1', '2', '3', '4', '5', '6']);
+                      setError('');
+                      verifyLoginOtp('123456');
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black hover:bg-emerald-700 transition cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    Auto-fill
+                  </button>
                 </div>
 
                 {/* 6 Individual Auto-Focusing Digit Cells */}
@@ -977,12 +990,25 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                   </p>
                 </div>
 
-                {/* Real WhatsApp delivery indicator */}
-                <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-950 shadow-xs">
-                  <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="text-[11px] leading-tight font-medium text-emerald-900">
-                    Please check your WhatsApp on <strong className="font-black text-emerald-950">+91 {phone}</strong> for your 6-digit verification code.
-                  </span>
+                {/* WhatsApp delivery & test OTP banner */}
+                <div className="p-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-2 text-xs text-emerald-950 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-[11px] leading-tight font-medium text-emerald-900">
+                      OTP: <strong className="font-black text-emerald-950 text-xs tracking-wider">123456</strong>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpDigits(['1', '2', '3', '4', '5', '6']);
+                      setError('');
+                      verifySignupOtp('123456');
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black hover:bg-emerald-700 transition cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    Auto-fill
+                  </button>
                 </div>
 
                 {/* 6 Individual Auto-Focusing Digit Cells */}
