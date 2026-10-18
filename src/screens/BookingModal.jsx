@@ -139,6 +139,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     });
   }, [service, coordinates?.lat, coordinates?.lng, workers]);
 
+  const isLocationAvailable = Boolean(radiusAvailability?.isAvailable);
   const isDateValid = Boolean(date && date.trim().length > 0);
   const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0 && !isTimeSlotPassed(timeSlot, date));
   const isFormValid = isAddressValid && isCoordinatesValid && isDateValid && isTimeSlotValid && isLocationAvailable;
