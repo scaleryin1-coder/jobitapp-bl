@@ -26,9 +26,20 @@ export default {
         },
       },
       boxShadow: {
+        '2xs': '0 1px 2px rgba(0, 0, 0, 0.04)',
+        'xs': '0 1px 3px rgba(0, 0, 0, 0.06)',
         'soft': '0 4px 20px rgba(0, 0, 0, 0.04)',
         'nav': '0 -4px 20px rgba(0, 0, 0, 0.05)',
         'card': '0 8px 24px -4px rgba(0, 0, 0, 0.05)',
+      },
+      dropShadow: {
+        '2xs': '0 1px 1px rgba(0, 0, 0, 0.04)',
+        'xs': '0 1px 2px rgba(0, 0, 0, 0.06)',
+      },
+      scale: {
+        '98': '0.98',
+        '95': '0.95',
+        '102': '1.02',
       }
     },
   },

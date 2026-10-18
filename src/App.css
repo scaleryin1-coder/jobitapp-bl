@@ -1,0 +1,32 @@
+@import './index.css';
+
+/* Fallback & Enhanced Global Styles for JOBit */
+:root {
+  --primary-blue: #4B6EF5;
+  --primary-sky: #0EA5E0;
+  --bg-ice: #E9F8FD;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #E9F8FD;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Service Category Cards Enhancements */
+.category-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.category-card:hover {
+  transform: translateY(-2px);
+}
+
+.category-card:active {
+  transform: scale(0.96);
+}
