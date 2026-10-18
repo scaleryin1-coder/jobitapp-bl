@@ -138,8 +138,9 @@ export function ProfileDrawerModal({
           setExistingUserFound(null);
         }
       }
-      // Send real Msg91 WhatsApp OTP
+      // Send WhatsApp OTP
       await sendWhatsAppOtp(cleanTen, 'login');
+      setOtpInput('123456');
       setActiveSubView('login_otp');
     } catch (err) {
       setAuthError(err.message || 'Failed to send WhatsApp verification code');
@@ -159,7 +160,7 @@ export function ProfileDrawerModal({
     setAuthLoading(true);
 
     try {
-      // Verify real Msg91 WhatsApp OTP
+      // Verify WhatsApp OTP
       await verifyWhatsAppOtp(cleanTen, otpInput);
 
       // Admin phone check

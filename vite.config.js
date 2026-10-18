@@ -72,14 +72,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: 'all',
-    proxy: {
-      '/api/msg91': {
-        target: 'https://control.msg91.com/api/v5',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/msg91/, '')
-      }
-    }
+    allowedHosts: 'all'
   },
   preview: {
     host: '0.0.0.0',

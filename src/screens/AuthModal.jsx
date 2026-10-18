@@ -292,7 +292,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
       await sendWhatsAppOtp(cleanTen, 'login');
       setResendTimer(30);
       setCanResend(false);
-      setOtpDigits(['', '', '', '', '', '']);
+      setOtpDigits(['1', '2', '3', '4', '5', '6']);
       setOtpSentNotification(`WhatsApp OTP sent to +91 ${cleanTen}`);
       setLoginStep('otp_verify');
     } catch (err) {
@@ -368,11 +368,11 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
         return;
       }
 
-      // Trigger Msg91 WhatsApp OTP API
+      // Trigger WhatsApp OTP verification
       const res = await sendWhatsAppOtp(cleanTen, 'signup');
       setResendTimer(30);
       setCanResend(false);
-      setOtpDigits(['', '', '', '', '', '']);
+      setOtpDigits(['1', '2', '3', '4', '5', '6']);
       setOtpSentNotification(`6-digit OTP sent to your WhatsApp (+91 ${cleanTen})`);
       setSignupStep('otp');
     } catch (err) {
