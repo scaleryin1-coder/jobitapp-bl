@@ -173,6 +173,58 @@ function MainLayout() {
     return () => unsub();
   }, []);
 
+  // Dynamic mobile status bar & theme-color synchronization per active screen/view
+  useEffect(() => {
+    const getPageThemeColor = () => {
+      // 1. Worker & Admin views: Clean white top bar
+      if (currentUser?.role === 'worker' || currentUser?.role === 'admin') {
+        return '#FFFFFF';
+      }
+
+      // 2. Specialized sub-screens: Clean white top bar
+      if (currentScreen === 'splash') return '#FFFFFF';
+      if (currentScreen === 'service-list') return '#FFFFFF';
+      if (currentScreen === 'detail') return '#FFFFFF';
+      if (currentScreen === 'portfolio-selection') return '#FFFFFF';
+      if (currentScreen === 'chat') return '#FFFFFF';
+
+      // 3. Main tab views
+      if (currentScreen === 'main') {
+        if (activeTab === 'home') {
+          return '#E9F8FD'; // Soft sky blue matching home gradient header
+        }
+        return '#FFFFFF'; // Bookings, Chat, Profile use crisp white headers
+      }
+
+      return '#E9F8FD';
+    };
+
+    const targetColor = getPageThemeColor();
+
+    // Update <meta name="theme-color">
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (!metaTheme) {
+      metaTheme = document.createElement('meta');
+      metaTheme.name = 'theme-color';
+      document.head.appendChild(metaTheme);
+    }
+    metaTheme.setAttribute('content', targetColor);
+
+    // Update <meta name="msapplication-navbutton-color">
+    let metaMs = document.querySelector('meta[name="msapplication-navbutton-color"]');
+    if (!metaMs) {
+      metaMs = document.createElement('meta');
+      metaMs.name = 'msapplication-navbutton-color';
+      document.head.appendChild(metaMs);
+    }
+    metaMs.setAttribute('content', targetColor);
+
+    // Update document.body background for seamless overscroll matching
+    if (document.body) {
+      document.body.style.backgroundColor = targetColor;
+    }
+  }, [currentUser?.role, currentScreen, activeTab]);
+
   // Check URL hash for direct partner/staff login route or worker onboarding
   useEffect(() => {
     const handleHash = () => {
@@ -257,8 +309,8 @@ function MainLayout() {
   if (currentUser?.role === 'worker') {
     if (currentScreen === 'chat') {
       return (
-        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
-          <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+        <div className="min-h-screen min-h-[100dvh] bg-slate-100 flex flex-col items-center justify-start select-none">
+          <div className="w-full max-w-md min-h-screen min-h-[100dvh] bg-white shadow-xl flex flex-col relative">
             <ChatScreen
               booking={activeChatBooking || {
                 id: 'bk_default',
@@ -273,8 +325,8 @@ function MainLayout() {
     }
 
     return (
-      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
-        <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+      <div className="min-h-screen min-h-[100dvh] bg-slate-100 flex flex-col items-center justify-start select-none">
+        <div className="w-full max-w-md min-h-screen min-h-[100dvh] bg-white shadow-xl flex flex-col relative">
           <WorkerScreen
             onOpenChat={(b) => {
               setActiveChatBooking(b);
@@ -290,8 +342,8 @@ function MainLayout() {
   // 2. If authenticated as Admin -> Strictly Admin Control Center
   if (currentUser?.role === 'admin') {
     return (
-      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start select-none">
-        <div className="w-full max-w-md min-h-screen bg-white shadow-xl flex flex-col relative">
+      <div className="min-h-screen min-h-[100dvh] bg-slate-100 flex flex-col items-center justify-start select-none">
+        <div className="w-full max-w-md min-h-screen min-h-[100dvh] bg-white shadow-xl flex flex-col relative">
           <AdminScreen
             onBack={handleLogoutToCustomer}
             onLogout={handleLogoutToCustomer}
@@ -302,11 +354,13 @@ function MainLayout() {
   }
 
   // 3. Default: Customer Dashboard (Service Booking UI)
+  const isHomeView = currentScreen === 'main' && activeTab === 'home';
+
   return (
-    <div className="min-h-screen bg-[#E9F8FD] flex flex-col items-center justify-start select-none">
+    <div className={`min-h-screen min-h-[100dvh] ${isHomeView ? 'bg-[#E9F8FD]' : 'bg-slate-100'} flex flex-col items-center justify-start select-none transition-colors duration-200`}>
       
       {/* Clean Web App Container (No phone OS bezel, no hardcoded status bar) */}
-      <div className="w-full max-w-[440px] min-h-screen bg-white shadow-xl flex flex-col relative overflow-x-hidden">
+      <div className="w-full max-w-[440px] min-h-screen min-h-[100dvh] bg-white shadow-xl flex flex-col relative overflow-x-hidden">
         
         {/* Dynamic Screen View */}
         <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">

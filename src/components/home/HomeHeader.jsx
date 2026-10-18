@@ -17,7 +17,10 @@ export function HomeHeader({
   const userPhoto = currentUser?.photo || currentUser?.avatar;
 
   return (
-    <header className="px-5 pt-4 pb-2.5 flex items-center justify-between">
+    <header 
+      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+      className="px-5 pb-2.5 flex items-center justify-between"
+    >
       {/* Left: Profile Icon / Avatar & Clean Location Detail */}
       <div className="flex items-center gap-3">
         {/* Clean Minimalist Static Profile Icon Button */}

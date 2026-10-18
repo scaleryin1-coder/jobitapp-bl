@@ -265,7 +265,10 @@ export function ServiceListScreen({
     <div className="w-full min-h-screen bg-[#F8FAFC] pb-28 text-slate-900 select-none">
       
       {/* 1. Header: Back arrow, "Search Service" title, & More options menu icon */}
-      <header className="bg-white px-5 pt-4 pb-3 border-b border-slate-100/80 sticky top-0 z-30 shadow-xs">
+      <header 
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+        className="bg-white px-5 pb-3 border-b border-slate-100/80 sticky top-0 z-30 shadow-xs"
+      >
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}

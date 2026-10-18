@@ -132,8 +132,10 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
-      {/* Header */}
-      <header className="px-5 pt-4 pb-3 bg-white border-b border-slate-100">
+      <header 
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+        className="px-5 pb-3 bg-white border-b border-slate-100"
+      >
         <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
           My Bookings & Trackings
         </h1>

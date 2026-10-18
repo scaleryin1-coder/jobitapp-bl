@@ -813,8 +813,10 @@ export function AdminScreen({ onBack, onLogout }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
-      {/* 1. Master Header */}
-      <header className="px-5 py-3 border-b border-slate-200/80 flex items-center justify-between sticky top-0 bg-white z-30 shadow-xs">
+      <header 
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}
+        className="px-5 pb-3 border-b border-slate-200/80 flex items-center justify-between sticky top-0 bg-white z-30 shadow-xs"
+      >
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}

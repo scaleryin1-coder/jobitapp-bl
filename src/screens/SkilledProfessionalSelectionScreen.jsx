@@ -81,8 +81,10 @@ export function SkilledProfessionalSelectionScreen({
   return (
     <div className="w-full min-h-screen bg-[#F4FAFD] pb-24 text-slate-900 select-none">
       
-      {/* 1. Header Bar */}
-      <header className="px-5 py-3.5 bg-white border-b border-slate-100 sticky top-0 z-30 flex items-center justify-between shadow-2xs">
+      <header 
+        style={{ paddingTop: 'max(0.875rem, env(safe-area-inset-top, 0.875rem))' }}
+        className="px-5 pb-3.5 bg-white border-b border-slate-100 sticky top-0 z-30 flex items-center justify-between shadow-2xs"
+      >
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack}

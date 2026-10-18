@@ -33,8 +33,10 @@ export function ServiceDetailScreen({
   return (
     <div className="w-full min-h-screen bg-white pb-28 text-slate-900 select-none">
       
-      {/* 1. Top Navigation Bar */}
-      <header className="px-5 pt-3 pb-3 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-30">
+      <header 
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}
+        className="px-5 pb-3 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-30"
+      >
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full bg-[#F1F3F5] text-slate-800 flex items-center justify-center hover:bg-slate-200 active:scale-95 transition"

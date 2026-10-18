@@ -30,4 +30,22 @@
 body {
   font-family: 'Outfit', 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.25s ease;
 }
+
+/* Modern full-screen mobile immersive safe-area utility classes */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+.pt-safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+}
+
+.pb-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+

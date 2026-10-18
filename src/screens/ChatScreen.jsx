@@ -212,8 +212,10 @@ export function ChatScreen({ booking, onBack }) {
   return (
     <div className="w-full min-h-screen bg-white flex flex-col justify-between text-slate-900 select-none pb-16">
       
-      {/* 1. Top Header with Privacy & In-App Voice Call Button */}
-      <header className="px-5 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-30 shadow-2xs">
+      <header 
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}
+        className="px-5 pb-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-30 shadow-2xs"
+      >
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}

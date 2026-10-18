@@ -41,7 +41,10 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
       <div className="relative w-full h-[76vh] sm:h-[78vh] overflow-hidden bg-slate-50 flex-shrink-0">
         
         {/* Top Overlay Header: JOBit Brand Badge & Skip Button */}
-        <div className="absolute top-4 inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-none">
+        <div 
+          style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+          className="absolute inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-none"
+        >
           <div className="bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-slate-200/80 shadow-md">
             <JobitLogo variant="horizontal" showTagline={false} />
           </div>

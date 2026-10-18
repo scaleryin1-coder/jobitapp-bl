@@ -520,7 +520,10 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
       <div className="w-full min-h-screen bg-slate-50 p-5 flex flex-col justify-between text-slate-900 select-none animate-fade-in">
         <div>
           {/* Top Bar */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+          <div 
+            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}
+            className="flex items-center justify-between pb-4 border-b border-slate-200"
+          >
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
                 <Clock className="w-5 h-5 animate-spin-slow" />
@@ -643,7 +646,10 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     return (
       <div className="w-full min-h-screen bg-slate-50 p-6 flex flex-col justify-between text-slate-900 select-none animate-fade-in">
         <div>
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+          <div 
+            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}
+            className="flex items-center justify-between pb-4 border-b border-slate-200"
+          >
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-xs">
                 <Briefcase className="w-5 h-5" />
@@ -693,7 +699,10 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
       {/* 1. Top Header with Worker Profile & Duty Switch */}
-      <div className="bg-white px-5 pt-3 pb-4 border-b border-slate-100 shadow-xs">
+      <div 
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}
+        className="bg-white px-5 pb-4 border-b border-slate-100 shadow-xs sticky top-0 z-30"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img 

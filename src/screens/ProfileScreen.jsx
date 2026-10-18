@@ -51,8 +51,10 @@ export function ProfileScreen({
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-28 text-slate-900 select-none">
       
-      {/* Top Header */}
-      <header className="px-5 pt-4 pb-3 bg-white border-b border-slate-100 shadow-xs">
+      <header 
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+        className="px-5 pb-3 bg-white border-b border-slate-100 shadow-xs"
+      >
         <h1 className="text-xl font-extrabold text-[#0B1528] tracking-tight">
           My Account
         </h1>
