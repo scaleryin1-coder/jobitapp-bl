@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db, isFirebaseConfigured } from '../firebase';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -92,6 +93,28 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const getLocalUserByIdentifier = (identifier) => {
+    if (!identifier) return null;
+    try {
+      const raw = localStorage.getItem('jobit_registered_users');
+      const users = raw ? JSON.parse(raw) : {};
+      const cleanDigits = String(identifier).replace(/\D/g, '').slice(-10);
+      if (cleanDigits.length === 10 && users[cleanDigits]) {
+        return users[cleanDigits];
+      }
+      const lower = String(identifier).trim().toLowerCase();
+      const allUsers = Object.values(users);
+      return allUsers.find(u => 
+        (u.username && u.username.toLowerCase() === lower) ||
+        (u.name && u.name.toLowerCase() === lower) ||
+        (u.email && u.email.toLowerCase() === lower) ||
+        (u.phone && u.phone.replace(/\D/g, '').slice(-10) === cleanDigits && cleanDigits.length === 10)
+      ) || null;
+    } catch {
+      return null;
+    }
+  };
+
   const saveLocalUserByPhone = (cleanTenDigits, userProfile) => {
     try {
       const raw = localStorage.getItem('jobit_registered_users');
@@ -101,29 +124,77 @@ export function AuthProvider({ children }) {
     } catch {}
   };
 
-  const checkPhoneRegistered = async (phone) => {
-    const rawDigits = phone.replace(/\D/g, '');
+  const checkPhoneRegistered = async (phoneOrIdentifier) => {
+    if (!phoneOrIdentifier) return { isRegistered: false };
+    const rawDigits = String(phoneOrIdentifier).replace(/\D/g, '');
     const cleanTenDigits = rawDigits.slice(-10);
 
     if (cleanTenDigits === '8289968045') {
-      return { isRegistered: true, isAdmin: true };
+      return { 
+        isRegistered: true, 
+        isAdmin: true, 
+        user: { 
+          uid: 'admin_master', 
+          name: 'Master Admin', 
+          phone: '+91 82899 68045', 
+          role: 'admin' 
+        } 
+      };
     }
 
-    // 1. Check local users map
-    const localExisting = getLocalUserByPhone(cleanTenDigits);
+    // 1. Check local users map (by phone or username)
+    const localExisting = getLocalUserByIdentifier(phoneOrIdentifier);
     if (localExisting) {
       return { isRegistered: true, user: localExisting };
     }
 
-    // 2. Check Firestore if configured
+    // 2. Check Supabase database if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (cleanTenDigits && cleanTenDigits.length === 10) {
+          const { data: supaUsers, error } = await supabase
+            .from('users')
+            .select('*')
+            .or(`phone.eq.+91${cleanTenDigits},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
+            .limit(1);
+          if (!error && supaUsers && supaUsers.length > 0) {
+            const user = supaUsers[0];
+            saveLocalUserByPhone(cleanTenDigits, user);
+            return { isRegistered: true, user };
+          }
+        }
+
+        // Also check by username in Supabase
+        const trimmedIdentifier = String(phoneOrIdentifier).trim();
+        if (trimmedIdentifier) {
+          const { data: userByUsername, error: uErr } = await supabase
+            .from('users')
+            .select('*')
+            .ilike('username', trimmedIdentifier)
+            .limit(1);
+          if (!uErr && userByUsername && userByUsername.length > 0) {
+            const user = userByUsername[0];
+            const uPhoneDigits = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
+            if (uPhoneDigits) saveLocalUserByPhone(uPhoneDigits, user);
+            return { isRegistered: true, user };
+          }
+        }
+      } catch (supaErr) {
+        console.warn('Supabase user check note:', supaErr);
+      }
+    }
+
+    // 3. Check Firestore if configured
     if (isFirebaseConfigured && db) {
       try {
-        const uid = 'usr_' + cleanTenDigits;
-        const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
-        if (snap && snap.exists && snap.exists()) {
-          const user = { uid, ...snap.data() };
-          saveLocalUserByPhone(cleanTenDigits, user);
-          return { isRegistered: true, user };
+        if (cleanTenDigits && cleanTenDigits.length === 10) {
+          const uid = 'usr_' + cleanTenDigits;
+          const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
+          if (snap && snap.exists && snap.exists()) {
+            const user = { uid, ...snap.data() };
+            saveLocalUserByPhone(cleanTenDigits, user);
+            return { isRegistered: true, user };
+          }
         }
       } catch {}
     }
@@ -219,17 +290,18 @@ export function AuthProvider({ children }) {
     return profile;
   };
 
-  const loginWithPassword = async (phone, password) => {
-    const rawDigits = String(phone || '').replace(/\D/g, '');
-    const cleanTenDigits = rawDigits.slice(-10);
-
-    if (!cleanTenDigits || cleanTenDigits.length !== 10) {
-      throw new Error('Please enter a valid 10-digit mobile number');
+  const loginWithPassword = async (identifier, password) => {
+    if (!identifier || !String(identifier).trim()) {
+      throw new Error('Please enter your mobile number or username');
     }
 
     if (!password || !String(password).trim()) {
       throw new Error('Please enter your account password');
     }
+
+    const cleanInput = String(identifier).trim();
+    const rawDigits = cleanInput.replace(/\D/g, '');
+    const cleanTenDigits = rawDigits.slice(-10);
 
     // Direct Admin Rule (Critical): Phone number 8289968045 is ALWAYS Admin!
     if (cleanTenDigits === '8289968045') {
@@ -253,9 +325,9 @@ export function AuthProvider({ children }) {
       return adminProfile;
     }
 
-    const regStatus = await checkPhoneRegistered(cleanTenDigits);
+    const regStatus = await checkPhoneRegistered(cleanInput);
     if (!regStatus.isRegistered || !regStatus.user) {
-      throw new Error(`No account found for mobile +91 ${cleanTenDigits}. Please sign up first.`);
+      throw new Error(`No account found for "${cleanInput}". Please check your mobile or username, or sign up first.`);
     }
 
     const user = regStatus.user;
@@ -288,13 +360,83 @@ export function AuthProvider({ children }) {
     }
 
     // Strict Database Constraint: Strictly ONE account per mobile number!
-    const regCheck = await checkPhoneRegistered(cleanTenDigits);
-    if (regCheck.isRegistered) {
+    const phoneCheck = await checkPhoneRegistered(cleanTenDigits);
+    if (phoneCheck.isRegistered) {
       throw new Error(`An account already exists for +91 ${cleanTenDigits}. Strictly ONE account per mobile number. Please log in directly.`);
     }
 
-    const uid = 'usr_' + cleanTenDigits;
+    // Check if username is already taken by another user
+    const usernameCheck = await checkPhoneRegistered(cleanUsername);
+    if (usernameCheck.isRegistered && usernameCheck.user && usernameCheck.user.phone?.replace(/\D/g, '').slice(-10) !== cleanTenDigits) {
+      throw new Error(`The username "${cleanUsername}" is already taken. Please choose another username.`);
+    }
+
+    let uid = 'usr_' + cleanTenDigits;
     const selectedRole = role === 'worker' ? 'worker' : 'customer';
+
+    // 1. Supabase Auth & Database Sync (with UNIQUE phone constraint)
+    if (isSupabaseConfigured && supabase) {
+      try {
+        // Enforce UNIQUE constraint in Supabase database
+        const { data: existingSupaPhone } = await supabase
+          .from('users')
+          .select('id, phone')
+          .or(`phone.eq.+91${cleanTenDigits},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
+          .limit(1);
+
+        if (existingSupaPhone && existingSupaPhone.length > 0) {
+          throw new Error(`An account already exists for +91 ${cleanTenDigits}. Strictly ONE account per mobile number. Please sign in instead.`);
+        }
+
+        // Register in Supabase Auth
+        const supaEmail = `${cleanUsername.toLowerCase().replace(/[^a-z0-9]/g, '') || cleanTenDigits}@jobit.app`;
+        try {
+          const { data: supaAuthData, error: supaAuthErr } = await supabase.auth.signUp({
+            email: supaEmail,
+            password: cleanPassword,
+            options: {
+              data: {
+                phone: `+91 ${cleanTenDigits}`,
+                username: cleanUsername,
+                name: cleanUsername,
+                role: selectedRole
+              }
+            }
+          });
+          if (supaAuthData?.user?.id) {
+            uid = supaAuthData.user.id;
+          }
+        } catch (authErr) {
+          console.warn('Supabase auth signUp note:', authErr);
+        }
+
+        // Insert into Supabase 'users' table
+        const { error: supaInsertErr } = await supabase
+          .from('users')
+          .upsert({
+            id: uid,
+            phone: `+91 ${cleanTenDigits}`,
+            username: cleanUsername,
+            name: cleanUsername,
+            password: cleanPassword,
+            role: selectedRole,
+            city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
+            created_at: new Date().toISOString()
+          }, { onConflict: 'phone' });
+
+        if (supaInsertErr) {
+          if (supaInsertErr.code === '23505' || supaInsertErr.message?.toLowerCase()?.includes('unique')) {
+            throw new Error(`An account already exists for +91 ${cleanTenDigits}. Strictly ONE account per mobile number. Please sign in instead.`);
+          }
+          console.warn('Supabase users table insert note:', supaInsertErr);
+        }
+      } catch (supaErr) {
+        if (supaErr.message?.includes('Strictly ONE account')) {
+          throw supaErr;
+        }
+        console.warn('Supabase database registration notice:', supaErr);
+      }
+    }
 
     const profile = {
       uid,

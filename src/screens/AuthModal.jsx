@@ -51,6 +51,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
   // Form states
   const [selectedRole, setSelectedRole] = useState('customer'); // 'customer' | 'worker'
   const [phone, setPhone] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
@@ -135,6 +136,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     const raw = val.replace(/\D/g, '');
     const cleanTen = raw.slice(-10);
     setPhone(cleanTen);
+    setLoginIdentifier(val);
     setError('');
     setExistingUserFound(null);
   };
@@ -236,12 +238,14 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
   // 1. Password Login
   const handlePasswordLoginSubmit = async (e) => {
     if (e) e.preventDefault();
-    const cleanTen = phone.replace(/\D/g, '').slice(-10);
+    const identifier = (loginIdentifier || phone).trim();
 
-    if (!cleanTen || cleanTen.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number');
+    if (!identifier) {
+      setError('Please enter your 10-digit mobile number or username');
       return;
     }
+
+    const cleanTen = identifier.replace(/\D/g, '').slice(-10);
 
     if (cleanTen === '8289968045') {
       await triggerAdminLogin();
@@ -257,7 +261,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     setError('');
 
     try {
-      const user = await loginWithPassword(cleanTen, loginPassword);
+      const user = await loginWithPassword(identifier, loginPassword);
       onSuccess?.(user.role || 'customer');
       onClose();
     } catch (err) {
@@ -323,7 +327,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     setError('');
 
     try {
-      const isValid = verifyWhatsAppOtp(cleanTen, code);
+      const isValid = await verifyWhatsAppOtp(cleanTen, code);
       if (!isValid) {
         throw new Error('Invalid or expired WhatsApp OTP. Please check the code or tap "Resend via WhatsApp".');
       }
@@ -404,7 +408,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     setError('');
 
     try {
-      const isValid = verifyWhatsAppOtp(cleanTen, code);
+      const isValid = await verifyWhatsAppOtp(cleanTen, code);
       if (!isValid) {
         throw new Error('Invalid or expired WhatsApp OTP. Please check the code or tap "Resend via WhatsApp".');
       }
@@ -605,19 +609,28 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                   <p className="text-[11px] text-slate-500 font-medium">Enter your mobile number and password</p>
                 </div>
 
-                {/* Mobile Number */}
+                {/* Mobile Number or Username */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">Mobile Number</label>
+                  <label className="text-xs font-bold text-slate-700">Mobile Number or Username</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400">+91</span>
+                    <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400 flex items-center">
+                      {/^\d+$/.test(loginIdentifier || phone) ? '+91' : <User className="w-4 h-4 text-slate-400" />}
+                    </span>
                     <input
-                      type="tel"
-                      maxLength={10}
+                      type="text"
                       required
-                      value={phone}
-                      onChange={(e) => handlePhoneChange(e.target.value)}
-                      className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
-                      placeholder="10-digit mobile number"
+                      value={loginIdentifier || phone}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLoginIdentifier(val);
+                        const digits = val.replace(/\D/g, '');
+                        if (digits) {
+                          setPhone(digits.slice(-10));
+                        }
+                        setError('');
+                      }}
+                      className={`w-full ${/^\d+$/.test(loginIdentifier || phone) ? 'pl-12' : 'pl-10'} pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]`}
+                      placeholder="10-digit mobile or username"
                       autoFocus
                     />
                   </div>
