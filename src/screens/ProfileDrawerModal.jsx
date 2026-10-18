@@ -19,6 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { sendWhatsAppOtp, verifyWhatsAppOtp } from '../utils/whatsappOtpService';
 
 export function ProfileDrawerModal({ 
   isOpen, 
@@ -42,7 +43,7 @@ export function ProfileDrawerModal({
 
   // Inline OTP Auth state for guest users
   const [phoneInput, setPhoneInput] = useState('');
-  const [otpInput, setOtpInput] = useState('123456');
+  const [otpInput, setOtpInput] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -68,7 +69,7 @@ export function ProfileDrawerModal({
         setEditEmail('');
         setEditAddress('');
         setPhoneInput('');
-        setOtpInput('123456');
+        setOtpInput('');
         setNameInput('');
         setExistingUserFound(null);
       }
@@ -137,9 +138,11 @@ export function ProfileDrawerModal({
           setExistingUserFound(null);
         }
       }
+      // Send real Msg91 WhatsApp OTP
+      await sendWhatsAppOtp(cleanTen, 'login');
       setActiveSubView('login_otp');
-    } catch {
-      setActiveSubView('login_otp');
+    } catch (err) {
+      setAuthError(err.message || 'Failed to send WhatsApp verification code');
     } finally {
       setAuthLoading(false);
     }
@@ -148,14 +151,17 @@ export function ProfileDrawerModal({
   const handleVerifyOtp = async (e) => {
     e?.preventDefault?.();
     const cleanTen = phoneInput.replace(/\D/g, '').slice(-10);
-    if (!otpInput || otpInput.length < 4) {
-      setAuthError('Please enter verification code (Mock OTP: 123456)');
+    if (!otpInput || otpInput.trim().length !== 6) {
+      setAuthError('Please enter the 6-digit WhatsApp verification code');
       return;
     }
     setAuthError('');
     setAuthLoading(true);
 
     try {
+      // Verify real Msg91 WhatsApp OTP
+      await verifyWhatsAppOtp(cleanTen, otpInput);
+
       // Admin phone check
       if (cleanTen === '8289968045') {
         await loginWithPhone('8289968045', otpInput, 'Master Admin', 'admin');
@@ -772,12 +778,12 @@ export function ProfileDrawerModal({
                   required
                   autoFocus
                   value={otpInput}
-                  onChange={(e) => setOtpInput(e.target.value)}
-                  placeholder="123456"
+                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="------"
                   className="w-full text-center tracking-[8px] py-2.5 bg-white border border-slate-200 rounded-xl text-base font-black text-slate-900 focus:outline-none focus:border-[#0EA5E0] shadow-xs"
                 />
-                <div className="p-2 rounded-xl bg-[#E0F7FA] text-[11px] text-[#00A3E0] text-center font-bold">
-                  🔑 Mock OTP: Enter 123456 (or any code)
+                <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-100 text-[11px] text-emerald-800 text-center font-bold">
+                  Check your WhatsApp on +91 {phoneInput} for the 6-digit code
                 </div>
               </div>
 

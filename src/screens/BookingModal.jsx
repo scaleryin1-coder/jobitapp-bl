@@ -45,6 +45,50 @@ const getInitialCoords = (locName) => {
   return { lat: 11.0607, lng: 76.2625 }; // Melattur default
 };
 
+// Helper to determine if a time slot has already passed based on current date & time
+export const isTimeSlotPassed = (slotString, selectedDateString) => {
+  if (!selectedDateString) return false;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const localToday = `${year}-${month}-${day}`;
+
+  // If selected date is in the past, all slots are passed
+  if (selectedDateString < localToday) {
+    return true;
+  }
+
+  // If selected date is a future date, slot is active and selectable
+  if (selectedDateString > localToday) {
+    return false;
+  }
+
+  // If selected date is TODAY: check slot start time against now
+  try {
+    const startPart = slotString.split('-')[0].trim();
+    const match = startPart.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return false;
+
+    let [_, hoursStr, minutesStr, modifier] = match;
+    let hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+
+    if (modifier.toUpperCase() === 'PM' && hours < 12) {
+      hours += 12;
+    }
+    if (modifier.toUpperCase() === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    const slotStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+    return now >= slotStartTime;
+  } catch {
+    return false;
+  }
+};
+
 export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity, workers = [] }) {
   const { currentUser } = useAuth() || {};
   const effectiveCity = currentCity || localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
@@ -95,11 +139,19 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     });
   }, [service, coordinates?.lat, coordinates?.lng, workers]);
 
-  const isLocationAvailable = radiusAvailability.isAvailable;
   const isDateValid = Boolean(date && date.trim().length > 0);
-  const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0);
+  const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0 && !isTimeSlotPassed(timeSlot, date));
   const isFormValid = isAddressValid && isCoordinatesValid && isDateValid && isTimeSlotValid && isLocationAvailable;
-  const todayString = new Date().toISOString().split('T')[0];
+  
+  const now = new Date();
+  const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Automatically deselect time slot if user changes date and the slot has already passed
+  useEffect(() => {
+    if (date && timeSlot && isTimeSlotPassed(timeSlot, date)) {
+      setTimeSlot('');
+    }
+  }, [date, timeSlot]);
 
   // Derive sub-categories for this service/category
   const availableSubCategories = service
@@ -582,30 +634,50 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                   '04:00 PM - 06:00 PM'
                 ].map((slot) => {
                   const isSelected = timeSlot === slot;
+                  const isPassed = isTimeSlotPassed(slot, date);
                   return (
                     <button
                       type="button"
                       key={slot}
+                      disabled={isPassed}
                       onClick={() => {
+                        if (isPassed) return;
                         setTimeSlot(slot);
                         if (!touched.timeSlot) setTouched((prev) => ({ ...prev, timeSlot: true }));
                       }}
-                      className={`p-2.5 rounded-2xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-[#EAF0FF] border-[#4B6EF5] text-[#4B6EF5] shadow-xs ring-1 ring-[#4B6EF5]'
-                          : 'bg-[#F8FAFC] border-slate-200 text-slate-600 hover:border-slate-300'
+                      className={`p-2.5 rounded-2xl text-[11px] font-bold border transition flex items-center justify-between ${
+                        isPassed
+                          ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                          : isSelected
+                            ? 'bg-[#EAF0FF] border-[#4B6EF5] text-[#4B6EF5] shadow-xs ring-1 ring-[#4B6EF5] cursor-pointer'
+                            : 'bg-[#F8FAFC] border-slate-200 text-slate-600 hover:border-slate-300 cursor-pointer'
                       }`}
                     >
-                      <span>{slot}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3] text-[#4B6EF5]" />}
+                      <span className={isPassed ? 'line-through text-slate-400' : ''}>{slot}</span>
+                      {isPassed ? (
+                        <span className="text-[9px] font-bold text-slate-400 bg-slate-200/80 px-1.5 py-0.5 rounded-md">Passed</span>
+                      ) : (
+                        isSelected && <Check className="w-3.5 h-3.5 stroke-[3] text-[#4B6EF5]" />
+                      )}
                     </button>
                   );
                 })}
               </div>
+              {date === todayString && [
+                '09:00 AM - 11:00 AM',
+                '11:00 AM - 01:00 PM',
+                '02:00 PM - 04:00 PM',
+                '04:00 PM - 06:00 PM'
+              ].every((s) => isTimeSlotPassed(s, date)) && (
+                <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-xl mt-2 flex items-center gap-1.5 animate-fade-in">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>All time slots for today have already passed. Please choose a future date.</span>
+                </p>
+              )}
               {touched.timeSlot && !isTimeSlotValid && (
                 <p className="text-[11px] font-bold text-rose-500 mt-1 flex items-center gap-1 animate-fade-in">
                   <AlertCircle className="w-3 h-3 shrink-0" />
-                  <span>Please select a preferred time slot</span>
+                  <span>Please select an available preferred time slot</span>
                 </p>
               )}
             </div>

@@ -606,7 +606,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       try {
         await loginWithPhone(
           primaryPhone, 
-          '123456', 
+          'onboarded', 
           legalName, 
           'worker', 
           { 

@@ -69,7 +69,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
   // WhatsApp OTP timer and delivery states
   const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
-  const [activeOtpCode, setActiveOtpCode] = useState('');
   const [otpSentNotification, setOtpSentNotification] = useState('');
 
   const [error, setError] = useState('');
@@ -122,7 +121,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     setLoading(true);
     setError('');
     try {
-      await loginWithPhone('8289968045', '123456', 'Master Admin', 'admin');
+      await loginWithPhone('8289968045', 'admin_auth', 'Master Admin', 'admin');
       onSuccess?.('admin');
       onClose();
     } catch (err) {
@@ -194,19 +193,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     }
   };
 
-  const quickFillMockOtp = (mode) => {
-    const code = activeOtpCode || '123456';
-    const splitArr = code.split('').slice(0, 6);
-    while (splitArr.length < 6) splitArr.push('0');
-    setOtpDigits(splitArr);
-    setError('');
-    if (mode === 'login') {
-      verifyLoginOtp(code);
-    } else {
-      verifySignupOtp(code);
-    }
-  };
-
   // Helper to resend WhatsApp OTP with 30s countdown reset
   const handleResendWhatsAppOtp = async (targetMode = authMode) => {
     const cleanTen = phone.replace(/\D/g, '').slice(-10);
@@ -216,7 +202,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
     setError('');
     try {
       const res = await sendWhatsAppOtp(cleanTen, targetMode);
-      setActiveOtpCode(res.otp);
       setResendTimer(30);
       setCanResend(false);
       setOtpDigits(['', '', '', '', '', '']);
@@ -298,9 +283,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
       }
       setExistingUserFound(regStatus.user);
 
-      // Trigger WhatsApp OTP endpoint
+      // Trigger WhatsApp OTP endpoint via Msg91 API
       const res = await sendWhatsAppOtp(cleanTen, 'login');
-      setActiveOtpCode(res.otp);
       setResendTimer(30);
       setCanResend(false);
       setOtpDigits(['', '', '', '', '', '']);
@@ -379,9 +363,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
         return;
       }
 
-      // Trigger WhatsApp OTP API endpoint (via Supabase Edge Function / API route)
+      // Trigger Msg91 WhatsApp OTP API
       const res = await sendWhatsAppOtp(cleanTen, 'signup');
-      setActiveOtpCode(res.otp);
       setResendTimer(30);
       setCanResend(false);
       setOtpDigits(['', '', '', '', '', '']);
@@ -488,7 +471,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
               type="button"
               onClick={async () => {
                 setLoading(true);
-                await loginWithPhone('9876500001', '123456', 'Aman Gupta', 'customer');
+                await loginWithPhone('9876500001', 'demo_auth', 'Aman Gupta', 'customer');
                 setLoading(false);
                 onSuccess?.('customer');
                 onClose();
@@ -794,19 +777,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                   </p>
                 </div>
 
-                {/* WhatsApp Code helper box */}
-                <div className="p-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 flex items-center justify-between text-xs text-emerald-950">
-                  <div className="flex items-center gap-1.5">
-                    <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="font-bold text-[11px]">WhatsApp OTP: <strong className="text-emerald-800 text-xs tracking-wider">{activeOtpCode || '123456'}</strong></span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => quickFillMockOtp('login')}
-                    className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black hover:bg-emerald-700 transition cursor-pointer active:scale-95 shadow-xs"
-                  >
-                    Auto-fill
-                  </button>
+                {/* Real WhatsApp delivery indicator */}
+                <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-950 shadow-xs">
+                  <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="text-[11px] leading-tight font-medium text-emerald-900">
+                    Please check your WhatsApp on <strong className="font-black text-emerald-950">+91 {phone}</strong> for your 6-digit verification code.
+                  </span>
                 </div>
 
                 {/* 6 Individual Auto-Focusing Digit Cells */}
@@ -1001,19 +977,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
                   </p>
                 </div>
 
-                {/* Live WhatsApp Delivery Card */}
-                <div className="p-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 flex items-center justify-between text-xs text-emerald-950">
-                  <div className="flex items-center gap-1.5">
-                    <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="font-bold text-[11px]">WhatsApp OTP: <strong className="text-emerald-800 text-xs tracking-wider">{activeOtpCode || '123456'}</strong></span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => quickFillMockOtp('signup')}
-                    className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black hover:bg-emerald-700 transition cursor-pointer active:scale-95 shadow-xs"
-                  >
-                    Auto-fill
-                  </button>
+                {/* Real WhatsApp delivery indicator */}
+                <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-950 shadow-xs">
+                  <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="text-[11px] leading-tight font-medium text-emerald-900">
+                    Please check your WhatsApp on <strong className="font-black text-emerald-950">+91 {phone}</strong> for your 6-digit verification code.
+                  </span>
                 </div>
 
                 {/* 6 Individual Auto-Focusing Digit Cells */}
