@@ -98,16 +98,11 @@ export function AllCategoriesModal({
                       <span className="text-[9px] bg-sky-100 text-[#0EA5E0] font-black px-1.5 py-0.5 rounded-full">
                         Pro Albums
                       </span>
-                    ) : isLive ? (
-                      <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-black px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span>Live</span>
-                      </span>
-                    ) : (
+                    ) : !isLive ? (
                       <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 font-black px-1.5 py-0.5 rounded-full">
                         Soon
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="mt-2.5 flex items-center justify-between gap-1">

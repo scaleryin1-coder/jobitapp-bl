@@ -250,42 +250,32 @@ export function PopularServiceSection({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent pointer-events-none transition-opacity duration-300 group-hover:from-black/70" />
               </div>
 
-              {/* Top Status Badge */}
-              {isLive ? (
-                <div className="absolute top-2 left-2 z-10 bg-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  <span>Live</span>
-                </div>
-              ) : (
+              {/* Top Status Badge (Only for upcoming services) */}
+              {!isLive && (
                 <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
                   <Clock className="w-3 h-3 text-white" />
                   <span>Soon</span>
                 </div>
               )}
 
-              {/* Bottom Info Bar: Service Name, Status & Action Button */}
+              {/* Bottom Info Bar: Service Name, Status (if upcoming) & Action Button */}
               <div 
                 className="absolute inset-x-2 bottom-2 z-10 bg-white/95 backdrop-blur-md p-2.5 shadow-sm border border-white/90 flex items-center justify-between gap-1.5 transition-all duration-200 group-hover:bg-white"
                 style={{ borderRadius: '12px' }}
               >
-                {/* Service Name & Status Badge */}
+                {/* Service Name & Status */}
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xs sm:text-sm font-black text-[#111827] truncate leading-tight group-hover:text-[#0EA5E0] transition-colors" title={service.title}>
                     {service.title}
                   </h3>
-                  <div className="flex items-center gap-1 mt-1 text-[10px] font-bold leading-none">
-                    {isLive ? (
-                      <span className="text-emerald-600 truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span>Verified Pros Available</span>
-                      </span>
-                    ) : (
+                  {!isLive && (
+                    <div className="flex items-center gap-1 mt-1 text-[10px] font-bold leading-none">
                       <span className="text-amber-600 truncate flex items-center gap-1">
                         <Clock className="w-3 h-3 text-amber-500" />
                         <span>Coming Soon</span>
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Button: Opens Details/Booking or Coming Soon */}

@@ -65,10 +65,6 @@ export function CategoryRow({
                 </span>
               )}
 
-              {isLive && !isPortfolio && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" title="Service Available" />
-              )}
-
               {/* Category Icon / Graphic */}
               <div className="transition-transform group-hover:scale-105 shrink-0">
                 <CategoryBadgeIcon category={cat} categoryName={cat.name} />
