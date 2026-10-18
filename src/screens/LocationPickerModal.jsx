@@ -14,7 +14,15 @@ const CITY_COORDS = {
   'bengaluru': { lat: 12.9716, lng: 77.5946 }
 };
 
-export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLocation }) {
+export function LocationPickerModal({
+  isOpen,
+  onClose,
+  currentCity,
+  onSelectLocation,
+  service = null,
+  category = null,
+  workers = []
+}) {
   const getCityCoords = (cityName) => {
     const key = (cityName || '').toLowerCase();
     for (const [cityKey, coords] of Object.entries(CITY_COORDS)) {
@@ -44,6 +52,9 @@ export function LocationPickerModal({ isOpen, onClose, currentCity, onSelectLoca
       onClose={onClose}
       initialCoordinates={initialCoords}
       initialAddress={currentCity}
+      service={service}
+      category={category}
+      workers={workers}
       onSelectLocation={handleSelectLocation}
     />
   );

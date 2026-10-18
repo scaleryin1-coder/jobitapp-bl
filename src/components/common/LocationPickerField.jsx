@@ -15,6 +15,9 @@ export function LocationPickerField({
   value = '',
   coordinates = null,
   plusCode = '',
+  service = null,
+  category = null,
+  workers = [],
   onChange,
   label = 'Select Area / Location',
   placeholder = 'Tap to select location on map...',
@@ -212,6 +215,9 @@ export function LocationPickerField({
         onClose={() => setIsMapModalOpen(false)}
         initialCoordinates={coordinates}
         initialAddress={value}
+        service={service}
+        category={category || service?.categoryName || service?.title}
+        workers={workers}
         onSelectLocation={handleSelectLocation}
       />
 

@@ -12,9 +12,11 @@ import {
   Minus,
   Sparkles,
   Layers,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { reverseGeocodeNominatim, encodePlusCode } from '../../utils/locationUtils';
+import { checkServiceAvailabilityByRadius } from '../../data/bookingService';
 
 // Fallback baseline coordinates (Melattur, Kerala)
 const DEFAULT_CENTER = { lat: 11.0607, lng: 76.2625 };
@@ -24,6 +26,9 @@ export function LeafletLocationPickerModal({
   onClose,
   initialCoordinates,
   initialAddress = '',
+  service = null,
+  category = null,
+  workers = [],
   onSelectLocation
 }) {
   const mapContainerRef = useRef(null);
@@ -53,6 +58,24 @@ export function LeafletLocationPickerModal({
     lat: null,
     lng: null
   });
+
+  // Dynamic Radius Availability Check (Swiggy / Zomato style)
+  const targetCategory = category || service?.categoryName || service?.title || (typeof service === 'string' ? service : '');
+  const hasCategory = Boolean(targetCategory);
+
+  const radiusAvailability = React.useMemo(() => {
+    if (!hasCategory || !centerCoords?.lat || !centerCoords?.lng) {
+      return { isAvailable: true, matchingCount: 0, minDistanceKm: null };
+    }
+    return checkServiceAvailabilityByRadius({
+      category: targetCategory,
+      service,
+      coordinates: centerCoords,
+      workersList: workers
+    });
+  }, [hasCategory, targetCategory, service, centerCoords?.lat, centerCoords?.lng, workers]);
+
+  const isLocationAvailable = !hasCategory || radiusAvailability.isAvailable;
 
   // Search input inside map view
   const [searchQuery, setSearchQuery] = useState('');
@@ -511,15 +534,50 @@ export function LeafletLocationPickerModal({
           </div>
         </div>
 
+        {/* Out-of-Range / Dark Area Overlay or Badge (Swiggy / Zomato style) */}
+        {hasCategory && !isGeocoding && !isLocatingUser && !radiusAvailability.isAvailable && (
+          <div className="mb-3.5 p-3 rounded-2xl bg-amber-50/95 border border-amber-200 text-amber-900 flex items-center gap-2.5 animate-fade-in shadow-2xs">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-xs font-bold leading-snug">
+              Service currently unavailable in this location. We are expanding soon!
+            </p>
+          </div>
+        )}
+
+        {/* Active workers found within dynamic radius badge */}
+        {hasCategory && !isGeocoding && !isLocatingUser && radiusAvailability.isAvailable && radiusAvailability.matchingCount > 0 && (
+          <div className="mb-3.5 px-3.5 py-2 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-emerald-800 flex items-center justify-between text-xs font-bold animate-fade-in">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Service available in this location</span>
+            </div>
+            {radiusAvailability.minDistanceKm !== null && (
+              <span className="text-[10px] text-emerald-700 font-extrabold bg-emerald-100/90 px-2.5 py-0.5 rounded-full">
+                ~{radiusAvailability.minDistanceKm} km away
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Action: Single prominent "Select Location" button at the bottom */}
         <button
           type="button"
           onClick={handleConfirmLocation}
-          disabled={isGeocoding || isLocatingUser}
-          className="w-full py-3.5 px-4 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] active:scale-[0.99] text-white text-sm font-black shadow-[0_8px_25px_-4px_rgba(14,165,224,0.45)] flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60"
+          disabled={isGeocoding || isLocatingUser || !isLocationAvailable}
+          className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition cursor-pointer ${
+            !isLocationAvailable
+              ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60 shadow-none'
+              : 'bg-[#0EA5E0] hover:bg-[#0284C7] active:scale-[0.99] text-white shadow-[0_8px_25px_-4px_rgba(14,165,224,0.45)] disabled:opacity-60'
+          }`}
         >
-          <Check className="w-4 h-4 stroke-[3]" />
-          <span>Select Location</span>
+          {!isLocationAvailable ? (
+            <span>Service Unavailable in this Location</span>
+          ) : (
+            <>
+              <Check className="w-4 h-4 stroke-[3]" />
+              <span>Select Location</span>
+            </>
+          )}
         </button>
 
       </div>

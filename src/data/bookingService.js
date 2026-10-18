@@ -249,6 +249,106 @@ export function isCategoryAvailableInLocation(category, location, workersList) {
   return availableWorkers.length > 0;
 }
 
+/**
+ * Dynamic Radius Availability Check (Swiggy / Zomato style):
+ * When a customer selects or drags the map pin to a location (Lat/Lng),
+ * calculate the distance to all online workers providing that selected service category using the Haversine formula.
+ * Check if there is at least ONE active worker whose individual service radius covers the customer's selected location (i.e., Calculated Distance <= Worker Radius).
+ */
+export function checkServiceAvailabilityByRadius({
+  category,
+  service,
+  coordinates,
+  workersList
+} = {}) {
+  const targetCategory = category || service?.categoryName || service?.title || service;
+  // If no category specified, return available (e.g. general city picker without category filter)
+  if (!targetCategory) {
+    return {
+      isAvailable: true,
+      hasCategory: false,
+      matchingWorkers: [],
+      minDistanceKm: null
+    };
+  }
+
+  const rawLat = coordinates?.lat ?? coordinates?.latitude ?? coordinates?.user_latitude;
+  const rawLng = coordinates?.lng ?? coordinates?.longitude ?? coordinates?.user_longitude;
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+
+  if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+    return {
+      isAvailable: false,
+      hasCategory: true,
+      matchingWorkers: [],
+      minDistanceKm: null,
+      reason: 'invalid_coordinates'
+    };
+  }
+
+  const allWorkers = (Array.isArray(workersList) && workersList.length > 0)
+    ? workersList
+    : getLocalWorkers();
+
+  // If a specific worker was pre-selected (portfolio trade), check that worker
+  const preselectedWorkerId = service?.workerId;
+
+  const matchingWorkers = [];
+  let minDistanceKm = Infinity;
+
+  for (const worker of allWorkers) {
+    if (!worker || !worker.id) continue;
+    if (DUMMY_WORKER_IDS.has(worker.id)) continue;
+
+    // 1. Must be Admin-approved worker
+    const isApproved = worker.is_approved === true || worker.status === 'approved' || worker.workerStatus === 'approved';
+    if (!isApproved) continue;
+
+    // 2. Must be online and active (not offline on duty)
+    if (worker.isOnline === false || worker.isAvailable === false) continue;
+
+    // 3. Preselected worker check if applicable
+    if (preselectedWorkerId && worker.id !== preselectedWorkerId) continue;
+
+    // 4. Must provide the selected service category
+    if (!doesWorkerMatchCategory(worker, targetCategory)) continue;
+
+    // 5. Worker GPS coordinates
+    const workerCoords = getWorkerCoordinates(worker);
+    if (!workerCoords || workerCoords.lat === undefined || workerCoords.lng === undefined) continue;
+
+    // 6. Worker's individual service radius (defaults to 15 KM if not explicitly configured)
+    const workerRadiusKm = Math.max(1, Number(worker.serviceRadius || worker.radius || worker.coverageRadius || 15));
+
+    // 7. Calculate direct Haversine distance
+    const distanceKm = calculateHaversineDistanceKm(lat, lng, Number(workerCoords.lat), Number(workerCoords.lng));
+    if (distanceKm === null) continue;
+
+    // 8. Distance check: Calculated Distance <= Worker Radius
+    if (distanceKm <= workerRadiusKm) {
+      matchingWorkers.push({
+        worker,
+        distanceKm,
+        radiusKm: workerRadiusKm
+      });
+      if (distanceKm < minDistanceKm) {
+        minDistanceKm = distanceKm;
+      }
+    }
+  }
+
+  const isAvailable = matchingWorkers.length > 0;
+
+  return {
+    isAvailable,
+    hasCategory: true,
+    matchingWorkers,
+    matchingCount: matchingWorkers.length,
+    minDistanceKm: Number.isFinite(minDistanceKm) ? minDistanceKm : null
+  };
+}
+
 // Safe Database call wrapper with timeout so Firebase offline/delay never hangs the UI
 export const safeDbPromise = (promise, timeoutMs = 2500) => {
   return Promise.race([

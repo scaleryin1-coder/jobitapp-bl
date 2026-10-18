@@ -18,7 +18,7 @@ import {
   Navigation,
   ExternalLink
 } from 'lucide-react';
-import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber } from '../data/bookingService';
+import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber, checkServiceAvailabilityByRadius } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory, isPortfolioCategory } from '../data/categoriesData';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
@@ -78,11 +78,27 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     coordinates.lat !== undefined &&
     coordinates.lng !== undefined &&
     !isNaN(Number(coordinates.lat)) &&
-    !isNaN(Number(coordinates.lng))
+    !isNaN(Number(coordinates.lng)) &&
+    Number(coordinates.lat) !== 0
   );
+
+  // Dynamic Radius Availability Check (Swiggy / Zomato style)
+  const radiusAvailability = React.useMemo(() => {
+    if (!service || !coordinates?.lat || !coordinates?.lng) {
+      return { isAvailable: true, matchingCount: 0, minDistanceKm: null };
+    }
+    return checkServiceAvailabilityByRadius({
+      category: service.categoryName || service.title,
+      service,
+      coordinates,
+      workersList: workers
+    });
+  }, [service, coordinates?.lat, coordinates?.lng, workers]);
+
+  const isLocationAvailable = radiusAvailability.isAvailable;
   const isDateValid = Boolean(date && date.trim().length > 0);
   const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0);
-  const isFormValid = isAddressValid && isCoordinatesValid && isDateValid && isTimeSlotValid;
+  const isFormValid = isAddressValid && isCoordinatesValid && isDateValid && isTimeSlotValid && isLocationAvailable;
   const todayString = new Date().toISOString().split('T')[0];
 
   // Derive sub-categories for this service/category
@@ -494,6 +510,8 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
                 value={address}
                 coordinates={coordinates}
                 plusCode={plusCode}
+                service={service}
+                workers={workers}
                 onChange={({ address: resolvedAddress, coordinates: newCoords, plusCode: code }) => {
                   setAddress(resolvedAddress);
                   if (newCoords) setCoordinates(newCoords);
@@ -653,18 +671,30 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
               </div>
             )}
 
-            {/* Submit Button - Disabled until user explicitly selects Address, Date, and Time Slot */}
+            {/* Out-of-Range / Dark Area Overlay or Badge (Swiggy / Zomato style) */}
+            {isCoordinatesValid && !radiusAvailability.isAvailable && (
+              <div className="p-3.5 rounded-2xl bg-amber-50/95 border border-amber-200 text-amber-900 flex items-center gap-2.5 animate-fade-in shadow-2xs">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <p className="text-xs font-bold leading-snug">
+                  Service currently unavailable in this location. We are expanding soon!
+                </p>
+              </div>
+            )}
+
+            {/* Submit Button - Disabled until user explicitly selects Address, Date, Time Slot, and location is in range */}
             <button
               type="submit"
-              disabled={!isFormValid || loading}
+              disabled={!isFormValid || loading || !isLocationAvailable}
               className={`w-full py-4 rounded-full font-extrabold text-sm transition flex items-center justify-center gap-2 ${
-                !isFormValid || loading
+                !isFormValid || loading || !isLocationAvailable
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60 shadow-none'
                   : 'bg-[#0EA5E0] hover:bg-[#0284C7] text-white shadow-[0_12px_28px_-6px_rgba(14,165,224,0.45)] active:scale-[0.99] cursor-pointer'
               }`}
             >
               {loading ? (
                 'Confirming...'
+              ) : !isLocationAvailable ? (
+                'Service Unavailable in this Location'
               ) : !isFormValid ? (
                 'Select Address, Date & Time to Book'
               ) : (
