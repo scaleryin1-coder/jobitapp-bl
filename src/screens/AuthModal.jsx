@@ -276,15 +276,20 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
 
     try {
       const regStatus = await checkPhoneRegistered(cleanTen);
-      if (!regStatus.isRegistered) {
-        setError(`No account found for +91 ${cleanTen}. Please sign up first.`);
-        setLoading(false);
-        return;
+      if (regStatus.isRegistered && regStatus.user) {
+        setExistingUserFound(regStatus.user);
+      } else {
+        // Dummy OTP testing fallback: allows logging in directly with any mobile number
+        setExistingUserFound({
+          uid: 'usr_' + cleanTen,
+          phone: `+91 ${cleanTen}`,
+          name: 'Valued Customer',
+          role: selectedRole
+        });
       }
-      setExistingUserFound(regStatus.user);
 
-      // Trigger WhatsApp OTP endpoint via Msg91 API
-      const res = await sendWhatsAppOtp(cleanTen, 'login');
+      // Trigger OTP dispatch / Dummy OTP fallback
+      await sendWhatsAppOtp(cleanTen, 'login');
       setResendTimer(30);
       setCanResend(false);
       setOtpDigits(['', '', '', '', '', '']);
