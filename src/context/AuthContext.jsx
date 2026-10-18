@@ -7,6 +7,9 @@ const defaultAuthContext = {
   currentUser: null,
   loading: false,
   loginWithPhone: async () => null,
+  loginWithPassword: async () => null,
+  registerWithPhoneAndPassword: async () => null,
+  checkPhoneRegistered: async () => ({ isRegistered: false }),
   loginAsWorker: async () => null,
   loginAsAdmin: async () => null,
   updateUserProfile: async () => {},
@@ -216,6 +219,115 @@ export function AuthProvider({ children }) {
     return profile;
   };
 
+  const loginWithPassword = async (phone, password) => {
+    const rawDigits = String(phone || '').replace(/\D/g, '');
+    const cleanTenDigits = rawDigits.slice(-10);
+
+    if (!cleanTenDigits || cleanTenDigits.length !== 10) {
+      throw new Error('Please enter a valid 10-digit mobile number');
+    }
+
+    if (!password || !String(password).trim()) {
+      throw new Error('Please enter your account password');
+    }
+
+    // Direct Admin Rule (Critical): Phone number 8289968045 is ALWAYS Admin!
+    if (cleanTenDigits === '8289968045') {
+      const adminProfile = {
+        uid: 'admin_master',
+        name: 'Master Admin',
+        email: 'admin@jobit.com',
+        phone: '+91 82899 68045',
+        role: 'admin',
+        city: 'Headquarters'
+      };
+
+      if (isFirebaseConfigured && db) {
+        try {
+          await safeDbPromise(setDoc(doc(db, 'users', 'admin_master'), adminProfile, { merge: true }), 1500);
+        } catch {}
+      }
+
+      setCurrentUser(adminProfile);
+      localStorage.setItem('jobit_user', JSON.stringify(adminProfile));
+      return adminProfile;
+    }
+
+    const regStatus = await checkPhoneRegistered(cleanTenDigits);
+    if (!regStatus.isRegistered || !regStatus.user) {
+      throw new Error(`No account found for mobile +91 ${cleanTenDigits}. Please sign up first.`);
+    }
+
+    const user = regStatus.user;
+    if (user.password && String(user.password).trim() !== String(password).trim()) {
+      throw new Error('Incorrect password. Please try again or use "Login via OTP".');
+    }
+
+    // Update active session
+    setCurrentUser(user);
+    localStorage.setItem('jobit_user', JSON.stringify(user));
+    return user;
+  };
+
+  const registerWithPhoneAndPassword = async (phone, username, password, role = 'customer', extraData = {}) => {
+    const rawDigits = String(phone || '').replace(/\D/g, '');
+    const cleanTenDigits = rawDigits.slice(-10);
+
+    if (!cleanTenDigits || cleanTenDigits.length !== 10) {
+      throw new Error('Please enter a valid 10-digit mobile number');
+    }
+
+    const cleanUsername = String(username || '').trim();
+    if (!cleanUsername || cleanUsername.length < 2) {
+      throw new Error('Please enter your full name or username (min 2 characters)');
+    }
+
+    const cleanPassword = String(password || '').trim();
+    if (!cleanPassword || cleanPassword.length < 4) {
+      throw new Error('Password must be at least 4 characters long');
+    }
+
+    // Strict Database Constraint: Strictly ONE account per mobile number!
+    const regCheck = await checkPhoneRegistered(cleanTenDigits);
+    if (regCheck.isRegistered) {
+      throw new Error(`An account already exists for +91 ${cleanTenDigits}. Strictly ONE account per mobile number. Please log in directly.`);
+    }
+
+    const uid = 'usr_' + cleanTenDigits;
+    const selectedRole = role === 'worker' ? 'worker' : 'customer';
+
+    const profile = {
+      uid,
+      phone: `+91 ${cleanTenDigits}`,
+      name: cleanUsername,
+      username: cleanUsername,
+      password: cleanPassword,
+      email: `${cleanUsername.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}@example.com`,
+      role: selectedRole,
+      status: selectedRole === 'worker' ? (extraData.status || 'pending') : undefined,
+      workerStatus: selectedRole === 'worker' ? (extraData.workerStatus || extraData.status || 'pending') : undefined,
+      city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
+      photo: selectedRole === 'worker' 
+        ? 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'
+        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      createdAt: new Date().toISOString(),
+      ...extraData
+    };
+
+    saveLocalUserByPhone(cleanTenDigits, profile);
+
+    if (isFirebaseConfigured && db) {
+      try {
+        const userRef = doc(db, 'users', uid);
+        await safeDbPromise(setDoc(userRef, profile, { merge: true }), 1500);
+      } catch {}
+    }
+
+    setCurrentUser(profile);
+    localStorage.setItem('jobit_user', JSON.stringify(profile));
+    return profile;
+  };
+
   const loginAsWorker = async (worker = {}) => {
     const wId = worker.id || worker.workerId || ('worker_' + Date.now());
     const profile = {
@@ -304,6 +416,8 @@ export function AuthProvider({ children }) {
         loading,
         checkPhoneRegistered,
         loginWithPhone,
+        loginWithPassword,
+        registerWithPhoneAndPassword,
         loginAsWorker,
         loginAsAdmin,
         updateUserProfile,
