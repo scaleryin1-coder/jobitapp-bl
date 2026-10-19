@@ -388,12 +388,19 @@ function MainLayout() {
 
   // 3. Default: Customer Dashboard (Service Booking UI)
   const isHomeView = currentScreen === 'main' && activeTab === 'home';
+  const isSplashView = currentScreen === 'splash';
 
   return (
-    <div className={`min-h-screen min-h-[100dvh] ${isHomeView ? 'bg-[#E9F8FD]' : 'bg-slate-100'} flex flex-col items-center justify-start select-none transition-colors duration-200`}>
+    <div 
+      className={`min-h-screen min-h-[100dvh] ${isSplashView ? 'bg-white' : (isHomeView ? 'bg-[#E9F8FD]' : 'bg-slate-100')} flex flex-col items-center justify-start select-none transition-colors duration-200`}
+      style={isSplashView ? { backgroundColor: '#FFFFFF', colorScheme: 'light' } : undefined}
+    >
       
       {/* Clean Web App Container (No phone OS bezel, no hardcoded status bar) */}
-      <div className="w-full max-w-[440px] min-h-screen min-h-[100dvh] bg-white shadow-xl flex flex-col relative overflow-x-hidden">
+      <div 
+        className={`w-full max-w-[440px] min-h-screen min-h-[100dvh] bg-white ${isSplashView ? 'shadow-none' : 'shadow-xl'} flex flex-col relative overflow-x-hidden`}
+        style={isSplashView ? { backgroundColor: '#FFFFFF' } : undefined}
+      >
         
         {/* Dynamic Screen View */}
         <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">

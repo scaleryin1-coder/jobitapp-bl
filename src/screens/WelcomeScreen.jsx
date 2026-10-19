@@ -32,23 +32,32 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
   }, [onGetStarted]);
 
   return (
-    <div className="relative w-full h-full min-h-screen flex flex-col justify-between bg-white overflow-hidden select-none">
+    <div className="relative w-full h-full min-h-screen flex flex-col justify-between bg-white overflow-hidden select-none" style={{ backgroundColor: '#FFFFFF', colorScheme: 'light' }}>
       
       {/* ========================================================
           1. HERO IMAGE (75% - 80% UPPER SCREEN SPACE)
           ======================================================== */}
-      <div className="relative w-full h-[76vh] sm:h-[78vh] overflow-hidden bg-slate-50 flex-shrink-0">
+      <div className="relative w-full h-[76vh] sm:h-[78vh] overflow-hidden bg-white flex-shrink-0" style={{ backgroundColor: '#FFFFFF' }}>
         
         {/* Top Overlay Header: JOBit Brand Badge & Skip Button */}
         <div 
           style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
           className="absolute inset-x-0 z-30 flex items-center justify-between px-5 pointer-events-none"
         >
-          <div className="bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-slate-200/80 shadow-md">
+          <div 
+            className="bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-center pointer-events-auto"
+            style={{ backgroundColor: '#FFFFFF' }}
+          >
             <img
               src="/apple-touch-icon.png"
               alt="JOBit - Reliable Service Partner"
-              className="h-8 sm:h-9 w-auto max-w-[170px] object-contain"
+              className="w-full h-auto max-w-[180px] object-contain mx-auto"
+              style={{
+                maxWidth: '180px',
+                width: '80%',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
             />
           </div>
 
@@ -78,9 +87,6 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
           }`}
         />
 
-        {/* Top subtle vignette for header contrast */}
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/25 to-transparent pointer-events-none" />
-
         {/* Smooth white gradient / fade blend where bottom of photo meets clean white text area */}
         <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-white via-white/85 to-transparent pointer-events-none" />
 
@@ -105,7 +111,7 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
       {/* ========================================================
           2. CONTENT & CTA PLACEMENT (CLEAN WHITE BACKGROUND, LIFTED HIGHER: pb-16)
           ======================================================== */}
-      <div className="relative flex-1 flex flex-col justify-end px-6 pb-16 pt-2 z-20 bg-white text-slate-900">
+      <div className="relative flex-1 flex flex-col justify-end px-6 pb-16 pt-2 z-20 bg-white text-slate-900" style={{ backgroundColor: '#FFFFFF' }}>
         
         {/* Headlines & Subtext sitting comfortably above bottom edge */}
         <div className="mb-4">

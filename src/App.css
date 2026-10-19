@@ -11,8 +11,9 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: 'Outfit', 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #E9F8FD;
+  background-color: #FFFFFF;
   color: #0f172a;
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
