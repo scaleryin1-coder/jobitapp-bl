@@ -1,94 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
-  <!-- Background: Clean solid white -->
-  <rect width="500" height="500" fill="#FFFFFF" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 520" width="100%" height="100%">
+  <!-- Clean solid white canvas background -->
+  <rect width="1100" height="520" fill="#FFFFFF" />
 
-  <g id="logo-container" transform="translate(0, 0)">
+  <g id="brand-logo" transform="translate(60, 40)">
     
-    <!-- 1. VIBRANT DEEP RED LOCATION PIN (Directly above the icon block) -->
-    <g id="location-pin" transform="translate(250, 95)">
-      <!-- Red Pin Outer Shape -->
-      <path d="M0 -55 C-26 -55 -47 -34 -47 -8 C-47 24 0 62 0 62 C0 62 47 24 47 -8 C47 -34 26 -55 0 -55 Z" 
-            fill="#D32F2F" />
-      <!-- Central White Pin Circle -->
-      <circle cx="0" cy="-14" r="17" fill="#FFFFFF" />
+    <!-- Wordmark JOB: Deep Navy Blue (#0B2559) -->
+    <!-- 'J' -->
+    <path d="M 120 70 L 195 70 L 195 240 C 195 320 145 355 60 355 C 20 355 -15 342 -30 328 L -5 268 C 10 278 30 288 60 288 C 100 288 120 270 120 230 Z" fill="#0B2559" />
+    
+    <!-- 'O' -->
+    <path d="M 330 65 C 425 65 490 135 490 230 C 490 325 425 395 330 395 C 235 395 170 325 170 230 C 170 135 235 65 330 65 Z M 330 135 C 275 135 245 175 245 230 C 245 285 275 325 330 325 C 385 325 415 285 415 230 C 415 175 385 135 330 135 Z" fill="#0B2559" />
+
+    <!-- 'B' -->
+    <path d="M 505 70 L 610 70 C 665 70 705 95 705 145 C 705 180 680 205 645 218 C 695 230 725 260 725 315 C 725 370 675 395 605 395 L 505 395 Z M 578 135 L 578 195 L 605 195 C 630 195 645 185 645 165 C 645 145 630 135 605 135 Z M 578 260 L 578 330 L 610 330 C 640 330 658 318 658 295 C 658 272 640 260 610 260 Z" fill="#0B2559" />
+
+    <!-- Wordmark 'it': Bright Red (#E50914) -->
+    <!-- 'i' dot -->
+    <circle cx="790" cy="95" r="42" fill="#E50914" />
+    <!-- 'i' stem -->
+    <rect x="755" y="160" width="70" height="235" rx="14" fill="#E50914" />
+
+    <!-- 't' -->
+    <path d="M 855 205 L 905 205 L 905 160 L 975 160 L 975 205 L 1030 205 L 1030 260 L 975 260 L 975 340 C 975 365 985 375 1010 375 C 1020 375 1030 372 1038 368 L 1045 425 C 1030 435 1005 440 970 440 C 915 440 885 410 885 350 L 885 260 L 855 260 Z" fill="#E50914" />
+
+    <!-- Red Location Pin below J & O -->
+    <g transform="translate(195, 290)">
+      <!-- Navy Blue Orbit Ring -->
+      <ellipse cx="20" cy="40" rx="95" ry="42" fill="none" stroke="#0B2559" stroke-width="22" transform="rotate(-26 20 40)" />
+      <!-- Red Pin Body -->
+      <path d="M 20 -40 C -25 -40 -60 -5 -60 40 C -60 85 20 155 20 155 C 20 155 100 85 100 40 C 100 -5 65 -40 20 -40 Z" fill="#E50914" />
+      <!-- White Center Circle -->
+      <circle cx="20" cy="35" r="28" fill="#FFFFFF" />
     </g>
 
-    <!-- 2. CENTRAL ICON BLOCK: Crisp Deep Navy Blue Squared Badge -->
-    <g id="squared-icon-block" transform="translate(180, 165)">
-      <!-- Outer Rounded Square Container -->
-      <rect x="0" y="0" width="140" height="140" rx="22" fill="#0B172E" />
-      
-      <!-- Inside Icons (Crisp White Vector Silhouettes) -->
-      
-      <!-- Hand gripping styled spanner (plumbing/mechanical) -->
-      <g id="spanner-hand" transform="translate(70, 42)">
-        <!-- Double-ended / Styled Wrench Head angled across -->
-        <path d="M-28 -14 C-25 -20 -18 -22 -12 -18 L-5 -12 L12 -24 C17 -27 24 -25 27 -20 C30 -15 28 -8 23 -5 L6 7 L12 14 C15 19 13 25 7 28 C2 30 -5 28 -8 24 Z" 
-              fill="#FFFFFF" />
-        <!-- Hand / Fist Silhouette gripping around the handle -->
-        <path d="M-12 -6 C-12 -10 -7 -12 -2 -11 C3 -10 6 -7 6 -3 C9 -3 13 -1 13 3 C14 7 11 11 8 13 L-10 13 C-13 13 -14 9 -14 5 C-14 1 -12 -3 -12 -6 Z" 
-              fill="#FFFFFF" stroke="#0B172E" stroke-width="2" />
-        <!-- Wrist / Arm Base -->
-        <rect x="-8" y="10" width="14" height="15" rx="3" fill="#FFFFFF" />
-      </g>
-
-      <!-- House silhouette with checkmark (top-right beside wrench) -->
-      <g id="house-check" transform="translate(98, 48)">
-        <!-- House roof and walls -->
-        <path d="M14 -12 L0 -24 L-14 -12 L-14 12 L14 12 Z" fill="#FFFFFF" />
-        <!-- Roof overhang trim detail -->
-        <path d="M-16 -10 L0 -23 L16 -10" stroke="#0B172E" stroke-width="2.5" fill="none" stroke-linecap="round" />
-        <!-- Centered Confirmation Checkmark inside house -->
-        <path d="M-6 0 L-2 4 L8 -6" fill="none" stroke="#0B172E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
-      </g>
-
-      <!-- Lightning bolt with leaves (electrical & eco / ac services) -->
-      <g id="lightning-leaves" transform="translate(104, 102)">
-        <!-- Lightning bolt -->
-        <path d="M2 -22 L-8 -6 L-1 -6 L-6 8 L6 -4 L0 -4 Z" fill="#FFFFFF" />
-        <!-- Clean Leaf pair beside bolt -->
-        <path d="M5 -1 C5 -8 13 -12 18 -10 C18 -4 13 2 5 -1 Z" fill="#FFFFFF" />
-        <path d="M7 4 C11 1 18 3 20 8 C15 11 9 9 7 4 Z" fill="#FFFFFF" />
-      </g>
-
-      <!-- Water droplet with power symbol (water services / utilities) -->
-      <g id="water-droplet-power" transform="translate(70, 104)">
-        <!-- Droplet silhouette -->
-        <path d="M0 -22 C-14 -6 -14 6 0 14 C14 6 14 -6 0 -22 Z" fill="#FFFFFF" />
-        <!-- Cutout Power symbol inside droplet -->
-        <path d="M-5 -2 C-7 1 -6 6 -2 8 C2 10 7 8 8 4 C9 0 7 -4 4 -6" fill="none" stroke="#0B172E" stroke-width="2" stroke-linecap="round" />
-        <line x1="0" y1="-5" x2="0" y2="1" stroke="#0B172E" stroke-width="2" stroke-linecap="round" />
-      </g>
-
-      <!-- Vertical ladder silhouette (tree services & maintenance climbing) -->
-      <g id="vertical-ladder" transform="translate(30, 84)">
-        <!-- Left and Right Rails -->
-        <line x1="-9" y1="-38" x2="-9" y2="40" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
-        <line x1="9" y1="-38" x2="9" y2="40" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
-        <!-- Ladder Rungs -->
-        <line x1="-9" y1="-28" x2="9" y2="-28" stroke="#FFFFFF" stroke-width="2.5" />
-        <line x1="-9" y1="-14" x2="9" y2="-14" stroke="#FFFFFF" stroke-width="2.5" />
-        <line x1="-9" y1="0" x2="9" y2="0" stroke="#FFFFFF" stroke-width="2.5" />
-        <line x1="-9" y1="14" x2="9" y2="14" stroke="#FFFFFF" stroke-width="2.5" />
-        <line x1="-9" y1="28" x2="9" y2="28" stroke="#FFFFFF" stroke-width="2.5" />
-      </g>
-    </g>
-
-    <!-- 3. TYPOGRAPHY: 'JOBit' (Navy Blue 'JOB' and Vivid Red 'it') -->
-    <g id="brand-text" transform="translate(250, 395)">
-      <!-- Rendered as high-contrast paths/text with standard sans-serif font stack -->
-      <text text-anchor="middle" font-family="'Outfit', 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="78" letter-spacing="-1">
-        <tspan fill="#0B172E">JOB</tspan>
-        <tspan dx="4" fill="#D32F2F">it</tspan>
-      </text>
-    </g>
-
-    <!-- 4. DETAIL TEXT: 'Reliable Local Services | Melattur' -->
-    <g id="tagline-text" transform="translate(250, 435)">
-      <text text-anchor="middle" font-family="'Outfit', 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="16.5" fill="#0B172E" letter-spacing="0.4">
-        Reliable Local Services | Melattur
-      </text>
-    </g>
+    <!-- Tagline: Reliable Service Partner -->
+    <text x="735" y="445" text-anchor="middle" font-family="'Outfit', 'Montserrat', -apple-system, sans-serif" font-weight="700" font-size="34" fill="#0B2559" letter-spacing="0.5">
+      Reliable Service Partner
+    </text>
 
   </g>
 </svg>

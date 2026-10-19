@@ -107,6 +107,7 @@ function MainLayout() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [workers, setWorkers] = useState([]);
+  const [activeChatBooking, setActiveChatBooking] = useState(null);
   const [currentCity, setCurrentCity] = useState(() => {
     return localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   });
