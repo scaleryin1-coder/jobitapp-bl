@@ -47,7 +47,37 @@ export function CustomerDashboard({
 
   // Notification State
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(() => {
+    if (!currentUser || !currentUser.uid) return 0;
+    try {
+      const saved = localStorage.getItem('jobit_customer_notifications');
+      if (saved) {
+        const list = JSON.parse(saved);
+        if (Array.isArray(list)) return list.filter(n => n.unread).length;
+      }
+    } catch {}
+    return 0;
+  });
+
+  // Keep unread notification count in sync with user login/logout state and events
+  useEffect(() => {
+    if (!currentUser || !currentUser.uid) {
+      setUnreadNotifCount(0);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const handleNotifsChanged = (e) => {
+      if (!currentUser || !currentUser.uid) {
+        setUnreadNotifCount(0);
+        return;
+      }
+      const list = Array.isArray(e?.detail) ? e.detail : [];
+      setUnreadNotifCount(list.filter(n => n.unread).length);
+    };
+    window.addEventListener('jobit_notifications_changed', handleNotifsChanged);
+    return () => window.removeEventListener('jobit_notifications_changed', handleNotifsChanged);
+  }, [currentUser]);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');

@@ -86,12 +86,14 @@ function MainLayout() {
       return null;
     }
   });
-  const [activeChatBooking, setActiveChatBooking] = useState(null);
+  const [pendingBookingService, setPendingBookingService] = useState(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(() => {
     try {
+      const savedUser = localStorage.getItem('jobit_user');
+      const hasVerifiedUser = Boolean(savedUser && JSON.parse(savedUser)?.phone);
       const isOpen = localStorage.getItem('jobit_booking_modal_open') === 'true';
       const hasService = Boolean(localStorage.getItem('jobit_selected_service'));
-      return isOpen && hasService;
+      return isOpen && hasService && hasVerifiedUser;
     } catch {
       return false;
     }
@@ -108,6 +110,32 @@ function MainLayout() {
   const [currentCity, setCurrentCity] = useState(() => {
     return localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
   });
+
+  // Verify whether the active user state is verified (authenticated with mobile & name)
+  const isUserVerified = Boolean(
+    currentUser &&
+    currentUser.uid &&
+    currentUser.uid !== 'guest_user' &&
+    currentUser.phone &&
+    currentUser.name &&
+    currentUser.name !== 'Guest User'
+  );
+
+  // Guest booking interception guard: Require authorization before opening final booking modal
+  const handleProceedToBook = (serviceToBook) => {
+    if (!serviceToBook) return;
+
+    if (!isUserVerified) {
+      // Intercept the click, record the desired service, and trigger the Login Modal
+      setPendingBookingService(serviceToBook);
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    // Authorized user: proceed to booking confirmation step
+    setSelectedService(serviceToBook);
+    setIsBookingModalOpen(true);
+  };
 
   // State persistence across browser refresh
   useEffect(() => {
@@ -299,6 +327,10 @@ function MainLayout() {
     await logout();
     setCurrentScreen('main');
     setActiveTab('home');
+    setSelectedService(null);
+    setSelectedPortfolioCategory(null);
+    setIsBookingModalOpen(false);
+    setActiveChatBooking(null);
   };
 
   // ==========================================
@@ -413,8 +445,7 @@ function MainLayout() {
                       price: cat?.basePrice || 350,
                       subCategories: cat?.subCategories || []
                     };
-                    setSelectedService(serviceObj);
-                    setIsBookingModalOpen(true);
+                    handleProceedToBook(serviceObj);
                   }}
                   onSelectService={(serv) => {
                     if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
@@ -439,8 +470,7 @@ function MainLayout() {
                       setCurrentScreen('portfolio-selection');
                       return;
                     }
-                    setSelectedService(serv);
-                    setIsBookingModalOpen(true);
+                    handleProceedToBook(serv);
                   }}
                   onNavigateTab={(tab) => {
                     if (tab === 'bookings') setActiveTab('bookings');
@@ -510,8 +540,7 @@ function MainLayout() {
                   setCurrentScreen('portfolio-selection');
                   return;
                 }
-                setSelectedService(serv);
-                setIsBookingModalOpen(true);
+                handleProceedToBook(serv);
               }}
             />
           )}
@@ -537,8 +566,7 @@ function MainLayout() {
                   workerAvatar: worker.avatar,
                   subCategories: album ? [album.title, `${worker.skill} Custom Service`, 'Standard Inspection'] : [catName, 'Standard Inspection']
                 };
-                setSelectedService(serviceObj);
-                setIsBookingModalOpen(true);
+                handleProceedToBook(serviceObj);
               }}
             />
           )}
@@ -557,7 +585,7 @@ function MainLayout() {
                   setComingSoonCategory(selectedService);
                   return;
                 }
-                setIsBookingModalOpen(true);
+                handleProceedToBook(selectedService);
               }}
               onOpenChat={() => {
                 setActiveChatBooking({
@@ -598,6 +626,11 @@ function MainLayout() {
           workers={workers}
           isOpen={isBookingModalOpen}
           onClose={() => setIsBookingModalOpen(false)}
+          onRequireAuth={() => {
+            setIsBookingModalOpen(false);
+            setPendingBookingService(selectedService);
+            setIsAuthModalOpen(true);
+          }}
           onSuccess={() => {
             setCurrentScreen('main');
             setActiveTab('bookings');
@@ -607,12 +640,25 @@ function MainLayout() {
         {/* Customer Authentication Modal */}
         <AuthModal
           isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
+          bookingPrompt={Boolean(pendingBookingService)}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setPendingBookingService(null);
+          }}
           onSuccess={() => {
-            setCurrentScreen('main');
+            setIsAuthModalOpen(false);
+            if (pendingBookingService) {
+              const target = pendingBookingService;
+              setPendingBookingService(null);
+              setSelectedService(target);
+              setIsBookingModalOpen(true);
+            } else {
+              setCurrentScreen('main');
+            }
           }}
           onOpenWorkerOnboarding={() => {
             setIsAuthModalOpen(false);
+            setPendingBookingService(null);
             setIsWorkerOnboardingOpen(true);
           }}
         />

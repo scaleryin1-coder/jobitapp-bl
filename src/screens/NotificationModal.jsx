@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { X, Bell, ShieldCheck, Tag, Trash2, Clock, CheckCircle2, Check, Sparkles } from 'lucide-react';
 import { getLocalBookings } from '../data/bookingService';
+import { useAuth } from '../context/AuthContext';
 
 const STORAGE_KEY_NOTIFS = 'jobit_customer_notifications';
 
 export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
+  const { currentUser } = useAuth();
+  const isLoggedIn = Boolean(currentUser && currentUser.uid);
+
   const [notifications, setNotifications] = useState(() => {
+    // If not logged in, notifications must be strictly empty
+    if (!currentUser || !currentUser.uid) {
+      return [];
+    }
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY_NOTIFS);
       if (saved) return JSON.parse(saved);
     } catch {}
 
-    // Default clean initial notification items
+    // Default clean initial notification items for logged-in user
     return [
       {
         id: 'notif_welcome',
@@ -34,18 +43,51 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
     ];
   });
 
+  // Sync state when login/logout status changes
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setNotifications([]);
+      onUnreadChange?.(0);
+      try {
+        localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify([]));
+      } catch {}
+    } else {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_NOTIFS);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setNotifications(parsed);
+            onUnreadChange?.(parsed.filter(n => n.unread).length);
+          }
+        }
+      } catch {}
+    }
+  }, [isLoggedIn, onUnreadChange]);
+
+  // Listen for global notification cleanup events (e.g. on Logout)
+  useEffect(() => {
+    const handleNotifsChanged = (e) => {
+      const list = Array.isArray(e?.detail) ? e.detail : [];
+      setNotifications(list);
+      onUnreadChange?.(list.filter(n => n.unread).length);
+    };
+    window.addEventListener('jobit_notifications_changed', handleNotifsChanged);
+    return () => window.removeEventListener('jobit_notifications_changed', handleNotifsChanged);
+  }, [onUnreadChange]);
+
   // Keep unread count in sync with parent dashboard
   useEffect(() => {
-    const unread = notifications.filter(n => n.unread).length;
+    const unread = isLoggedIn ? notifications.filter(n => n.unread).length : 0;
     onUnreadChange?.(unread);
     try {
-      localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
+      localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(isLoggedIn ? notifications : []));
     } catch {}
-  }, [notifications, onUnreadChange]);
+  }, [notifications, isLoggedIn, onUnreadChange]);
 
-  // Synchronize dynamic booking alerts when modal opens
+  // Synchronize dynamic booking alerts when modal opens (only if user is logged in)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isLoggedIn) return;
 
     try {
       const bookings = getLocalBookings() || [];
@@ -91,7 +133,7 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
         return newNotifs;
       });
     } catch {}
-  }, [isOpen]);
+  }, [isOpen, isLoggedIn]);
 
   if (!isOpen) return null;
 
@@ -100,6 +142,7 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
     try {
       localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify([]));
     } catch {}
+    window.dispatchEvent(new CustomEvent('jobit_notifications_changed', { detail: [] }));
     onUnreadChange?.(0);
   };
 
@@ -114,7 +157,7 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
     onUnreadChange?.(0);
   };
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const unreadCount = isLoggedIn ? notifications.filter(n => n.unread).length : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -129,7 +172,7 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
             <div>
               <h3 className="text-sm font-extrabold text-slate-900">Notifications</h3>
               <p className="text-[10px] text-slate-400 font-semibold">
-                {unreadCount > 0 ? `${unreadCount} new update${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+                {unreadCount > 0 ? `${unreadCount} new update${unreadCount > 1 ? 's' : ''}` : 'No notifications'}
               </p>
             </div>
           </div>
@@ -212,9 +255,11 @@ export function NotificationModal({ isOpen, onClose, onUnreadChange }) {
               <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-300 flex items-center justify-center mx-auto mb-1">
                 <Bell className="w-6 h-6 stroke-[1.5]" />
               </div>
-              <h4 className="text-sm font-extrabold text-slate-800">No Notifications Yet</h4>
+              <h4 className="text-sm font-extrabold text-slate-800">No notifications</h4>
               <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-                You're all caught up! Real-time booking dispatches, technician arrival alerts, and offers will appear right here.
+                {isLoggedIn 
+                  ? "You're all caught up! Real-time booking dispatches, technician arrival alerts, and offers will appear right here."
+                  : "You have no notifications. Sign in to view booking updates and alerts."}
               </p>
             </div>
           )}

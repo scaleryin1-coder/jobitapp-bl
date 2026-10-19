@@ -50,8 +50,12 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
 
   // Subscribe to real-time synchronized bookings
   useEffect(() => {
+    if (!currentUser || !currentUser.uid) {
+      setBookings([]);
+      return;
+    }
     const unsub = subscribeBookings((list) => {
-      setBookings(list);
+      setBookings(list || []);
     });
     return () => unsub();
   }, [currentUser?.uid]);

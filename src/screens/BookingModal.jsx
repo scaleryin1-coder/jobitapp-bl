@@ -89,7 +89,7 @@ export const isTimeSlotPassed = (slotString, selectedDateString) => {
   }
 };
 
-export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity, workers = [] }) {
+export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity, workers = [], onRequireAuth }) {
   const { currentUser } = useAuth() || {};
   const effectiveCity = currentCity || localStorage.getItem('jobit_user_location') || currentUser?.city || 'Melattur, Kerala';
   const cleanCity = effectiveCity.split(',')[0].trim();
@@ -215,6 +215,10 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
 
   const handleConfirm = async (e) => {
     e.preventDefault();
+    if (!currentUser || !currentUser.uid || currentUser.uid === 'guest_user' || !currentUser.phone) {
+      onRequireAuth?.();
+      return;
+    }
     if (!isFormValid) {
       setTouched({ address: true, date: true, timeSlot: true });
       return;

@@ -3,6 +3,7 @@ import { auth, db, isFirebaseConfigured } from '../firebase';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { clearAllBookingAndUserData } from '../data/bookingService';
 
 const defaultAuthContext = {
   currentUser: null,
@@ -547,8 +548,16 @@ export function AuthProvider({ children }) {
         await fbSignOut(auth);
       } catch {}
     }
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+    }
     setCurrentUser(null);
     localStorage.removeItem('jobit_user');
+
+    // Clear all stored user data, booking history, notifications, and transient cache
+    clearAllBookingAndUserData();
   };
 
   return (

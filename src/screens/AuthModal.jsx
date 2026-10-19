@@ -30,7 +30,7 @@ export function WhatsAppIcon({ className = "w-4 h-4" }) {
   );
 }
 
-export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }) {
+export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, bookingPrompt = false }) {
   const { 
     loginWithPhone, 
     loginWithPassword, 
@@ -321,6 +321,22 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
         throw new Error('Invalid or expired WhatsApp OTP. Please check the code or tap "Resend via WhatsApp".');
       }
 
+      const hasRegisteredName = Boolean(
+        existingUserFound?.isRegistered && 
+        existingUserFound?.name && 
+        existingUserFound?.name !== 'Valued Customer' && 
+        existingUserFound?.name !== 'Customer'
+      );
+
+      // If phone is verified but no full name is registered, route to setup step to require mandatory Full Name
+      if (!hasRegisteredName) {
+        setSignupUsername('');
+        setSignupStep('setup');
+        setAuthMode('signup');
+        setLoading(false);
+        return;
+      }
+
       const user = await loginWithPhone(
         cleanTen, 
         code, 
@@ -513,8 +529,15 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }
         <div className="flex flex-col items-center text-center pb-2">
           <JobitLogo variant="horizontal" showTagline={false} className="mb-1" />
           <p className="text-xs text-slate-500 font-semibold mt-0.5">
-            Hyperlocal home services marketplace
+            {bookingPrompt 
+              ? 'Please verify your mobile number and name to continue booking'
+              : 'Hyperlocal home services marketplace'}
           </p>
+          {bookingPrompt && (
+            <div className="mt-2 px-3 py-1 bg-sky-50 border border-sky-200 text-[#0EA5E0] text-[11px] font-bold rounded-full">
+              Mobile verification & Full Name required to book
+            </div>
+          )}
         </div>
 
         {/* Top Tab Switcher: Sign In vs Sign Up */}

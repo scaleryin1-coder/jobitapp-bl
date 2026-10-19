@@ -28,6 +28,15 @@ export function ProfileScreen({
   const [email, setEmail] = useState(() => currentUser?.email || '');
   const [radius, setRadius] = useState(() => currentUser?.serviceRadius || '15');
 
+  // Synchronize state when user logs in or logs out
+  React.useEffect(() => {
+    setName(currentUser?.name || '');
+    setCity(currentUser?.city || currentUser?.address || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala');
+    setEmail(currentUser?.email || '');
+    setRadius(currentUser?.serviceRadius || '15');
+    setIsEditing(false);
+  }, [currentUser]);
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;

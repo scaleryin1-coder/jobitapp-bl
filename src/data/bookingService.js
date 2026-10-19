@@ -488,6 +488,44 @@ export function saveLocalBookings(bookings) {
   }
 }
 
+export function clearAllBookingAndUserData() {
+  try {
+    // 1. Clear bookings from localStorage & memory
+    localStorage.removeItem(STORAGE_KEY_BOOKINGS);
+    localStorage.setItem(STORAGE_KEY_BOOKINGS, JSON.stringify([]));
+    localStorage.removeItem('jobit_all_declined_jobs');
+
+    // 2. Clear customer notifications
+    localStorage.removeItem('jobit_customer_notifications');
+    localStorage.setItem('jobit_customer_notifications', JSON.stringify([]));
+
+    // 3. Clear transient selection & active modal states
+    localStorage.removeItem('jobit_selected_service');
+    localStorage.removeItem('jobit_selected_portfolio_cat');
+    localStorage.removeItem('jobit_booking_modal_open');
+
+    // 4. Clear chat caches and worker decline states
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('jobit_chat_') || key.startsWith('jobit_declined_jobs_'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch {}
+
+    // 5. Notify all active subscribers to reset state
+    window.dispatchEvent(new CustomEvent(EVENT_BOOKINGS_CHANGED, { detail: [] }));
+    window.dispatchEvent(new CustomEvent('jobit_notifications_changed', { detail: [] }));
+  } catch (err) {
+    console.warn('Failed to clear booking and user data', err);
+  }
+}
+
+export const clearLocalBookings = clearAllBookingAndUserData;
+
 export function getLocalWorkers() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_WORKERS);
@@ -524,13 +562,27 @@ export function subscribeBookings(callback) {
   let supabaseChannel = null;
 
   const handleLocalChange = () => {
+    const activeUser = localStorage.getItem('jobit_user');
+    if (!activeUser) {
+      callback([]);
+      return;
+    }
     callback(getLocalBookings());
   };
 
   window.addEventListener(EVENT_BOOKINGS_CHANGED, handleLocalChange);
   window.addEventListener('storage', handleLocalChange);
 
-  // Initial trigger from local storage
+  // Initial trigger: check if user is logged in
+  const activeUser = localStorage.getItem('jobit_user');
+  if (!activeUser) {
+    callback([]);
+    return () => {
+      window.removeEventListener(EVENT_BOOKINGS_CHANGED, handleLocalChange);
+      window.removeEventListener('storage', handleLocalChange);
+    };
+  }
+
   callback(getLocalBookings());
 
   // Supabase fetch & realtime sync if configured
