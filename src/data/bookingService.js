@@ -2031,7 +2031,7 @@ export async function registerWorkerOnboarding(onboardingData) {
     city: areaName,
     serviceArea: areaName,
     pincode: (onboardingData.pincode || '').trim(),
-    serviceRadius: String(onboardingData.serviceRadius || '25'),
+    serviceRadius: String(onboardingData.serviceRadius || '5'),
     // Skills & Category matching both arrays and single strings
     category: primaryCategory,
     categoryName: primaryCategory,

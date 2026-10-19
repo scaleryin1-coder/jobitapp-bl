@@ -71,7 +71,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Melattur, Kerala');
   const [pincode, setPincode] = useState('679326');
-  const [serviceRadius, setServiceRadius] = useState('25'); // km
+  const [serviceRadius, setServiceRadius] = useState('5'); // km
 
   // Step 3: Skills & Professional Details (Dynamically synced)
   const [primaryCategory, setPrimaryCategory] = useState('');
@@ -544,7 +544,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       city: city.trim(),
       serviceArea: city.trim(),
       pincode: pincode.trim(),
-      serviceRadius: String(serviceRadius || '25'),
+      serviceRadius: String(serviceRadius || '5'),
       category: primaryCat,
       categoryName: primaryCat,
       categoryId: `cat_${primaryCat.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
@@ -1143,8 +1143,8 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {['5', '10', '15', '25', '50'].map((r) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {['5', '10'].map((r) => (
                         <button
                           key={r}
                           type="button"
