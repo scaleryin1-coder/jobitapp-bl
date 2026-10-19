@@ -641,25 +641,25 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[94vh]">
         
         {/* Top Header */}
-        <div className="bg-gradient-to-r from-[#0EA5E0] via-[#0284C7] to-[#0369A1] p-5 text-white relative">
+        <div className="bg-white border-b border-slate-200/80 p-5 text-slate-900 relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center shadow-xs">
-                <ShieldCheck className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-2xl bg-[#0A192F] text-white flex items-center justify-center shadow-xs">
+                <ShieldCheck className="w-5 h-5 text-sky-400" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-base font-black tracking-tight">Become a Verified Professional</h3>
-                  <span className="px-2 py-0.5 rounded-full bg-white/25 text-[10px] font-black uppercase tracking-wider">PRO</span>
+                  <h3 className="text-base font-black tracking-tight text-slate-900">Become a Verified Professional</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-[#0A192F] text-white text-[10px] font-black uppercase tracking-wider">PRO</span>
                 </div>
-                <p className="text-[11px] text-sky-100 font-semibold mt-0.5">
+                <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
                   Join JOBit certified service network • Earn daily payouts
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition cursor-pointer"
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition cursor-pointer"
               title="Close"
             >
               <X className="w-4 h-4" />
@@ -668,9 +668,9 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
 
           {/* Step Progress Indicators */}
           {!isCompleted && (
-            <div className="mt-4 pt-3 border-t border-white/20">
+            <div className="mt-4 pt-3 border-t border-slate-100">
               <div className="flex items-center justify-between text-xs font-bold mb-2">
-                <span className="text-white">
+                <span className="text-slate-800 font-black">
                   Step {currentStep} of 4: {
                     currentStep === 1 ? 'Personal Details & Live Selfie' :
                     currentStep === 2 ? 'Coverage Location' :
@@ -678,7 +678,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     'Govt KYC & Bank Details'
                   }
                 </span>
-                <span className="text-sky-200">{currentStep * 25}%</span>
+                <span className="text-[#0A192F] font-black">{currentStep * 25}%</span>
               </div>
               
               <div className="grid grid-cols-4 gap-1.5">
@@ -686,7 +686,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   <div
                     key={s}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
-                      s <= currentStep ? 'bg-white shadow-xs' : 'bg-white/30'
+                      s <= currentStep ? 'bg-[#0A192F] shadow-xs' : 'bg-slate-200'
                     }`}
                   />
                 ))}
@@ -743,7 +743,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 </div>
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="font-semibold">Expected Approval:</span>
-                  <span className="font-bold text-sky-600">Within 2 to 4 Hours</span>
+                  <span className="font-bold text-slate-700">Within 2 to 4 Hours</span>
                 </div>
               </div>
 
@@ -753,7 +753,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     onSuccess?.('pending_worker');
                     onClose();
                   }}
-                  className="w-full py-3 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-2xl text-xs font-black shadow-md transition cursor-pointer"
+                  className="w-full py-3 bg-[#0A192F] hover:bg-[#12233f] text-white rounded-2xl text-xs font-black shadow-md transition cursor-pointer"
                 >
                   Go to Partner Portal
                 </button>
@@ -777,10 +777,10 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   
                   {/* UNIFIED ACCOUNT DETECTED CARD */}
                   {isAccountAutoDetected ? (
-                    <div className="p-3.5 bg-gradient-to-r from-sky-50 via-sky-50/60 to-blue-50 border border-sky-200/90 rounded-2xl shadow-2xs">
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl shadow-2xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-[#0EA5E0] text-white flex items-center justify-center font-black text-sm shadow-xs">
+                          <div className="w-10 h-10 rounded-2xl bg-[#0A192F] text-white flex items-center justify-center font-black text-sm shadow-xs">
                             {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
                           </div>
                           <div>
@@ -790,18 +790,18 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                                 <CheckCircle2 className="w-2.5 h-2.5" /> Auto-Linked
                               </span>
                             </div>
-                            <p className="text-[11px] font-bold text-sky-700 flex items-center gap-1 mt-0.5">
-                              <Phone className="w-3 h-3 text-sky-600" />
+                            <p className="text-[11px] font-bold text-slate-700 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-[#0A192F]" />
                               <span>+91 {primaryPhone}</span>
                               <span className="text-slate-400 font-normal ml-1">• Main Customer Phone</span>
                             </p>
                           </div>
                         </div>
-                        <span className="text-[9px] font-black uppercase text-sky-700 bg-white/90 px-2 py-1 rounded-xl border border-sky-100">
+                        <span className="text-[9px] font-black uppercase text-slate-700 bg-white px-2 py-1 rounded-xl border border-slate-200">
                           Single ID
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 font-medium mt-2 pt-2 border-t border-sky-100/80 leading-relaxed">
+                      <p className="text-[10px] text-slate-500 font-medium mt-2 pt-2 border-t border-slate-200/80 leading-relaxed">
                         ✓ Registered phone number automatically detected. No re-entry required. Please complete your professional credentials below.
                       </p>
                     </div>
@@ -819,17 +819,17 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={primaryPhone}
                           onChange={(e) => setPrimaryPhone(e.target.value.replace(/\D/g, ''))}
                           placeholder="e.g. 98568 51023"
-                          className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                         />
                       </div>
                     </div>
                   )}
 
                   {/* MANDATORY LIVE CAMERA SELFIE SECTION (No Avatars Allowed!) */}
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border-2 border-dashed border-[#0EA5E0]/40 space-y-3">
+                  <div className="p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-sky-100 text-[#0EA5E0] flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-lg bg-slate-100 text-[#0A192F] flex items-center justify-center">
                           <Camera className="w-3.5 h-3.5" />
                         </div>
                         <div>
@@ -894,7 +894,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                             <button
                               type="button"
                               onClick={() => startLiveCamera('selfie')}
-                              className="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0A192F] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
                             >
                               <RefreshCw className="w-3 h-3" />
                               <span>Retake Live Selfie</span>
@@ -930,13 +930,13 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         <button
                           type="button"
                           onClick={() => startLiveCamera('selfie')}
-                          className="p-3.5 rounded-2xl bg-sky-500 hover:bg-[#0284C7] text-white transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer shadow-md group active:scale-98"
+                          className="p-3.5 rounded-2xl bg-[#0A192F] hover:bg-[#12233f] text-white transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer shadow-md group active:scale-98"
                         >
                           <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition">
                             <Camera className="w-5 h-5" />
                           </div>
                           <span className="text-xs font-black">Open Live Camera</span>
-                          <span className="text-[9px] text-sky-100 font-semibold">Take Selfie Now</span>
+                          <span className="text-[9px] text-slate-300 font-semibold">Take Selfie Now</span>
                         </button>
 
                         <button
@@ -946,9 +946,9 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                               selfieCameraInputRef.current.click();
                             }
                           }}
-                          className="p-3.5 rounded-2xl bg-white border-2 border-dashed border-sky-300 hover:border-sky-400 hover:bg-sky-50/50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                          className="p-3.5 rounded-2xl bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
                         >
-                          <div className="w-9 h-9 rounded-full bg-sky-100 text-[#0EA5E0] flex items-center justify-center group-hover:scale-110 transition">
+                          <div className="w-9 h-9 rounded-full bg-slate-100 text-[#0A192F] flex items-center justify-center group-hover:scale-110 transition">
                             <Camera className="w-5 h-5" />
                           </div>
                           <span className="text-xs font-black text-slate-800">Phone Camera App</span>
@@ -969,7 +969,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Ramesh Kumar / Anil K"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                     />
                   </div>
 
@@ -987,7 +987,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={altPhone}
                           onChange={(e) => setAltPhone(e.target.value.replace(/\D/g, ''))}
                           placeholder="98765 11223"
-                          className="w-full pl-12 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full pl-12 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                         />
                       </div>
                     </div>
@@ -1001,7 +1001,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="e.g. partner.tech@gmail.com"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
                   </div>
@@ -1015,7 +1015,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       >
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
@@ -1032,7 +1032,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         required
                         value={dob}
                         onChange={(e) => setDob(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
                   </div>
@@ -1046,7 +1046,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               {currentStep === 2 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                    <MapPin className="w-4 h-4 text-[#0EA5E0]" />
+                    <MapPin className="w-4 h-4 text-[#0A192F]" />
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
                       Step 2: Service Coverage & Residential Address
                     </h4>
@@ -1075,7 +1075,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Building name, Street, Landmark, Village / Town"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                     />
                   </div>
 
@@ -1091,7 +1091,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="e.g. Melattur, Kerala"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
 
@@ -1106,7 +1106,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={pincode}
                         onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
                         placeholder="679326"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
                   </div>
@@ -1122,7 +1122,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           onClick={() => setCity(loc)}
                           className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full transition cursor-pointer ${
                             city === loc 
-                              ? 'bg-[#0EA5E0] text-white shadow-xs' 
+                              ? 'bg-[#0A192F] text-white shadow-xs' 
                               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                           }`}
                         >
@@ -1138,7 +1138,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       <label className="text-xs font-bold text-slate-700">
                         Maximum Service Radius <span className="text-red-500">*</span>
                       </label>
-                      <span className="text-xs font-black text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-100">
+                      <span className="text-xs font-black text-[#0A192F] bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
                         {serviceRadius} km radius
                       </span>
                     </div>
@@ -1151,7 +1151,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           onClick={() => setServiceRadius(r)}
                           className={`py-2 text-xs font-black rounded-xl border transition cursor-pointer text-center ${
                             serviceRadius === r 
-                              ? 'border-[#0EA5E0] bg-[#0EA5E0] text-white shadow-xs' 
+                              ? 'border-[#0A192F] bg-[#0A192F] text-white shadow-xs' 
                               : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
                           }`}
                         >
@@ -1170,12 +1170,12 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 <div className="space-y-4 animate-fade-in">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 text-[#0EA5E0]" />
+                      <Briefcase className="w-4 h-4 text-[#0A192F]" />
                       <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
                         Step 3: Profession & Trade Categories
                       </h4>
                     </div>
-                    <span className="text-[10px] font-extrabold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                    <span className="text-[10px] font-extrabold text-[#0A192F] bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                       {categories.length} Categories Synced
                     </span>
                   </div>
@@ -1193,7 +1193,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
                         placeholder="Search all 20+ service categories (e.g. Electrician, AC, Painting)..."
-                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
 
@@ -1208,7 +1208,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                             onClick={() => handleCategoryChange(c.name)}
                             className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                               isSelected
-                                ? 'bg-sky-500 text-white border-sky-500 shadow-xs'
+                                ? 'bg-[#0A192F] text-white border-[#0A192F] shadow-xs'
                                 : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800'
                             }`}
                           >
@@ -1230,14 +1230,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   {/* Sub-skills & Services Offered */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 block">
-                      Specific Sub-Skills Offered for <strong className="text-[#0EA5E0]">{primaryCategory}</strong> <span className="text-red-500">*</span>
+                      Specific Sub-Skills Offered for <strong className="text-[#0A192F]">{primaryCategory}</strong> <span className="text-red-500">*</span>
                     </label>
                     <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200/80">
                       {selectedSubSkills.map((skill) => (
                         <span
                           key={skill}
                           onClick={() => toggleSubSkill(skill)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#0EA5E0] text-white shadow-xs cursor-pointer hover:bg-rose-500 transition"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#0A192F] text-white shadow-xs cursor-pointer hover:bg-rose-500 transition"
                           title="Click to remove"
                         >
                           {skill}
@@ -1253,12 +1253,12 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={customSkillInput}
                         onChange={(e) => setCustomSkillInput(e.target.value)}
                         placeholder="Add another custom specialization..."
-                        className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0EA5E0]"
+                        className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0A192F]"
                       />
                       <button
                         type="button"
                         onClick={handleAddCustomSkill}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                        className="px-3 py-1.5 bg-[#0A192F] hover:bg-[#12233f] text-white rounded-xl text-xs font-bold transition cursor-pointer"
                       >
                         + Add
                       </button>
@@ -1279,7 +1279,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={experienceYears}
                         onChange={(e) => setExperienceYears(e.target.value)}
                         placeholder="e.g. 5"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
 
@@ -1297,7 +1297,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={baseRate}
                           onChange={(e) => setBaseRate(e.target.value)}
                           placeholder="350"
-                          className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                         />
                       </div>
                     </div>
@@ -1311,7 +1311,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               {currentStep === 4 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                    <CreditCard className="w-4 h-4 text-[#0EA5E0]" />
+                    <CreditCard className="w-4 h-4 text-[#0A192F]" />
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
                       Step 4: Mandatory KYC & Bank Verification
                     </h4>
@@ -1350,10 +1350,10 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   />
 
                   {/* 1. MANDATORY AADHAAR CARD VERIFICATION */}
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-sky-100 text-[#0EA5E0] text-[11px] font-black flex items-center justify-center">1</span>
+                        <span className="w-5 h-5 rounded-full bg-slate-100 text-[#0A192F] text-[11px] font-black flex items-center justify-center">1</span>
                         <label className="text-xs font-black text-slate-800">
                           Aadhaar Card <span className="text-red-500">* (Mandatory)</span>
                         </label>
@@ -1377,7 +1377,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           setAadhaarNumber(formatted);
                         }}
                         placeholder="e.g. 7845 2319 8812"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] tracking-wider"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0A192F] tracking-wider"
                       />
                     </div>
 
@@ -1428,7 +1428,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                               <button
                                 type="button"
                                 onClick={() => startLiveCamera('aadhaar')}
-                                className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
+                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0A192F] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
                                 title="Retake with Camera"
                               >
                                 <Camera className="w-3 h-3" />
@@ -1466,13 +1466,13 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           <button
                             type="button"
                             onClick={() => startLiveCamera('aadhaar')}
-                            className="p-3 rounded-2xl bg-sky-50 border-2 border-dashed border-[#0EA5E0]/60 hover:border-[#0EA5E0] hover:bg-sky-100/60 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                            className="p-3 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 hover:border-[#0A192F] hover:bg-slate-100/60 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
                           >
-                            <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-[#0EA5E0] group-hover:scale-110 transition">
+                            <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-[#0A192F] group-hover:scale-110 transition">
                               <Camera className="w-4 h-4" />
                             </div>
-                            <span className="text-xs font-black text-[#0EA5E0]">Take Photo</span>
-                            <span className="text-[9px] text-sky-700/70 font-semibold">Live Camera Capture</span>
+                            <span className="text-xs font-black text-[#0A192F]">Take Photo</span>
+                            <span className="text-[9px] text-slate-500 font-semibold">Live Camera Capture</span>
                           </button>
 
                           <button
@@ -1496,15 +1496,15 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   </div>
 
                   {/* 2. MANDATORY DRIVING LICENSE VERIFICATION */}
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 text-[11px] font-black flex items-center justify-center">2</span>
+                        <span className="w-5 h-5 rounded-full bg-slate-100 text-[#0A192F] text-[11px] font-black flex items-center justify-center">2</span>
                         <label className="text-xs font-black text-slate-800">
                           Driving License / Trade Badge <span className="text-red-500">* (Mandatory)</span>
                         </label>
                       </div>
-                      <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
                         Mandatory KYC
                       </span>
                     </div>
@@ -1520,7 +1520,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={drivingLicenseNumber}
                         onChange={(e) => setDrivingLicenseNumber(e.target.value.toUpperCase())}
                         placeholder="e.g. KL-10-2020-0045129"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] uppercase tracking-wider"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0A192F] uppercase tracking-wider"
                       />
                     </div>
 
@@ -1529,14 +1529,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                       <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
                         <span>Driving License Photo Document <span className="text-red-500">*</span></span>
                         {drivingLicenseDoc?.url && (
-                          <span className="text-[10px] text-purple-600 font-extrabold flex items-center gap-1">
+                          <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" /> Attached
                           </span>
                         )}
                       </label>
 
                       {drivingLicenseDoc?.url ? (
-                        <div className="p-2.5 bg-white rounded-2xl border-2 border-purple-200/80 shadow-xs flex items-center gap-3">
+                        <div className="p-2.5 bg-white rounded-2xl border-2 border-emerald-200/80 shadow-xs flex items-center gap-3">
                           <div 
                             onClick={() => setPreviewModalDoc({ title: 'Driving License Preview', ...drivingLicenseDoc })}
                             className="relative w-20 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200 cursor-pointer group"
@@ -1561,7 +1561,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                             <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
                               <span>{drivingLicenseDoc.size || 'Captured Photo'}</span>
                               <span>•</span>
-                              <span className="text-purple-600 font-bold flex items-center gap-0.5">
+                              <span className="text-emerald-600 font-bold flex items-center gap-0.5">
                                 <Check className="w-2.5 h-2.5" /> Attached
                               </span>
                             </div>
@@ -1571,7 +1571,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                               <button
                                 type="button"
                                 onClick={() => startLiveCamera('license')}
-                                className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-600 text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
+                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0A192F] text-[10px] font-extrabold flex items-center gap-1 transition cursor-pointer"
                                 title="Retake with Camera"
                               >
                                 <Camera className="w-3 h-3" />
@@ -1609,13 +1609,13 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           <button
                             type="button"
                             onClick={() => startLiveCamera('license')}
-                            className="p-3 rounded-2xl bg-purple-50/70 border-2 border-dashed border-purple-300 hover:border-purple-400 hover:bg-purple-50 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
+                            className="p-3 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 hover:border-[#0A192F] hover:bg-slate-100/60 transition flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer group"
                           >
-                            <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-purple-600 group-hover:scale-110 transition">
+                            <div className="w-8 h-8 rounded-full bg-white shadow-xs flex items-center justify-center text-[#0A192F] group-hover:scale-110 transition">
                               <Camera className="w-4 h-4" />
                             </div>
-                            <span className="text-xs font-black text-purple-600">Take Photo</span>
-                            <span className="text-[9px] text-purple-600/70 font-semibold">Live Camera Capture</span>
+                            <span className="text-xs font-black text-[#0A192F]">Take Photo</span>
+                            <span className="text-[9px] text-slate-500 font-semibold">Live Camera Capture</span>
                           </button>
 
                           <button
@@ -1654,7 +1654,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={accountHolderName}
                         onChange={(e) => setAccountHolderName(e.target.value)}
                         placeholder="As printed on bank passbook"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
 
@@ -1669,7 +1669,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={bankName}
                           onChange={(e) => setBankName(e.target.value)}
                           placeholder="State Bank of India"
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                         />
                       </div>
 
@@ -1683,7 +1683,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={ifscCode}
                           onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
                           placeholder="SBIN0008421"
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0] uppercase"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0A192F] uppercase"
                         />
                       </div>
                     </div>
@@ -1699,7 +1699,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={accountNumber}
                           onChange={(e) => setAccountNumber(e.target.value)}
                           placeholder="••••••••••••"
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                         />
                       </div>
 
@@ -1713,7 +1713,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           value={confirmAccountNumber}
                           onChange={(e) => setConfirmAccountNumber(e.target.value)}
                           placeholder="Re-enter Account No."
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                         />
                       </div>
                     </div>
@@ -1727,7 +1727,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                         value={upiId}
                         onChange={(e) => setUpiId(e.target.value)}
                         placeholder="e.g. 9856851023@okaxis"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0A192F]"
                       />
                     </div>
                   </div>
@@ -1774,7 +1774,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={handleNextStep}
-                className="px-6 py-2.5 bg-[#0EA5E0] hover:bg-[#0284C7] text-white rounded-2xl text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer ml-auto"
+                className="px-6 py-2.5 bg-[#0A192F] hover:bg-[#12233f] text-white rounded-2xl text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer ml-auto"
               >
                 <span>Next Step</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1808,7 +1808,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               {/* Header */}
               <div className="p-4 bg-slate-800/90 flex items-center justify-between text-white border-b border-slate-700">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-[#0EA5E0] flex items-center justify-center text-white">
+                  <div className="w-7 h-7 rounded-full bg-[#0A192F] flex items-center justify-center text-white">
                     <Camera className="w-4 h-4" />
                   </div>
                   <div>
@@ -1839,7 +1839,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
               <div className="relative aspect-square sm:aspect-4/3 bg-black flex items-center justify-center overflow-hidden">
                 {cameraLoading && (
                   <div className="text-center text-white space-y-2 p-4">
-                    <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mx-auto" />
                     <p className="text-xs font-bold text-slate-300">Opening camera stream...</p>
                   </div>
                 )}
@@ -1860,7 +1860,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                           licenseCameraInputRef.current?.click();
                         }
                       }}
-                      className="px-4 py-2 bg-[#0EA5E0] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                      className="px-4 py-2 bg-[#0A192F] hover:bg-[#12233f] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
                     >
                       Use Phone Camera App
                     </button>
@@ -1877,14 +1877,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     {/* Framing Guidelines */}
                     {liveCameraTarget === 'selfie' ? (
                       <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
-                        <div className="w-52 h-52 rounded-full border-2 border-dashed border-sky-400/90 shadow-[0_0_30px_rgba(14,165,224,0.3)] flex items-center justify-center" />
+                        <div className="w-52 h-52 rounded-full border-2 border-dashed border-slate-300/90 shadow-[0_0_30px_rgba(255,255,255,0.2)] flex items-center justify-center" />
                         <div className="mt-3 text-center text-[10px] text-white/95 bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs font-bold">
                           Fit your face inside the circle
                         </div>
                       </div>
                     ) : (
-                      <div className="absolute inset-4 border-2 border-dashed border-sky-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
-                        <div className="flex justify-between text-[9px] text-sky-300 font-bold tracking-wider uppercase bg-black/50 px-2 py-0.5 rounded-md self-start">
+                      <div className="absolute inset-4 border-2 border-dashed border-slate-300/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
+                        <div className="flex justify-between text-[9px] text-slate-200 font-bold tracking-wider uppercase bg-black/50 px-2 py-0.5 rounded-md self-start">
                           {liveCameraTarget === 'aadhaar' ? 'Aadhaar Card' : 'Driving License'} Frame
                         </div>
                         <div className="text-center text-[10px] text-white/90 bg-black/50 px-2 py-1 rounded-lg backdrop-blur-xs font-medium">
@@ -1922,10 +1922,10 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                   type="button"
                   disabled={cameraLoading || !!cameraError}
                   onClick={captureLivePhoto}
-                  className="w-14 h-14 rounded-full bg-white hover:bg-slate-100 border-4 border-sky-400 shadow-xl flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-40"
+                  className="w-14 h-14 rounded-full bg-white hover:bg-slate-100 border-4 border-slate-300 shadow-xl flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-40"
                   title="Snap Photo"
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#0EA5E0] flex items-center justify-center text-white">
+                  <div className="w-10 h-10 rounded-full bg-[#0A192F] flex items-center justify-center text-white">
                     <Camera className="w-5 h-5" />
                   </div>
                 </button>
