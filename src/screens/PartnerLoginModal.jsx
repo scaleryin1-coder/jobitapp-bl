@@ -188,7 +188,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <button
                 type="button"
                 onClick={handleQuickWorkerLogin}
-                className="w-full py-2.5 rounded-xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#0A192F] hover:bg-[#12233f] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
               >
                 <span>⚡ Instant Verified Pro Login ({workers[0].name})</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -206,7 +206,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
                 onClose();
                 onOpenWorkerOnboarding?.();
               }}
-              className="w-full py-2 rounded-xl bg-white border border-[#0EA5E0] text-[#0EA5E0] hover:bg-sky-50 text-[11px] font-black transition flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2 rounded-xl bg-white border border-[#0A192F] text-[#0A192F] hover:bg-slate-50 text-[11px] font-black transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <span>🚀 Register as New Pro (4-Step Form)</span>
             </button>
@@ -219,7 +219,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <button
                 type="button"
                 onClick={() => setWorkerLoginMethod('credentials')}
-                className={`cursor-pointer ${workerLoginMethod === 'credentials' ? 'text-[#0EA5E0] font-black underline' : 'hover:text-slate-800'}`}
+                className={`cursor-pointer ${workerLoginMethod === 'credentials' ? 'text-[#0A192F] font-black underline' : 'hover:text-slate-800'}`}
               >
                 Email & Pass
               </button>
@@ -227,7 +227,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <button
                 type="button"
                 onClick={() => setWorkerLoginMethod('profile')}
-                className={`cursor-pointer ${workerLoginMethod === 'profile' ? 'text-[#0EA5E0] font-black underline' : 'hover:text-slate-800'}`}
+                className={`cursor-pointer ${workerLoginMethod === 'profile' ? 'text-[#0A192F] font-black underline' : 'hover:text-slate-800'}`}
               >
                 PIN / Profile
               </button>
@@ -247,7 +247,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
                     required
                     value={workerEmail}
                     onChange={(e) => setWorkerEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0EA5E0] outline-none"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0A192F] outline-none"
                     placeholder="worker@jobit.com or phone"
                   />
                 </div>
@@ -264,7 +264,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
                     required
                     value={workerPassword}
                     onChange={(e) => setWorkerPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0EA5E0] outline-none"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0A192F] outline-none"
                     placeholder="worker123"
                   />
                 </div>
@@ -273,7 +273,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-3 rounded-full bg-[#0A192F] hover:bg-[#12233f] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>{loading ? 'Authenticating...' : 'Sign In to Pro Dashboard'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -288,7 +288,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
                 <select
                   value={selectedWorkerId}
                   onChange={(e) => setSelectedWorkerId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0EA5E0] outline-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0A192F] outline-none"
                 >
                   {workers.length === 0 && pendingWorkers.length === 0 && (
                     <option value="">No technicians found - Register Below</option>
@@ -317,7 +317,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
                     maxLength={4}
                     value={workerPin}
                     onChange={(e) => setWorkerPin(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black tracking-widest text-slate-800 focus:border-[#0EA5E0] outline-none"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black tracking-widest text-slate-800 focus:border-[#0A192F] outline-none"
                     placeholder="1234"
                   />
                 </div>
@@ -327,7 +327,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
               <button
                 type="submit"
                 disabled={loading || (!selectedWorkerId && workers.length === 0 && pendingWorkers.length === 0)}
-                className="w-full py-3 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-3 rounded-full bg-[#0A192F] hover:bg-[#12233f] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>{loading ? 'Accessing...' : 'Open Worker Dashboard'}</span>
                 <ArrowRight className="w-4 h-4" />
