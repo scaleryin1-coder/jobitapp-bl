@@ -482,67 +482,20 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
           <X className="w-4 h-4" />
         </button>
 
-        {/* 1-Tap Quick Demo Logins Header */}
-        <div className="mb-4 pb-3 border-b border-slate-100">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
-            ⚡ Quick Demo Access
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={async () => {
-                setLoading(true);
-                await loginWithPhone('9876500001', 'demo_auth', 'Aman Gupta', 'customer');
-                setLoading(false);
-                onSuccess?.('customer');
-                onClose();
-              }}
-              className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
-            >
-              <User className="w-3.5 h-3.5 text-slate-500" />
-              <span>Customer Demo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={async () => {
-                setLoading(true);
-                await loginAsWorker({
-                  id: 'worker_rajesh',
-                  name: 'Rajesh Sharma',
-                  skill: 'Plumbing Specialist',
-                  phone: '98765 43210'
-                });
-                setLoading(false);
-                onSuccess?.('worker');
-                onClose();
-              }}
-              className="py-1.5 px-2 bg-sky-50 hover:bg-sky-100 text-[#0EA5E0] rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
-            >
-              <Briefcase className="w-3.5 h-3.5 text-[#0EA5E0]" />
-              <span>Verified Pro</span>
-            </button>
+        {/* Brand Header: Official JOBit logo/text neatly centered */}
+        <div className="flex flex-col items-center justify-center text-center pt-1 pb-4">
+          <div className="flex items-center justify-center font-sans tracking-tight text-3xl font-black select-none">
+            <span className="text-[#0B172E]">JOB</span>
+            <span className="text-[#D32F2F] ml-0.5">it</span>
           </div>
-        </div>
-
-        {/* Brand Header */}
-        <div className="flex flex-col items-center text-center pb-2">
-          <JobitLogo variant="horizontal" showTagline={false} className="mb-1" />
-          <p className="text-xs text-slate-500 font-semibold mt-0.5">
-            {bookingPrompt 
-              ? 'Please verify your mobile number and name to continue booking'
-              : 'Hyperlocal home services marketplace'}
+          <p className="text-[11px] font-semibold text-slate-400 tracking-wide mt-1">
+            Reliable Local Services
           </p>
-          {bookingPrompt && (
-            <div className="mt-2 px-3 py-1 bg-sky-50 border border-sky-200 text-[#0EA5E0] text-[11px] font-bold rounded-full">
-              Mobile verification & Full Name required to book
-            </div>
-          )}
         </div>
 
         {/* Top Tab Switcher: Sign In vs Sign Up */}
         {(signupStep === 'phone' || loginStep === 'password' || loginStep === 'otp_phone') && (
-          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl mb-4">
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-5">
             <button
               type="button"
               onClick={() => {
@@ -550,10 +503,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 setLoginStep('password');
                 setError('');
               }}
-              className={`py-2 rounded-xl text-xs font-black transition cursor-pointer ${
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 authMode === 'login'
                   ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Sign In
@@ -565,10 +518,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 setSignupStep('phone');
                 setError('');
               }}
-              className={`py-2 rounded-xl text-xs font-black transition cursor-pointer ${
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 authMode === 'signup'
-                  ? 'bg-[#0EA5E0] text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Sign Up
@@ -578,7 +531,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
 
         {/* Error Notification */}
         {error && (
-          <div className="mb-3 text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-xl border border-red-200 flex items-start gap-2 animate-fade-in">
+          <div className="mb-4 text-xs text-red-600 font-semibold bg-red-50 p-3 rounded-xl border border-red-200 flex items-start gap-2 animate-fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
             <div className="flex-1 leading-snug">
               <span>{error}</span>
@@ -590,7 +543,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                     setLoginStep('password');
                     setError('');
                   }}
-                  className="block mt-1 font-black text-[#0EA5E0] underline cursor-pointer"
+                  className="block mt-1 font-bold text-[#0B172E] underline cursor-pointer"
                 >
                   Click here to Sign In with Password or OTP →
                 </button>
@@ -601,7 +554,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
 
         {/* WhatsApp OTP Sent Notification Banner */}
         {otpSentNotification && (loginStep === 'otp_verify' || signupStep === 'otp') && (
-          <div className="mb-3 text-xs text-emerald-800 font-semibold bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/80 flex items-center gap-2 animate-fade-in shadow-xs">
+          <div className="mb-4 text-xs text-emerald-800 font-semibold bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/80 flex items-center gap-2 animate-fade-in shadow-xs">
             <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
             <span className="flex-1 text-[11px] font-bold">{otpSentNotification}</span>
           </div>
@@ -614,17 +567,17 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
           <>
             {/* 1. Direct Mobile Number + Password Login */}
             {loginStep === 'password' && (
-              <form onSubmit={handlePasswordLoginSubmit} className="space-y-3.5">
+              <form onSubmit={handlePasswordLoginSubmit} className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">Sign in to your account</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Enter your mobile number and password</p>
+                  <h3 className="text-sm font-bold text-slate-900">Sign in to your account</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Enter your mobile number and password</p>
                 </div>
 
                 {/* Mobile Number or Username */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Mobile Number or Username</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400 flex items-center">
+                    <span className="absolute left-3.5 top-3 text-xs font-bold text-slate-400 flex items-center">
                       {/^\d+$/.test(loginIdentifier || phone) ? '+91' : <User className="w-4 h-4 text-slate-400" />}
                     </span>
                     <input
@@ -640,7 +593,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         }
                         setError('');
                       }}
-                      className={`w-full ${/^\d+$/.test(loginIdentifier || phone) ? 'pl-12' : 'pl-10'} pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]`}
+                      className={`w-full ${/^\d+$/.test(loginIdentifier || phone) ? 'pl-12' : 'pl-10'} pr-4 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all`}
                       placeholder="10-digit mobile or username"
                       autoFocus
                     />
@@ -648,7 +601,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 </div>
 
                 {/* Password Input */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-slate-700">Password</label>
                     <button
@@ -657,13 +610,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setLoginStep('otp_phone');
                         setError('');
                       }}
-                      className="text-[11px] font-extrabold text-[#0EA5E0] hover:underline cursor-pointer"
+                      className="text-[11px] font-bold text-slate-700 hover:text-[#0B172E] hover:underline cursor-pointer"
                     >
                       Login via OTP?
                     </button>
                   </div>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type={showLoginPassword ? 'text' : 'password'}
                       required
@@ -672,13 +625,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setLoginPassword(e.target.value);
                         setError('');
                       }}
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all"
                       placeholder="Enter account password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowLoginPassword(!showLoginPassword)}
-                      className="w-6 h-6 absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
+                      className="w-7 h-7 absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
                     >
                       {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -689,13 +642,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl bg-[#0B172E] hover:bg-[#182848] text-white font-bold text-xs shadow-sm hover:shadow transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
                 >
                   {loading ? (
                     <span>Verifying Credentials...</span>
                   ) : (
                     <>
-                      <span>Sign In Fast</span>
+                      <span>Sign In</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -709,9 +662,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       setLoginStep('otp_phone');
                       setError('');
                     }}
-                    className="text-xs font-extrabold text-slate-600 hover:text-[#0EA5E0] transition flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
+                    className="text-xs font-semibold text-slate-600 hover:text-[#0B172E] transition flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
                   >
-                    <KeyRound className="w-3.5 h-3.5 text-[#0EA5E0]" />
+                    <KeyRound className="w-3.5 h-3.5 text-slate-500" />
                     <span>Forgot password? <strong>Login via fast OTP</strong></span>
                   </button>
 
@@ -724,7 +677,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setSignupStep('phone');
                         setError('');
                       }}
-                      className="font-black text-[#0EA5E0] hover:underline cursor-pointer"
+                      className="font-bold text-[#0B172E] hover:underline cursor-pointer"
                     >
                       Sign Up Here
                     </button>
@@ -735,23 +688,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
 
             {/* 2. Login via OTP - Phone step */}
             {loginStep === 'otp_phone' && (
-              <form onSubmit={handleStartLoginOtp} className="space-y-3.5">
+              <form onSubmit={handleStartLoginOtp} className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">Login with Fast OTP</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">We'll send a fast 6-digit code to verify your phone</p>
+                  <h3 className="text-sm font-bold text-slate-900">Login with Fast OTP</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">We'll send a 6-digit code to verify your phone</p>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Mobile Number</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400">+91</span>
+                    <span className="absolute left-3.5 top-3 text-xs font-bold text-slate-400">+91</span>
                     <input
                       type="tel"
                       maxLength={10}
                       required
                       value={phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all"
                       placeholder="10-digit mobile number"
                       autoFocus
                     />
@@ -761,7 +714,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl bg-[#0B172E] hover:bg-[#182848] text-white font-bold text-xs shadow-sm hover:shadow transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
                 >
                   {loading ? (
                     <span>Sending Code...</span>
@@ -779,7 +732,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                     setLoginStep('password');
                     setError('');
                   }}
-                  className="w-full text-xs text-slate-500 hover:text-slate-800 font-bold transition text-center"
+                  className="w-full text-xs text-slate-500 hover:text-slate-800 font-bold transition text-center cursor-pointer"
                 >
                   ← Sign In with Password instead
                 </button>
@@ -794,23 +747,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                     <WhatsAppIcon className="w-6 h-6" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-slate-900">WhatsApp OTP Verification</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                    <h3 className="text-sm font-bold text-slate-900">WhatsApp OTP Verification</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                       WhatsApp
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     6-digit code sent via WhatsApp to <strong className="text-slate-800">+91 {phone}</strong>
                   </p>
                 </div>
 
                 {/* WhatsApp delivery & test OTP banner */}
-                <div className="p-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-2 text-xs text-emerald-950 shadow-xs">
+                <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center justify-between gap-2 text-xs text-slate-700">
                   <div className="flex items-center gap-2">
                     <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-[11px] leading-tight font-medium text-emerald-900">
-                      OTP: <strong className="font-black text-emerald-950 text-xs tracking-wider">123456</strong>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      OTP: <strong className="font-bold text-slate-900 tracking-wider">123456</strong>
                     </span>
                   </div>
                   <button
@@ -820,7 +773,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       setError('');
                       verifyLoginOtp('123456');
                     }}
-                    className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black hover:bg-emerald-700 transition cursor-pointer active:scale-95 shadow-xs"
+                    className="px-2.5 py-1 rounded-xl bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition cursor-pointer active:scale-95 shadow-xs"
                   >
                     Auto-fill
                   </button>
@@ -841,8 +794,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       onPaste={handleOtpPaste}
                       className={`w-11 h-12 text-center text-lg font-black rounded-xl border bg-slate-50 text-slate-900 outline-none transition ${
                         digit 
-                          ? 'border-emerald-500 bg-white ring-2 ring-emerald-500/20' 
-                          : 'border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20'
+                          ? 'border-slate-800 bg-white ring-2 ring-slate-800/10' 
+                          : 'border-slate-200 focus:border-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-800/10'
                       }`}
                     />
                   ))}
@@ -852,7 +805,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                   type="button"
                   onClick={() => verifyLoginOtp()}
                   disabled={loading || otpDigits.join('').length < 6}
-                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3.5 rounded-2xl bg-[#0B172E] hover:bg-[#182848] text-white font-bold text-xs shadow-sm hover:shadow transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? 'Verifying WhatsApp OTP...' : 'Verify WhatsApp OTP & Sign In'}
                 </button>
@@ -864,7 +817,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       type="button"
                       onClick={() => handleResendWhatsAppOtp('login')}
                       disabled={loading}
-                      className="w-full py-2.5 px-3 rounded-xl border border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50 font-black text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
                     >
                       <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
                       <span>Resend via WhatsApp</span>
@@ -872,7 +825,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                   ) : (
                     <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 py-1">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Resend via WhatsApp in <strong className="text-slate-700 font-black">0:{resendTimer < 10 ? `0${resendTimer}` : resendTimer}</strong></span>
+                      <span>Resend via WhatsApp in <strong className="text-slate-700 font-bold">0:{resendTimer < 10 ? `0${resendTimer}` : resendTimer}</strong></span>
                     </div>
                   )}
 
@@ -880,7 +833,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                     <button
                       type="button"
                       onClick={() => setLoginStep('otp_phone')}
-                      className="hover:text-slate-800 font-bold"
+                      className="hover:text-slate-800 font-bold cursor-pointer"
                     >
                       ← Change Phone
                     </button>
@@ -890,7 +843,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setLoginStep('password');
                         setError('');
                       }}
-                      className="font-bold text-[#0EA5E0] hover:underline"
+                      className="font-bold text-[#0B172E] hover:underline cursor-pointer"
                     >
                       Use Password instead
                     </button>
@@ -908,23 +861,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
           <>
             {/* STEP 1: Phone input & role selection */}
             {signupStep === 'phone' && (
-              <form onSubmit={handleSignupPhoneSubmit} className="space-y-3.5">
+              <form onSubmit={handleSignupPhoneSubmit} className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">Create a New Account</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Strictly one account per mobile number</p>
+                  <h3 className="text-sm font-bold text-slate-900">Create an Account</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Strictly one account per mobile number</p>
                 </div>
 
                 {/* Role Selection Toggle */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600">I am joining as</label>
-                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600">I am joining as</label>
+                  <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl">
                     <button
                       type="button"
                       onClick={() => setSelectedRole('customer')}
-                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         selectedRole === 'customer' 
                           ? 'bg-white text-slate-900 shadow-xs' 
-                          : 'text-slate-500 hover:text-slate-900'
+                          : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
                       <User className="w-3.5 h-3.5" />
@@ -934,10 +887,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                     <button
                       type="button"
                       onClick={() => setSelectedRole('worker')}
-                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         selectedRole === 'worker' 
-                          ? 'bg-[#0EA5E0] text-white shadow-xs' 
-                          : 'text-slate-500 hover:text-slate-900'
+                          ? 'bg-white text-slate-900 shadow-xs' 
+                          : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
                       <Briefcase className="w-3.5 h-3.5" />
@@ -947,17 +900,17 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 </div>
 
                 {/* Mobile Number */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Mobile Number</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-2.5 text-xs font-black text-slate-400">+91</span>
+                    <span className="absolute left-3.5 top-3 text-xs font-bold text-slate-400">+91</span>
                     <input
                       type="tel"
                       maxLength={10}
                       required
                       value={phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all"
                       placeholder="10-digit mobile number"
                       autoFocus
                     />
@@ -967,7 +920,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl bg-[#0B172E] hover:bg-[#182848] text-white font-bold text-xs shadow-sm hover:shadow transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
                 >
                   {loading ? (
                     <span>Checking Database...</span>
@@ -989,7 +942,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         onClose();
                         onOpenWorkerOnboarding?.();
                       }}
-                      className="text-xs font-extrabold text-[#0EA5E0] hover:underline flex items-center justify-center gap-1 mx-auto cursor-pointer"
+                      className="text-xs font-bold text-slate-700 hover:text-[#0B172E] hover:underline flex items-center justify-center gap-1 mx-auto cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Or complete full 4-Step Worker Onboarding</span>
@@ -1007,23 +960,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                     <WhatsAppIcon className="w-6 h-6" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-slate-900">WhatsApp OTP Verification</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                    <h3 className="text-sm font-bold text-slate-900">WhatsApp OTP Verification</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                       WhatsApp
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     6-digit code sent via WhatsApp to <strong className="text-slate-800">+91 {phone}</strong>
                   </p>
                 </div>
 
                 {/* WhatsApp delivery & test OTP banner */}
-                <div className="p-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-2 text-xs text-emerald-950 shadow-xs">
+                <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center justify-between gap-2 text-xs text-slate-700">
                   <div className="flex items-center gap-2">
                     <WhatsAppIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-[11px] leading-tight font-medium text-emerald-900">
-                      OTP: <strong className="font-black text-emerald-950 text-xs tracking-wider">123456</strong>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      OTP: <strong className="font-bold text-slate-900 tracking-wider">123456</strong>
                     </span>
                   </div>
                   <button
@@ -1033,7 +986,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       setError('');
                       verifySignupOtp('123456');
                     }}
-                    className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black hover:bg-emerald-700 transition cursor-pointer active:scale-95 shadow-xs"
+                    className="px-2.5 py-1 rounded-xl bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition cursor-pointer active:scale-95 shadow-xs"
                   >
                     Auto-fill
                   </button>
@@ -1054,8 +1007,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       onPaste={handleOtpPaste}
                       className={`w-11 h-12 text-center text-lg font-black rounded-xl border bg-slate-50 text-slate-900 outline-none transition ${
                         digit 
-                          ? 'border-emerald-500 bg-white ring-2 ring-emerald-500/20' 
-                          : 'border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20'
+                          ? 'border-slate-800 bg-white ring-2 ring-slate-800/10' 
+                          : 'border-slate-200 focus:border-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-800/10'
                       }`}
                     />
                   ))}
@@ -1065,7 +1018,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                   type="button"
                   onClick={() => verifySignupOtp()}
                   disabled={loading || otpDigits.join('').length < 6}
-                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3.5 rounded-2xl bg-[#0B172E] hover:bg-[#182848] text-white font-bold text-xs shadow-sm hover:shadow transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? 'Verifying WhatsApp OTP...' : 'Verify Code & Set Password'}
                 </button>
@@ -1077,7 +1030,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       type="button"
                       onClick={() => handleResendWhatsAppOtp('signup')}
                       disabled={loading}
-                      className="w-full py-2.5 px-3 rounded-xl border border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50 font-black text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
                     >
                       <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
                       <span>Resend via WhatsApp</span>
@@ -1085,7 +1038,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                   ) : (
                     <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 py-1">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Resend via WhatsApp in <strong className="text-slate-700 font-black">0:{resendTimer < 10 ? `0${resendTimer}` : resendTimer}</strong></span>
+                      <span>Resend via WhatsApp in <strong className="text-slate-700 font-bold">0:{resendTimer < 10 ? `0${resendTimer}` : resendTimer}</strong></span>
                     </div>
                   )}
 
@@ -1095,7 +1048,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                       setSignupStep('phone');
                       setError('');
                     }}
-                    className="w-full text-xs text-slate-500 hover:text-slate-800 font-bold transition text-center"
+                    className="w-full text-xs text-slate-500 hover:text-slate-800 font-bold transition text-center cursor-pointer"
                   >
                     ← Change Mobile Number
                   </button>
@@ -1105,22 +1058,22 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
 
             {/* STEP 3: Navigate directly to screen to set Username and Password */}
             {signupStep === 'setup' && (
-              <form onSubmit={handleSignupSetupSubmit} className="space-y-3.5 animate-scale-up">
+              <form onSubmit={handleSignupSetupSubmit} className="space-y-4 animate-scale-up">
                 <div className="text-center pb-1">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 ring-4 ring-emerald-50/50">
-                    <CheckCircle2 className="w-6 h-6" />
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 ring-4 ring-emerald-50/50">
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <h3 className="text-base font-black text-slate-900">Set Username & Password</h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                    Phone +91 {phone} verified! Complete your security setup.
+                  <h3 className="text-sm font-bold text-slate-900">Set Full Name & Password</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Phone +91 {phone} verified! Complete your profile.
                   </p>
                 </div>
 
                 {/* Username Input */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">Username / Full Name</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Full Name</label>
                   <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type="text"
                       required
@@ -1129,7 +1082,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setSignupUsername(e.target.value);
                         setError('');
                       }}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all"
                       placeholder="e.g. Rahul Sharma"
                       autoFocus
                     />
@@ -1137,10 +1090,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 </div>
 
                 {/* Password Input */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Create Password</label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type={showSignupPassword ? 'text' : 'password'}
                       required
@@ -1149,13 +1102,13 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setSignupPassword(e.target.value);
                         setError('');
                       }}
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all"
                       placeholder="At least 4 characters"
                     />
                     <button
                       type="button"
                       onClick={() => setShowSignupPassword(!showSignupPassword)}
-                      className="w-6 h-6 absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
+                      className="w-7 h-7 absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
                     >
                       {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -1163,10 +1116,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                 </div>
 
                 {/* Confirm Password Input */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Confirm Password</label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type={showSignupConfirmPassword ? 'text' : 'password'}
                       required
@@ -1175,29 +1128,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
                         setSignupConfirmPassword(e.target.value);
                         setError('');
                       }}
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0EA5E0]"
+                      className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-900/10 transition-all"
                       placeholder="Re-type password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
-                      className="w-6 h-6 absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
+                      className="w-7 h-7 absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
                     >
                       {showSignupConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Database Constraint Badge */}
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Enforcing constraint: Strictly 1 account per mobile number.</span>
-                </div>
-
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-2xl bg-[#0EA5E0] hover:bg-[#0284C7] text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl bg-[#0B172E] hover:bg-[#182848] text-white font-bold text-xs shadow-sm hover:shadow transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
                 >
                   {loading ? (
                     <span>Setting up Profile...</span>

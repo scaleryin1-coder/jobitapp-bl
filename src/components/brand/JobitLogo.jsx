@@ -60,6 +60,19 @@ export function JobitLogo({
     );
   }
 
+  // Text only variant (clean official JOBit typography without pinned marks)
+  if (variant === 'text') {
+    return (
+      <div 
+        className={`inline-flex items-center select-none font-sans font-black tracking-tight ${onClick ? 'cursor-pointer' : ''} ${className}`}
+        onClick={onClick}
+      >
+        <span className="text-[#0B172E]">JOB</span>
+        <span className="text-[#D32F2F] ml-0.5">it</span>
+      </div>
+    );
+  }
+
   // Horizontal variant (for App Header / Navigation bars)
   if (variant === 'horizontal') {
     return (
