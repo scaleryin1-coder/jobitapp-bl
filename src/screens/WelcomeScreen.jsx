@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, ShieldCheck, Star } from 'lucide-react';
-import jobitLogoImg from '../assets/images/jobit_logo_1792387626740.jpg';
 
 const WELCOME_HERO_IMAGE_URL = 'https://i.imgur.com/1OViWYh.png';
 
@@ -47,12 +46,9 @@ export function WelcomeScreen({ onGetStarted, imageSrc }) {
         >
           <div className="bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-slate-200/80 shadow-md">
             <img
-              src={jobitLogoImg}
+              src="/apple-touch-icon.png"
               alt="JOBit - Reliable Service Partner"
               className="h-8 sm:h-9 w-auto max-w-[170px] object-contain"
-              onError={(e) => {
-                e.currentTarget.src = '/assets/images/jobit_logo_1792387626740.jpg';
-              }}
             />
           </div>
 

@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'jobit-logo.png', 'assets/images/jobit_icon_1792387644073.jpg', 'assets/images/jobit_logo_1792387626740.jpg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'jobit-logo.png'],
       devOptions: {
         enabled: false
       },
@@ -24,43 +24,31 @@ export default defineConfig({
         background_color: '#FFFFFF',
         icons: [
           {
-            src: '/assets/images/jobit_icon_1792387644073.jpg',
-            sizes: '1024x1024',
-            type: 'image/jpeg',
-            purpose: 'any'
-          },
-          {
-            src: '/assets/images/jobit_icon_1792387644073.jpg',
-            sizes: '1024x1024',
-            type: 'image/jpeg',
-            purpose: 'maskable'
-          },
-          {
-            src: '/apple-touch-icon.png?v=4',
+            src: '/apple-touch-icon.png',
             sizes: '180x180',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-192x192.png?v=4',
+            src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-512x512.png?v=4',
+            src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-maskable-192x192.png?v=4',
+            src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'maskable'
           },
           {
-            src: '/pwa-maskable-512x512.png?v=4',
+            src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
