@@ -43,6 +43,79 @@ const POPULAR_LOCATIONS = [
   'Mumbai, Maharashtra'
 ];
 
+/**
+ * Determines whether Driving License is mandatory for the given category.
+ * - OPTIONAL for categories like 'Catering Staff', 'Cleaning', 'Helpers', and other general service/support roles.
+ * - MANDATORY ONLY for 'Driver' or skilled technical categories (like Electrician, Plumber, AC Service, etc.).
+ */
+export function isDrivingLicenseMandatory(categoryName = '') {
+  if (!categoryName) return false;
+  const lower = categoryName.toLowerCase().trim();
+
+  // Explicit non-technical / service / support / catering / cleaning / helper roles: Driving License is OPTIONAL
+  const nonMandatoryKeywords = [
+    'catering',
+    'clean',
+    'helper',
+    'labour',
+    'labor',
+    'loading',
+    'unloading',
+    'maid',
+    'cook',
+    'housekeeping',
+    'laundry',
+    'home support',
+    'support',
+    'garden',
+    'outdoor',
+    'coconut',
+    'climbing',
+    'mehndi',
+    'henna',
+    'beauty',
+    'personal care',
+    'salon',
+    'makeup',
+    'water tank',
+    'waste'
+  ];
+  if (nonMandatoryKeywords.some((kw) => lower.includes(kw))) {
+    return false;
+  }
+
+  // Mandatory ONLY for 'Driver' or skilled technical categories (like Electrician, Plumber, etc.)
+  const technicalMandatoryKeywords = [
+    'driver',
+    'driving',
+    'chauffeur',
+    'electric',
+    'plumb',
+    'ac',
+    'air condition',
+    'hvac',
+    'mechanic',
+    'car',
+    'bike',
+    'technician',
+    'weld',
+    'carpenter',
+    'carpentry',
+    'fabricat',
+    'aluminium',
+    'electronic',
+    'appliance',
+    'cctv',
+    'security',
+    'mason',
+    'civil',
+    'construct',
+    'paint'
+  ];
+
+  return technicalMandatoryKeywords.some((kw) => lower.includes(kw));
+}
+
 export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const { currentUser, loginWithPhone } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -80,11 +153,12 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const [experienceYears, setExperienceYears] = useState('5');
   const [baseRate, setBaseRate] = useState('350');
 
-  // Step 4: Verification & Bank Details (Both Aadhaar & Driving License mandatory)
+  // Step 4: Verification & Bank Details (Aadhaar mandatory; Driving License mandatory only for Driver & skilled trades)
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [aadhaarDoc, setAadhaarDoc] = useState(null);
   const [drivingLicenseNumber, setDrivingLicenseNumber] = useState('');
   const [drivingLicenseDoc, setDrivingLicenseDoc] = useState(null);
+  const isLicenseMandatory = isDrivingLicenseMandatory(primaryCategory);
 
   // Bank Account details
   const [accountHolderName, setAccountHolderName] = useState('');
@@ -454,12 +528,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
       return 'Mandatory Aadhaar Card document photo required! Please take a photo or upload from gallery.';
     }
 
-    // 2. Mandatory Driving License
-    if (!drivingLicenseNumber.trim() || drivingLicenseNumber.trim().length < 5) {
-      return 'Please enter your Driving License / Trade Badge number';
-    }
-    if (!drivingLicenseDoc?.url) {
-      return 'Mandatory Driving License document photo required! Please take a photo or upload from gallery.';
+    // 2. Driving License: Mandatory ONLY for 'Driver' and skilled technical trades, OPTIONAL for Catering Staff, Cleaning, Helpers, etc.
+    if (isLicenseMandatory) {
+      if (!drivingLicenseNumber.trim() || drivingLicenseNumber.trim().length < 5) {
+        return `Please enter your Driving License / Trade Badge number (required for ${primaryCategory || 'this skilled trade'})`;
+      }
+      if (!drivingLicenseDoc?.url) {
+        return `Mandatory Driving License document photo required for ${primaryCategory || 'this skilled trade'}! Please take a photo or upload from gallery.`;
+      }
     }
 
     // 3. Bank Account
@@ -564,21 +640,21 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
         aadhaarNumber: aadhaarNumber.trim(),
         aadhaarDocUrl: aadhaarDoc.url,
         aadhaarDocName: aadhaarDoc.name,
-        drivingLicenseNumber: drivingLicenseNumber.trim(),
-        drivingLicenseDocUrl: drivingLicenseDoc.url,
-        drivingLicenseDocName: drivingLicenseDoc.name,
+        drivingLicenseNumber: (drivingLicenseNumber || '').trim(),
+        drivingLicenseDocUrl: drivingLicenseDoc?.url || '',
+        drivingLicenseDocName: drivingLicenseDoc?.name || '',
         idProofUrl: aadhaarDoc.url,
-        idProofType: 'Aadhaar Card & Driving License',
+        idProofType: drivingLicenseDoc?.url ? 'Aadhaar Card & Driving License' : 'Aadhaar Card',
         photoUrl
       },
       aadhaarNumber: aadhaarNumber.trim(),
       aadhaarDocUrl: aadhaarDoc.url,
       aadhaarDocName: aadhaarDoc.name,
-      drivingLicenseNumber: drivingLicenseNumber.trim(),
-      drivingLicenseDocUrl: drivingLicenseDoc.url,
-      drivingLicenseDocName: drivingLicenseDoc.name,
+      drivingLicenseNumber: (drivingLicenseNumber || '').trim(),
+      drivingLicenseDocUrl: drivingLicenseDoc?.url || '',
+      drivingLicenseDocName: drivingLicenseDoc?.name || '',
       idProofUrl: aadhaarDoc.url,
-      idProofType: 'Aadhaar Card & Driving License',
+      idProofType: drivingLicenseDoc?.url ? 'Aadhaar Card & Driving License' : 'Aadhaar Card',
       accountHolderName: accountHolderName.trim(),
       bankName: bankName.trim(),
       accountNumber: accountNumber.trim(),
@@ -711,7 +787,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 </span>
                 <h3 className="text-xl font-black text-slate-900">Application Submitted! Pending Admin Approval.</h3>
                 <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto mt-1 leading-relaxed">
-                  Thank you, <strong className="text-slate-800">{fullName}</strong>. Your verified live selfie, Aadhaar, and Driving License documents have been received for review.
+                  Thank you, <strong className="text-slate-800">{fullName}</strong>. Your verified live selfie and ID documents have been received for review.
                 </p>
               </div>
 
@@ -738,7 +814,7 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="font-semibold">Documents Attached:</span>
                   <span className="font-bold text-emerald-600 flex items-center gap-1">
-                    <CheckCircle className="w-3.5 h-3.5" /> Aadhaar + Driving License
+                    <CheckCircle className="w-3.5 h-3.5" /> {drivingLicenseDoc?.url ? 'Aadhaar + Driving License' : 'Aadhaar Card (Basic ID)'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600">
@@ -1495,31 +1571,47 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     </div>
                   </div>
 
-                  {/* 2. MANDATORY DRIVING LICENSE VERIFICATION */}
+                  {/* 2. DRIVING LICENSE VERIFICATION (Mandatory for Driver & skilled trades, Optional for Catering Staff, Cleaning, Helpers, etc.) */}
                   <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-slate-100 text-[#0A192F] text-[11px] font-black flex items-center justify-center">2</span>
                         <label className="text-xs font-black text-slate-800">
-                          Driving License / Trade Badge <span className="text-red-500">* (Mandatory)</span>
+                          Driving License / Trade Badge{' '}
+                          {isLicenseMandatory ? (
+                            <span className="text-red-500">* (Mandatory)</span>
+                          ) : (
+                            <span className="text-slate-400 font-semibold text-[10px]">(Optional for {primaryCategory || 'this role'})</span>
+                          )}
                         </label>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                        Mandatory KYC
-                      </span>
+                      {isLicenseMandatory ? (
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Mandatory KYC
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                          Optional
+                        </span>
+                      )}
                     </div>
 
                     {/* Driving License Number */}
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-600 block">
-                        License / Badge Number <span className="text-red-500">*</span>
+                        License / Badge Number{' '}
+                        {isLicenseMandatory ? (
+                          <span className="text-red-500">*</span>
+                        ) : (
+                          <span className="text-slate-400 font-normal text-[10px]">(Optional)</span>
+                        )}
                       </label>
                       <input
                         type="text"
-                        required
+                        required={isLicenseMandatory}
                         value={drivingLicenseNumber}
                         onChange={(e) => setDrivingLicenseNumber(e.target.value.toUpperCase())}
-                        placeholder="e.g. KL-10-2020-0045129"
+                        placeholder={isLicenseMandatory ? "e.g. KL-10-2020-0045129" : "Optional (e.g. KL-10-2020-0045129)"}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0A192F] uppercase tracking-wider"
                       />
                     </div>
@@ -1527,7 +1619,14 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
                     {/* Driving License Upload / Preview Box */}
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-600 flex items-center justify-between">
-                        <span>Driving License Photo Document <span className="text-red-500">*</span></span>
+                        <span>
+                          Driving License Photo Document{' '}
+                          {isLicenseMandatory ? (
+                            <span className="text-red-500">*</span>
+                          ) : (
+                            <span className="text-slate-400 font-normal text-[10px]">(Optional)</span>
+                          )}
+                        </span>
                         {drivingLicenseDoc?.url && (
                           <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" /> Attached
