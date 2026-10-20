@@ -74,6 +74,14 @@ export const initialCategories = [
     color: "#FFEDD5",
     booking_type: "DIRECT_BOOKING",
     order: 9
+  },
+  {
+    id: "cat_catering",
+    name: "Catering Staff",
+    icon: "🍽️",
+    color: "#FEF2F2",
+    booking_type: "CATERING_BULK",
+    order: 10
   }
 ];
 

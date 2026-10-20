@@ -172,6 +172,16 @@ const CATEGORY_MAP = {
     emoji: '🛢️',
     color: '#CFFAFE',
     label: 'Water Tank & Waste Service'
+  },
+  catering: {
+    emoji: '🍽️',
+    color: '#FEF2F2', // soft pastel warm rose/apricot
+    label: 'Catering Staff'
+  },
+  waiter: {
+    emoji: '🍽️',
+    color: '#FEF2F2',
+    label: 'Catering Staff'
   }
 };
 

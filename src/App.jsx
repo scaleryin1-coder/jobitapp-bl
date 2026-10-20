@@ -31,7 +31,8 @@ import { ProfileDrawerModal } from './screens/ProfileDrawerModal';
 import { SkilledProfessionalSelectionScreen } from './screens/SkilledProfessionalSelectionScreen';
 import { LocationPickerModal } from './screens/LocationPickerModal';
 import { ComingSoonCategoryModal } from './components/common/ComingSoonCategoryModal';
-import { isPortfolioCategory } from './data/categoriesData';
+import { CateringBookingModal } from './components/catering/CateringBookingModal';
+import { isPortfolioCategory, isCateringCategory } from './data/categoriesData';
 import { subscribeWorkers, isCategoryAvailableInLocation } from './data/bookingService';
 import { BottomNav } from './components/BottomNav';
 
@@ -98,6 +99,7 @@ function MainLayout() {
       return false;
     }
   });
+  const [isCateringBookingModalOpen, setIsCateringBookingModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPartnerLoginOpen, setIsPartnerLoginOpen] = useState(false);
   const [isWorkerOnboardingOpen, setIsWorkerOnboardingOpen] = useState(false);
@@ -441,6 +443,11 @@ function MainLayout() {
                       return;
                     }
 
+                    if (isCateringCategory(cat || catName)) {
+                      setIsCateringBookingModalOpen(true);
+                      return;
+                    }
+
                     if (isPortfolioCategory(cat || catName)) {
                       setSelectedPortfolioCategory(cat);
                       setCurrentScreen('portfolio-selection');
@@ -456,6 +463,10 @@ function MainLayout() {
                     handleProceedToBook(serviceObj);
                   }}
                   onSelectService={(serv) => {
+                    if (isCateringCategory(serv)) {
+                      setIsCateringBookingModalOpen(true);
+                      return;
+                    }
                     if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
                       setComingSoonCategory(serv);
                       return;
@@ -469,6 +480,10 @@ function MainLayout() {
                     setCurrentScreen('detail');
                   }}
                   onBookService={(serv) => {
+                    if (isCateringCategory(serv)) {
+                      setIsCateringBookingModalOpen(true);
+                      return;
+                    }
                     if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
                       setComingSoonCategory(serv);
                       return;
@@ -640,6 +655,18 @@ function MainLayout() {
             setIsAuthModalOpen(true);
           }}
           onSuccess={() => {
+            setCurrentScreen('main');
+            setActiveTab('bookings');
+          }}
+        />
+
+        {/* Catering Staff Bulk Shift Booking Modal */}
+        <CateringBookingModal
+          isOpen={isCateringBookingModalOpen}
+          onClose={() => setIsCateringBookingModalOpen(false)}
+          currentCity={currentCity}
+          onSuccess={() => {
+            setIsCateringBookingModalOpen(false);
             setCurrentScreen('main');
             setActiveTab('bookings');
           }}

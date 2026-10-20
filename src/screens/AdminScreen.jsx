@@ -71,9 +71,10 @@ import {
   subscribeDailyGigs,
   updateDailyGigStatus
 } from '../data/bookingService';
-import { compressImage } from '../utils/imageUtils';
 import { PostGigModal } from '../components/gigs/PostGigModal';
 import { ChatAuditModal } from '../components/admin/ChatAuditModal';
+import { CateringShiftManagementAdmin } from '../components/catering/CateringShiftManagementAdmin';
+import { subscribeCateringBookings } from '../data/cateringShiftService';
 import { db, isFirebaseConfigured } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { initialCategories, initialBanners, initialServices } from '../data/seedData';
@@ -118,6 +119,7 @@ export function AdminScreen({ onBack, onLogout }) {
   const [categories, setCategories] = useState(initialCategories || []);
   const [banners, setBanners] = useState(initialBanners || []);
   const [dailyGigs, setDailyGigs] = useState([]);
+  const [cateringBookings, setCateringBookings] = useState([]);
   const [isPostGigOpen, setIsPostGigOpen] = useState(false);
   const [selectedChatAuditBooking, setSelectedChatAuditBooking] = useState(null);
   const [chatLogsSearch, setChatLogsSearch] = useState('');
@@ -244,6 +246,7 @@ export function AdminScreen({ onBack, onLogout }) {
     const unsubS = subscribeServices((list) => setServices(list || []));
     const unsubC = subscribeCategories((list) => setCategories(list || []));
     const unsubGigs = subscribeDailyGigs((list) => setDailyGigs(list || []));
+    const unsubCater = subscribeCateringBookings((list) => setCateringBookings(list || []));
 
     return () => {
       unsubB();
@@ -253,6 +256,7 @@ export function AdminScreen({ onBack, onLogout }) {
       unsubS();
       unsubC();
       unsubGigs();
+      unsubCater();
     };
   }, []);
 
@@ -1040,6 +1044,16 @@ export function AdminScreen({ onBack, onLogout }) {
             </button>
 
             <button
+              onClick={() => setTab('catering')}
+              className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
+                tab === 'catering' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🍽️</span>
+              <span>Catering Shifts ({cateringBookings.length})</span>
+            </button>
+
+            <button
               onClick={() => setTab('users_workers')}
               className={`py-2 px-3.5 rounded-full whitespace-nowrap transition cursor-pointer shrink-0 font-extrabold flex items-center gap-1.5 ${
                 tab === 'users_workers' ? 'bg-[#0EA5E0] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
@@ -1781,6 +1795,15 @@ export function AdminScreen({ onBack, onLogout }) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 5.5 TAB: CATERING SHIFTS & BULK STAFFING */}
+      {/* ========================================================= */}
+      {tab === 'catering' && (
+        <div className="px-5 space-y-3.5 animate-fade-in">
+          <CateringShiftManagementAdmin onOpenChat={onOpenChat} />
         </div>
       )}
 

@@ -190,31 +190,78 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
               className="p-4 rounded-[26px] bg-white border border-slate-200/80 shadow-xs space-y-3 relative overflow-hidden"
             >
               {/* Top Service Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full">
-                    {booking.categoryName || 'Home Service'}
-                  </span>
-                  <h3 className="text-sm font-extrabold text-slate-900 mt-1 leading-tight">
-                    {booking.serviceTitle}
-                  </h3>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-black text-[#0EA5E0]">Flat ₹99</span>
-                  <p className="text-[10px] text-slate-400 font-bold">Visiting Fee Paid</p>
-                </div>
-              </div>
+              {booking.bookingType === 'CATERING_BULK' ? (
+                <>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                        {booking.eventOccasion || 'Catering Staff'}
+                      </span>
+                      <h3 className="text-sm font-extrabold text-slate-900 mt-1 leading-tight">
+                        {booking.venueName || booking.serviceTitle}
+                      </h3>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-rose-600">₹{booking.estimatedTotal}</span>
+                      <p className="text-[10px] text-slate-400 font-bold">Advance ₹{booking.advancePaid || 500} Paid</p>
+                    </div>
+                  </div>
 
-              {/* Clean Customer Booking Summary - Strictly Flat ₹99 Visiting Fee Only */}
-              <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/70 text-xs space-y-1">
-                <div className="flex items-center justify-between text-slate-700 font-bold">
-                  <span>Visiting & Inspection Fee:</span>
-                  <span className="font-black text-emerald-600">Flat ₹99 (Paid Online)</span>
-                </div>
-                <p className="text-[10px] text-slate-500 font-medium pt-0.5">
-                  • Covers technician doorstep visit and inspection. Additional service labor or spare parts (if any) will be quoted on-site after diagnosis.
-                </p>
-              </div>
+                  <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-100 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-slate-800 font-bold">
+                      <span>Staff Allocation:</span>
+                      <span className="font-extrabold text-rose-600">
+                        {booking.totalStaffNeeded} Primary + {booking.standbyStaffNeeded} Standby
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600 text-[11px]">
+                      <span>Event Date & Shift:</span>
+                      <span className="font-bold text-slate-800">{booking.functionDate} • {booking.functionTime}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600 text-[11px]">
+                      <span>Staff Attendance:</span>
+                      <span className="font-extrabold text-emerald-700">
+                        {(booking.primaryWorkers || []).filter(w => ['attendance_confirmed', 'on_my_way'].includes(w.shiftStatus)).length}/{booking.totalStaffNeeded} Confirmed Present
+                      </span>
+                    </div>
+                    <div className="p-2 bg-white rounded-xl border border-rose-100 flex items-center justify-between text-[11px] text-slate-700">
+                      <span className="flex items-center gap-1 text-emerald-700 font-extrabold">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Zero-Drop Guarantee: {booking.standbyStaffNeeded} Standby Ready</span>
+                      </span>
+                      <span className="text-slate-400">10 KM Zone</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full">
+                        {booking.categoryName || 'Home Service'}
+                      </span>
+                      <h3 className="text-sm font-extrabold text-slate-900 mt-1 leading-tight">
+                        {booking.serviceTitle}
+                      </h3>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-[#0EA5E0]">Flat ₹99</span>
+                      <p className="text-[10px] text-slate-400 font-bold">Visiting Fee Paid</p>
+                    </div>
+                  </div>
+
+                  {/* Clean Customer Booking Summary - Strictly Flat ₹99 Visiting Fee Only */}
+                  <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/70 text-xs space-y-1">
+                    <div className="flex items-center justify-between text-slate-700 font-bold">
+                      <span>Visiting & Inspection Fee:</span>
+                      <span className="font-black text-emerald-600">Flat ₹99 (Paid Online)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium pt-0.5">
+                      • Covers technician doorstep visit and inspection. Additional service labor or spare parts (if any) will be quoted on-site after diagnosis.
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* 5-Step Real-time Status Stepper */}
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">

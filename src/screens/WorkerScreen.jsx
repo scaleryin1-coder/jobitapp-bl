@@ -52,6 +52,8 @@ import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 import { PaymentQRModal } from '../components/billing/PaymentQRModal';
 import { compressImage } from '../utils/imageUtils';
+import { WorkerCateringShiftsCard } from '../components/catering/WorkerCateringShiftsCard';
+import { subscribeCateringBookings, seedSampleCateringShiftIfEmpty } from '../data/cateringShiftService';
 
 /**
  * Generates direct Google Maps Navigation URL using exact GPS coordinates:
@@ -71,6 +73,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   const [workers, setWorkers] = useState([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState(() => currentUser?.workerId || currentUser?.uid || '');
   const [bookings, setBookings] = useState([]);
+  const [cateringShifts, setCateringShifts] = useState([]);
   const [declinedJobIds, setDeclinedJobIds] = useState(() => {
     try {
       const allDeclined = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
@@ -138,6 +141,15 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   useEffect(() => {
     const unsub = subscribePortfolios((list) => {
       setPortfolios(list || []);
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to real-time catering shifts
+  useEffect(() => {
+    seedSampleCateringShiftIfEmpty();
+    const unsub = subscribeCateringBookings((list) => {
+      setCateringShifts(list || []);
     });
     return () => unsub();
   }, []);
@@ -285,6 +297,45 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     b.status !== 'rejected' &&
     b.status !== 'declined'
   );
+
+  // Catering Shifts allocated to this worker (as Primary or Standby)
+  const myActiveCateringShifts = cateringShifts.filter(b => {
+    if (!activeWorker?.id) return false;
+    const isPrimary = (b.primaryWorkers || []).some(w => w.workerId === activeWorker.id && w.shiftStatus !== 'unable_to_attend');
+    const isStandby = (b.standbyWorkers || []).some(w => w.workerId === activeWorker.id);
+    return isPrimary || isStandby;
+  });
+
+  // Incoming Catering Broadcasts available for this worker
+  const isCateringSpecialist = Boolean(
+    activeWorker && (
+      doesWorkerMatchCategory(activeWorker, 'Catering Staff') ||
+      activeWorker.category === 'Catering Staff' ||
+      activeWorker.skill === 'Catering Staff' ||
+      (activeWorker.skills || []).some(s => String(s).toLowerCase().includes('cater') || String(s).toLowerCase().includes('waiter'))
+    )
+  );
+
+  const availableCateringBroadcasts = cateringShifts.filter(b => {
+    if (b.status === 'completed' || b.status === 'cancelled') return false;
+    if (!activeWorker?.id) return false;
+    // If worker is already active in primary or standby for this event, do not show in available
+    const inPrimary = (b.primaryWorkers || []).some(w => w.workerId === activeWorker.id);
+    const inStandby = (b.standbyWorkers || []).some(w => w.workerId === activeWorker.id);
+    if (inPrimary || inStandby) return false;
+    // If worker reported unable, do not re-show
+    if ((b.droppedWorkers || []).some(w => w.workerId === activeWorker.id)) return false;
+    if ((b.applicants || []).some(a => a.workerId === activeWorker.id)) return false;
+    
+    // Check trade matching
+    if (!isCateringSpecialist) return false;
+
+    // Radius match check (10 km default or worker's radius)
+    const dist = calculateDistanceToJob(b);
+    const maxRadius = Math.max(10, Number(activeWorker?.serviceRadius || 15));
+    if (dist !== null && dist > maxRadius) return false;
+    return true;
+  });
 
   // My completed jobs
   const myCompletedJobs = bookings.filter(b => 
@@ -979,7 +1030,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               activeTab === 'active' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Tasks ({myAssignedJobs.length})
+            Tasks ({myAssignedJobs.length + myActiveCateringShifts.length})
           </button>
           <button
             onClick={() => setActiveTab('available')}
@@ -987,7 +1038,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               activeTab === 'available' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Radar ({incomingBroadcastJobs.length})
+            Radar ({incomingBroadcastJobs.length + availableCateringBroadcasts.length})
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -1013,6 +1064,17 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
       <div className="px-5 space-y-3.5">
         {activeTab === 'active' && (
           <>
+            {/* Catering Shifts Assigned to this Worker */}
+            {myActiveCateringShifts.map((caterShift) => (
+              <WorkerCateringShiftsCard
+                key={caterShift.id}
+                booking={caterShift}
+                activeWorker={activeWorker}
+                mode="active"
+                onSuccess={() => {}}
+              />
+            ))}
+
             {myAssignedJobs.map((job) => {
               const stepInfo = {
                 accepted: {
@@ -1176,7 +1238,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               );
             })}
 
-            {myAssignedJobs.length === 0 && (
+            {myAssignedJobs.length === 0 && myActiveCateringShifts.length === 0 && (
               <div className="py-12 text-center bg-white rounded-3xl border border-slate-100 p-6">
                 <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2.5">
                   <Briefcase className="w-6 h-6" />
@@ -1195,6 +1257,17 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
         {/* Available / Radar Tab */}
         {activeTab === 'available' && (
           <div className="space-y-3.5">
+            {/* Catering Shifts Available for this Worker */}
+            {availableCateringBroadcasts.map((caterShift) => (
+              <WorkerCateringShiftsCard
+                key={caterShift.id}
+                booking={caterShift}
+                activeWorker={activeWorker}
+                mode="available"
+                onSuccess={() => {}}
+              />
+            ))}
+
             {incomingBroadcastJobs.map((job) => (
               <div key={job.id} className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-sm space-y-3">
                 {/* Top: Customer Name & Service Category */}
@@ -1304,7 +1377,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               </div>
             ))}
 
-            {incomingBroadcastJobs.length === 0 && (
+            {incomingBroadcastJobs.length === 0 && availableCateringBroadcasts.length === 0 && (
               <div className="py-12 text-center bg-white rounded-3xl border border-slate-100 p-6">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
                 <h4 className="text-sm font-extrabold text-slate-800">All Jobs Dispatched</h4>

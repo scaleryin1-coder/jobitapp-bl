@@ -324,6 +324,24 @@ export const ALL_MAIN_CATEGORIES = [
       'Solid Waste & Debris Clearing',
       'Drain & Gutter High-Pressure Wash'
     ]
+  },
+  {
+    id: 'cat_catering',
+    name: 'Catering Staff',
+    malayalamName: 'കാറ്ററിംഗ് സ്റ്റാഫ്',
+    displayName: 'Catering Staff & Event Service (കാറ്ററിംഗ് സ്റ്റാഫ്)',
+    icon: '🍽️',
+    color: '#FEF2F2', // soft warm rose/apricot
+    basePrice: 650,
+    booking_type: 'CATERING_BULK',
+    subCategories: [
+      'Event Service Staff & Waiters',
+      'Food Counter & Buffet Handlers',
+      'Kitchen Prep & Dishwashing Assistants',
+      'VIP Table Service Captains',
+      'Beverage & Juice Station Servers',
+      'Clean-up & Banquet Hall Reset Crew'
+    ]
   }
 ];
 
@@ -355,7 +373,8 @@ export function getSubCategoriesForCategory(categoryName = '') {
       ((norm.includes('laund') || norm.includes('wash') || norm.includes('iron')) && cNorm.includes('laundry')) ||
       ((norm.includes('beaut') || norm.includes('salon') || norm.includes('makeup')) && cNorm.includes('beauty')) ||
       ((norm.includes('mehndi') || norm.includes('henna')) && cNorm.includes('mehndi')) ||
-      ((norm.includes('tank') || norm.includes('waste') || norm.includes('sump')) && cNorm.includes('tank'))
+      ((norm.includes('tank') || norm.includes('waste') || norm.includes('sump')) && cNorm.includes('tank')) ||
+      ((norm.includes('cater') || norm.includes('waiter') || norm.includes('buffet') || norm.includes('event staff')) && cNorm.includes('cater'))
     );
   });
 
@@ -410,9 +429,28 @@ export function isPortfolioCategory(categoryOrName) {
 }
 
 /**
- * Returns 'PORTFOLIO_SELECT' or 'DIRECT_BOOKING' for a category
+ * Checks whether a category represents bulk catering staff and shift management.
+ */
+export function isCateringCategory(categoryOrName) {
+  if (!categoryOrName) return false;
+  if (typeof categoryOrName === 'object') {
+    if (categoryOrName.booking_type === 'CATERING_BULK' || categoryOrName.bookingType === 'CATERING_BULK') {
+      return true;
+    }
+    const name = (categoryOrName.name || categoryOrName.title || categoryOrName.categoryName || '').toLowerCase();
+    const id = (categoryOrName.id || categoryOrName.categoryId || '').toLowerCase();
+    return id.includes('cater') || name.includes('cater') || name.includes('waiter');
+  }
+  const str = String(categoryOrName).toLowerCase();
+  return str.includes('cater') || str.includes('waiter');
+}
+
+/**
+ * Returns 'CATERING_BULK', 'PORTFOLIO_SELECT', or 'DIRECT_BOOKING' for a category
  */
 export function getCategoryBookingType(categoryOrName) {
-  return isPortfolioCategory(categoryOrName) ? 'PORTFOLIO_SELECT' : 'DIRECT_BOOKING';
+  if (isCateringCategory(categoryOrName)) return 'CATERING_BULK';
+  if (isPortfolioCategory(categoryOrName)) return 'PORTFOLIO_SELECT';
+  return 'DIRECT_BOOKING';
 }
 

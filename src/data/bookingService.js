@@ -183,7 +183,8 @@ export function doesWorkerMatchCategory(worker, category) {
     { key: 'electron', test: (s) => s.includes('electron') || s.includes('tv') || s.includes('appliance') },
     { key: 'laund', test: (s) => s.includes('laund') || s.includes('iron') || s.includes('dry clean') },
     { key: 'support', test: (s) => s.includes('support') || s.includes('elder') || s.includes('domestic') || s.includes('home help') },
-    { key: 'tank', test: (s) => s.includes('tank') || s.includes('water tank') || s.includes('sump') }
+    { key: 'tank', test: (s) => s.includes('tank') || s.includes('water tank') || s.includes('sump') },
+    { key: 'catering', test: (s) => s.includes('cater') || s.includes('food server') || s.includes('buffet') || s.includes('waiter') || s.includes('banquet') || s.includes('event staff') }
   ];
 
   for (const m of tradeMatchers) {
