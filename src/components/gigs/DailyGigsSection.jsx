@@ -77,116 +77,120 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
 
   return (
     <section className="w-full px-4 sm:px-5 py-3 select-none">
-      {/* 1. Clean Structured Header Row matching JOBit Design Standard */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base sm:text-lg font-black text-[#111827] tracking-tight">
-            Daily Gigs & Shift Work
-          </h2>
-          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-[#4B6EF5] border border-blue-100">
-            ⚡ Urgent Shifts
-          </span>
-        </div>
+      {/* 1. Page Background Frame: Subtle Tinted Cream/Amber Container providing depth & contrast */}
+      <div className="w-full rounded-3xl bg-amber-50/30 border border-amber-100/70 p-4 sm:p-5 shadow-xs">
+        
+        {/* Header Row */}
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Daily Gigs & Shift Work
+            </h2>
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200/80">
+              ⚡ Urgent Shifts
+            </span>
+          </div>
 
-        {/* Post a Gig Action Button */}
-        <button
-          type="button"
-          onClick={() => setIsPostModalOpen(true)}
-          className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
-        >
-          <Plus className="w-3.5 h-3.5 text-white stroke-[2.5]" />
-          <span>Post a Gig</span>
-        </button>
-      </div>
-
-      <p className="text-xs text-slate-500 font-medium mb-3">
-        Short-term staff needed in {currentCity.split(',')[0]} (Petrol pumps, retail stores, delivery & helpers)
-      </p>
-
-      {/* 2. Interactive Filter Tabs Styled with Brand Blue / Clean Slate Palette */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-3 pt-0.5">
-        {FILTER_TABS.map((tab) => {
-          const isActive = activeFilter === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer border ${
-                isActive
-                  ? 'bg-[#4B6EF5] text-white border-[#4B6EF5] shadow-xs'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90 shadow-2xs'
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 3. Cards Container (Horizontal Snap Scroll on mobile, responsive grid on desktop/expanded) */}
-      {filteredGigs.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-white border border-slate-200/80 text-center space-y-2 mt-1 shadow-xs">
-          <Briefcase className="w-8 h-8 text-slate-300 mx-auto" />
-          <h4 className="text-sm font-bold text-slate-800">No shift vacancies in this category</h4>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
-            Need temporary staff for your shop or business? Post an urgent vacancy in under a minute.
-          </p>
+          {/* Primary Action Button: Warm Amber/Gold Tone */}
           <button
             type="button"
             onClick={() => setIsPostModalOpen(true)}
-            className="mt-2 px-4 py-2 bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            Post First Vacancy
+            <Plus className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+            <span>Post a Gig</span>
           </button>
         </div>
-      ) : showAllGrid ? (
-        /* Full Grid Mode */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-1">
-          {filteredGigs.map((gig) => (
-            <GigCard 
-              key={gig.id} 
-              gig={gig} 
-              onCardClick={() => handleCardClick(gig)} 
-            />
-          ))}
-        </div>
-      ) : (
-        /* Modern Horizontal Scroller with Clean White Cards */
-        <div className="relative mt-1">
-          <div className="flex gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1">
-            {filteredGigs.map((gig) => (
-              <div 
-                key={gig.id} 
-                className="w-[285px] sm:w-[320px] shrink-0 snap-start flex"
+
+        <p className="text-xs text-slate-600 font-medium mb-3">
+          Short-term staff needed in {currentCity.split(',')[0]} (Petrol pumps, retail stores, delivery & helpers)
+        </p>
+
+        {/* 2. Interactive Filter Tabs: Modern Amber Tone */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-3 pt-0.5">
+          {FILTER_TABS.map((tab) => {
+            const isActive = activeFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer border ${
+                  isActive
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                    : 'bg-white hover:bg-amber-50/70 text-slate-700 border-slate-200/90 shadow-2xs'
+                }`}
               >
-                <GigCard 
-                  gig={gig} 
-                  onCardClick={() => handleCardClick(gig)} 
-                />
-              </div>
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 3. Cards Container (Horizontal Snap Scroll on mobile, responsive grid on desktop/expanded) */}
+        {filteredGigs.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-white border border-slate-200/80 text-center space-y-2 mt-1 shadow-sm">
+            <Briefcase className="w-8 h-8 text-amber-400 mx-auto" />
+            <h4 className="text-sm font-bold text-slate-800">No shift vacancies in this category</h4>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              Need temporary staff for your shop or business? Post an urgent vacancy in under a minute.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsPostModalOpen(true)}
+              className="mt-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+            >
+              Post First Vacancy
+            </button>
+          </div>
+        ) : showAllGrid ? (
+          /* Full Grid Mode */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-1">
+            {filteredGigs.map((gig) => (
+              <GigCard 
+                key={gig.id} 
+                gig={gig} 
+                onCardClick={() => handleCardClick(gig)} 
+              />
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Footer Strip with Quick Action & Grid Toggle */}
-      <div className="flex items-center justify-between pt-2.5 px-0.5 text-xs">
-        <div className="flex items-center gap-1.5 font-bold text-slate-500">
-          <span className="w-2 h-2 rounded-full bg-[#4B6EF5] animate-ping" />
-          <span>{filteredGigs.length} active shift positions open</span>
-        </div>
-
-        {filteredGigs.length > 2 && (
-          <button
-            type="button"
-            onClick={() => setShowAllGrid(!showAllGrid)}
-            className="font-bold text-[#4B6EF5] hover:text-[#3D5FE0] flex items-center gap-0.5 cursor-pointer transition active:scale-95"
-          >
-            <span>{showAllGrid ? 'Carousel View' : 'View All Grid'}</span>
-            <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
-          </button>
+        ) : (
+          /* Modern Horizontal Scroller with Clean White Cards & Left Amber Highlight */
+          <div className="relative mt-1">
+            <div className="flex gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1">
+              {filteredGigs.map((gig) => (
+                <div 
+                  key={gig.id} 
+                  className="w-[285px] sm:w-[320px] shrink-0 snap-start flex"
+                >
+                  <GigCard 
+                    gig={gig} 
+                    onCardClick={() => handleCardClick(gig)} 
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
+
+        {/* Footer Strip with Quick Action & Grid Toggle */}
+        <div className="flex items-center justify-between pt-3 px-0.5 text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-slate-600">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+            <span>{filteredGigs.length} active shift positions open</span>
+          </div>
+
+          {filteredGigs.length > 2 && (
+            <button
+              type="button"
+              onClick={() => setShowAllGrid(!showAllGrid)}
+              className="font-bold text-amber-700 hover:text-amber-800 flex items-center gap-0.5 cursor-pointer transition active:scale-95"
+            >
+              <span>{showAllGrid ? 'Carousel View' : 'View All Grid'}</span>
+              <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Post a Gig Modal Drawer */}
@@ -210,7 +214,7 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
 }
 
 /**
- * Clean & Balanced Gig Card Component matching JOBit's Theme
+ * Clean White Gig Card with Warm Amber Left Highlight Strip & Soft Shadow
  */
 function GigCard({ gig, onCardClick }) {
   const cleanWhatsappNumber = (gig.whatsapp_number || gig.contact_number || '').replace(/[^0-9]/g, '');
@@ -222,7 +226,7 @@ function GigCard({ gig, onCardClick }) {
   const isToday = gig.urgency === 'today' || gig.duration?.toLowerCase().includes('today') || gig.duration?.toLowerCase().includes('1-day');
 
   return (
-    <div className="w-full h-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs hover:shadow-md hover:border-[#4B6EF5]/40 transition-all flex flex-col justify-between group">
+    <div className="w-full h-full bg-white rounded-2xl p-4 border border-slate-200/80 border-l-4 border-l-amber-500 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group">
       
       {/* Card Clickable Body */}
       <div className="cursor-pointer space-y-2.5" onClick={onCardClick}>
@@ -230,29 +234,29 @@ function GigCard({ gig, onCardClick }) {
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 flex-wrap">
             {isUrgent ? (
-              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-black tracking-wide flex items-center gap-1 border border-rose-200/80">
-                <Zap className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold tracking-wide flex items-center gap-1 border border-amber-200">
+                <Zap className="w-2.5 h-2.5 fill-amber-700 text-amber-700" />
                 <span>Urgent</span>
               </span>
             ) : isToday ? (
-              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#4B6EF5] text-[10px] font-black tracking-wide flex items-center gap-1 border border-blue-200/80">
-                <Flame className="w-2.5 h-2.5 fill-[#4B6EF5] text-[#4B6EF5]" />
+              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 text-[10px] font-bold tracking-wide flex items-center gap-1 border border-amber-200/80">
+                <Flame className="w-2.5 h-2.5 fill-amber-600 text-amber-600" />
                 <span>1-Day</span>
               </span>
             ) : null}
 
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
               {gig.duration}
             </span>
           </div>
 
-          <span className="text-[10px] font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[110px]">
+          <span className="text-[10px] font-bold text-amber-900/80 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100 truncate max-w-[110px]">
             {gig.category || 'Shift'}
           </span>
         </div>
 
         {/* Job Title */}
-        <h4 className="text-sm font-black text-slate-900 group-hover:text-[#4B6EF5] transition-colors leading-snug line-clamp-1">
+        <h4 className="text-sm font-black text-slate-900 group-hover:text-amber-700 transition-colors leading-snug line-clamp-1">
           {gig.title}
         </h4>
 

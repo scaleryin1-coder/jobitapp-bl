@@ -40,11 +40,11 @@ export function GigDetailModal({ gig, isOpen, onClose }) {
         {/* Modal Top Header */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
               gig.urgency === 'urgent'
-                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
                 : gig.urgency === 'today'
-                ? 'bg-blue-50 text-[#4B6EF5] border border-blue-200'
+                ? 'bg-amber-50 text-amber-900 border border-amber-200/80'
                 : 'bg-slate-100 text-slate-700 border border-slate-200'
             }`}>
               {gig.urgency === 'urgent' ? '⚡ Urgent Vacancy' : gig.urgency === 'today' ? '🔥 Today Only' : 'Active Shift'}
@@ -93,9 +93,9 @@ export function GigDetailModal({ gig, isOpen, onClose }) {
           </div>
 
           {/* Wage & Hours Highlight Strip */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 shadow-2xs flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200/70 text-slate-900 shadow-2xs flex items-center justify-between">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900/70">
                 Guaranteed Daily Wage
               </span>
               <div className="text-2xl font-black text-slate-900 font-mono tracking-tight tabular-nums flex items-center">
@@ -104,15 +104,15 @@ export function GigDetailModal({ gig, isOpen, onClose }) {
               <span className="text-[11px] font-bold text-emerald-600">Direct Cash / UPI at Shift End</span>
             </div>
 
-            <div className="text-right space-y-0.5 border-l border-slate-200 pl-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="text-right space-y-0.5 border-l border-amber-200 pl-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900/70">
                 Shift Timing
               </span>
               <div className="text-xs font-bold text-slate-800 flex items-center gap-1 justify-end">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <Clock className="w-3.5 h-3.5 text-amber-700" />
                 <span>{gig.timing || 'Standard Shift'}</span>
               </div>
-              <span className="text-[11px] font-semibold text-slate-500">{gig.duration}</span>
+              <span className="text-[11px] font-semibold text-slate-600">{gig.duration}</span>
             </div>
           </div>
 
