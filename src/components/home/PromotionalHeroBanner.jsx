@@ -47,7 +47,7 @@ export function PromotionalHeroBanner({ onBookNow, onExploreServices }) {
             <button
               type="button"
               onClick={() => onBookNow?.()}
-              className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-white hover:bg-blue-50 text-[#071739] font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>Book Now</span>
               <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />

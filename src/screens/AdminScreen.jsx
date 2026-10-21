@@ -2248,9 +2248,9 @@ export function AdminScreen({ onBack, onLogout }) {
             </div>
             <button
               onClick={() => setIsPostGigOpen(true)}
-              className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-slate-950 text-xs font-black shadow-xs flex items-center gap-1.5 transition cursor-pointer border border-amber-300"
+              className="py-2 px-3.5 rounded-xl bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Post New Vacancy</span>
             </button>
           </div>

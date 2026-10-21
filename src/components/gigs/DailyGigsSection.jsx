@@ -76,47 +76,35 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
   };
 
   return (
-    <section className="px-5 my-5 select-none">
-      {/* 1. Soft Pastel Yellow Header & Hero Action Strip */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-[#FEF3C7] via-[#FEF9C3] to-[#FFFBEB] p-4 sm:p-5 shadow-[0_4px_20px_rgba(245,158,11,0.06)] border border-[#FDE68A]/80 text-slate-900 overflow-hidden mb-3">
-        {/* Subtle Ambient Decorative Glow Accents */}
-        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-amber-300/20 blur-2xl pointer-events-none" />
-        <div className="absolute -left-8 -bottom-8 w-32 h-32 rounded-full bg-yellow-200/30 blur-xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/90 text-amber-900 border border-amber-300/70 text-[10px] font-black uppercase tracking-wider shadow-2xs">
-                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                <span>Urgent Daily Vacancies</span>
-              </span>
-              <span className="text-[11px] font-bold text-amber-950/75">
-                · Spot Cash Wage
-              </span>
-            </div>
-
-            <h3 className="text-xl font-black text-slate-950 tracking-tight leading-tight">
-              Daily Gigs & Shift Work
-            </h3>
-            <p className="text-xs font-bold text-slate-700 max-w-md leading-snug">
-              Short-term staff needed today in {currentCity.split(',')[0]} (Petrol pumps, stores, helpers)
-            </p>
-          </div>
-
-          {/* "Post a Gig" Trigger Button */}
-          <button
-            type="button"
-            onClick={() => setIsPostModalOpen(true)}
-            className="self-start sm:self-center px-4 py-2.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white text-xs font-black shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer border border-slate-800"
-          >
-            <Plus className="w-4 h-4 text-amber-400 stroke-[3]" />
-            <span>Post a Gig</span>
-          </button>
+    <section className="w-full px-4 sm:px-5 py-3 select-none">
+      {/* 1. Clean Structured Header Row matching JOBit Design Standard */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-black text-[#111827] tracking-tight">
+            Daily Gigs & Shift Work
+          </h2>
+          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-[#4B6EF5] border border-blue-100">
+            ⚡ Urgent Shifts
+          </span>
         </div>
+
+        {/* Post a Gig Action Button */}
+        <button
+          type="button"
+          onClick={() => setIsPostModalOpen(true)}
+          className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+          <span>Post a Gig</span>
+        </button>
       </div>
 
-      {/* 2. Interactive Filter Tabs Styled with Yellow Palette */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2.5 pt-0.5">
+      <p className="text-xs text-slate-500 font-medium mb-3">
+        Short-term staff needed in {currentCity.split(',')[0]} (Petrol pumps, retail stores, delivery & helpers)
+      </p>
+
+      {/* 2. Interactive Filter Tabs Styled with Brand Blue / Clean Slate Palette */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-3 pt-0.5">
         {FILTER_TABS.map((tab) => {
           const isActive = activeFilter === tab.id;
           return (
@@ -124,10 +112,10 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
               key={tab.id}
               type="button"
               onClick={() => setActiveFilter(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all shrink-0 cursor-pointer border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer border ${
                 isActive
-                  ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-[0_2px_8px_rgba(245,158,11,0.35)] scale-102'
-                  : 'bg-white hover:bg-amber-50/70 text-slate-700 border-amber-200/70 shadow-2xs'
+                  ? 'bg-[#4B6EF5] text-white border-[#4B6EF5] shadow-xs'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90 shadow-2xs'
               }`}
             >
               {tab.label}
@@ -138,8 +126,8 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
 
       {/* 3. Cards Container (Horizontal Snap Scroll on mobile, responsive grid on desktop/expanded) */}
       {filteredGigs.length === 0 ? (
-        <div className="p-8 rounded-3xl bg-white border border-amber-200 text-center space-y-2 mt-1 shadow-xs">
-          <Briefcase className="w-8 h-8 text-amber-400 mx-auto" />
+        <div className="p-8 rounded-2xl bg-white border border-slate-200/80 text-center space-y-2 mt-1 shadow-xs">
+          <Briefcase className="w-8 h-8 text-slate-300 mx-auto" />
           <h4 className="text-sm font-bold text-slate-800">No shift vacancies in this category</h4>
           <p className="text-xs text-slate-500 max-w-xs mx-auto">
             Need temporary staff for your shop or business? Post an urgent vacancy in under a minute.
@@ -147,7 +135,7 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
           <button
             type="button"
             onClick={() => setIsPostModalOpen(true)}
-            className="mt-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 rounded-xl text-xs font-black shadow-xs hover:from-amber-500 hover:to-yellow-500 transition cursor-pointer"
+            className="mt-2 px-4 py-2 bg-[#4B6EF5] hover:bg-[#3D5FE0] text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
           >
             Post First Vacancy
           </button>
@@ -156,7 +144,7 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
         /* Full Grid Mode */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-1">
           {filteredGigs.map((gig) => (
-            <ModernYellowGigCard 
+            <GigCard 
               key={gig.id} 
               gig={gig} 
               onCardClick={() => handleCardClick(gig)} 
@@ -164,15 +152,15 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
           ))}
         </div>
       ) : (
-        /* Modern Horizontal Scroller with Yellow Glass Cards */
+        /* Modern Horizontal Scroller with Clean White Cards */
         <div className="relative mt-1">
-          <div className="flex gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1 px-0.5">
+          <div className="flex gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1">
             {filteredGigs.map((gig) => (
               <div 
                 key={gig.id} 
-                className="w-[290px] sm:w-[325px] shrink-0 snap-start"
+                className="w-[285px] sm:w-[320px] shrink-0 snap-start flex"
               >
-                <ModernYellowGigCard 
+                <GigCard 
                   gig={gig} 
                   onCardClick={() => handleCardClick(gig)} 
                 />
@@ -183,9 +171,9 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
       )}
 
       {/* Footer Strip with Quick Action & Grid Toggle */}
-      <div className="flex items-center justify-between pt-2 px-1 text-xs">
-        <div className="flex items-center gap-1.5 font-bold text-slate-600">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+      <div className="flex items-center justify-between pt-2.5 px-0.5 text-xs">
+        <div className="flex items-center gap-1.5 font-bold text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-[#4B6EF5] animate-ping" />
           <span>{filteredGigs.length} active shift positions open</span>
         </div>
 
@@ -193,7 +181,7 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
           <button
             type="button"
             onClick={() => setShowAllGrid(!showAllGrid)}
-            className="font-black text-amber-700 hover:text-amber-800 flex items-center gap-0.5 cursor-pointer transition active:scale-95"
+            className="font-bold text-[#4B6EF5] hover:text-[#3D5FE0] flex items-center gap-0.5 cursor-pointer transition active:scale-95"
           >
             <span>{showAllGrid ? 'Carousel View' : 'View All Grid'}</span>
             <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -222,9 +210,9 @@ export function DailyGigsSection({ currentCity = 'Melattur, Kerala' }) {
 }
 
 /**
- * Modern Yellow Gig Card Component
+ * Clean & Balanced Gig Card Component matching JOBit's Theme
  */
-function ModernYellowGigCard({ gig, onCardClick }) {
+function GigCard({ gig, onCardClick }) {
   const cleanWhatsappNumber = (gig.whatsapp_number || gig.contact_number || '').replace(/[^0-9]/g, '');
   const whatsappUrl = `https://wa.me/${cleanWhatsappNumber.startsWith('91') ? cleanWhatsappNumber : `91${cleanWhatsappNumber}`}?text=${encodeURIComponent(
     `Hello, I saw your "${gig.title}" daily vacancy on JOBit at ${gig.shop_name}. I am available for this shift.`
@@ -234,91 +222,84 @@ function ModernYellowGigCard({ gig, onCardClick }) {
   const isToday = gig.urgency === 'today' || gig.duration?.toLowerCase().includes('today') || gig.duration?.toLowerCase().includes('1-day');
 
   return (
-    <div className="h-full bg-gradient-to-b from-amber-50/50 via-white to-white rounded-3xl p-4 border border-amber-200/90 shadow-[0_4px_18px_rgba(245,158,11,0.08)] hover:shadow-[0_8px_26px_rgba(245,158,11,0.16)] hover:border-amber-400/80 transition-all flex flex-col justify-between group relative overflow-hidden">
+    <div className="w-full h-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs hover:shadow-md hover:border-[#4B6EF5]/40 transition-all flex flex-col justify-between group">
       
-      {/* Top Vibrant Yellow Accent Glow Bar */}
-      <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500" />
-
       {/* Card Clickable Body */}
-      <div className="cursor-pointer" onClick={onCardClick}>
+      <div className="cursor-pointer space-y-2.5" onClick={onCardClick}>
         {/* Badges Row */}
-        <div className="flex items-center justify-between gap-1.5 mb-2.5">
+        <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 flex-wrap">
             {isUrgent ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-950 text-amber-300 text-[10px] font-black tracking-wide flex items-center gap-1 border border-amber-400/50 shadow-2xs">
-                <Zap className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                <span>⚡ Urgent</span>
+              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-black tracking-wide flex items-center gap-1 border border-rose-200/80">
+                <Zap className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+                <span>Urgent</span>
               </span>
             ) : isToday ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black tracking-wide flex items-center gap-1 shadow-2xs">
-                <Flame className="w-2.5 h-2.5 fill-slate-950 text-slate-950" />
-                <span>1-Day Work</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#4B6EF5] text-[10px] font-black tracking-wide flex items-center gap-1 border border-blue-200/80">
+                <Flame className="w-2.5 h-2.5 fill-[#4B6EF5] text-[#4B6EF5]" />
+                <span>1-Day</span>
               </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 text-[10px] font-black tracking-wide border border-amber-200">
-                {gig.duration}
-              </span>
-            )}
+            ) : null}
 
-            <span className="px-2 py-0.5 rounded-full bg-slate-100/90 text-slate-700 text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
               {gig.duration}
             </span>
           </div>
 
-          <span className="text-[10px] font-extrabold text-amber-800/80 bg-amber-100/50 px-2 py-0.5 rounded-lg">
+          <span className="text-[10px] font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[110px]">
             {gig.category || 'Shift'}
           </span>
         </div>
 
         {/* Job Title */}
-        <h4 className="text-[15px] font-black text-slate-950 group-hover:text-amber-700 transition-colors leading-snug line-clamp-1">
+        <h4 className="text-sm font-black text-slate-900 group-hover:text-[#4B6EF5] transition-colors leading-snug line-clamp-1">
           {gig.title}
         </h4>
 
         {/* Employer & Location Details */}
-        <div className="mt-1.5 space-y-0.5">
-          <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 truncate">
-            <Building2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate">
+            <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <span className="truncate">{gig.shop_name}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 truncate">
-            <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 truncate">
+            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
             <span className="truncate">{gig.location}</span>
           </div>
         </div>
 
-        {/* Striking Yellow Wage Tag Box */}
-        <div className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-slate-950 border border-amber-400/80 shadow-[0_2px_10px_rgba(245,158,11,0.18)] flex items-center justify-between">
+        {/* Clean Wage & Timing Box */}
+        <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200/80 flex items-center justify-between">
           <div>
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-950 block opacity-85">
-              ₹ Daily Wage
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block">
+              Daily Wage
             </span>
-            <span className="text-base font-black text-slate-950 font-mono tracking-tight tabular-nums block">
+            <span className="text-sm font-black text-slate-900 font-mono tracking-tight tabular-nums block">
               {gig.wage}
             </span>
           </div>
 
-          <div className="text-right border-l border-amber-500/40 pl-3">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-950 block opacity-85">
-              Hours
+          <div className="text-right border-l border-slate-200 pl-3">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block">
+              Timing
             </span>
-            <span className="text-xs font-black text-slate-950 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-slate-900" />
+            <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-slate-400" />
               <span>{gig.timing || 'Day Shift'}</span>
             </span>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons: "Call Now" (Dark High Contrast) & "WhatsApp" (Emerald Green) */}
-      <div className="grid grid-cols-2 gap-2 mt-3.5 pt-2 border-t border-amber-100">
+      {/* Action Buttons: "Call Now" (Dark Slate) & "WhatsApp" (Emerald Green) */}
+      <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-100">
         <a
           href={`tel:${gig.contact_number}`}
           onClick={(e) => e.stopPropagation()}
           title={`Call ${gig.shop_name}`}
-          className="h-10 rounded-xl bg-slate-950 hover:bg-slate-900 text-white text-[11px] font-black flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer"
+          className="h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 cursor-pointer"
         >
-          <Phone className="w-3.5 h-3.5 text-amber-400 stroke-[2.5]" />
+          <Phone className="w-3.5 h-3.5 text-slate-300 stroke-[2.2]" />
           <span>Call Now</span>
         </a>
 
@@ -328,7 +309,7 @@ function ModernYellowGigCard({ gig, onCardClick }) {
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           title={`WhatsApp ${gig.shop_name}`}
-          className="h-10 rounded-xl bg-[#25D366] hover:bg-[#20BD5A] text-white text-[11px] font-black flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer"
+          className="h-9 rounded-xl bg-[#25D366] hover:bg-[#20BD5A] text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 cursor-pointer"
         >
           <MessageSquare className="w-3.5 h-3.5 fill-white stroke-none" />
           <span>WhatsApp</span>
