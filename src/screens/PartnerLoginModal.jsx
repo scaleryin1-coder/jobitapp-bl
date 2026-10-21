@@ -12,7 +12,18 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { getLocalWorkers, getPendingWorkers, DUMMY_WORKER_IDS } from '../data/bookingService';
 
-export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding }) {
+import { db, isFirebaseConfigured } from '../firebase';
+import { supabase, isSupabaseConfigured } from '../supabase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+
+export function PartnerLoginModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  onOpenWorkerOnboarding,
+  workers: propWorkers = [],
+  pendingWorkers: propPendingWorkers = []
+}) {
   const { loginAsWorker } = useAuth();
   
   // Worker state
@@ -29,9 +40,18 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
 
   useEffect(() => {
     if (isOpen) {
-      const allWorkers = getLocalWorkers();
-      const approvedOnly = allWorkers.filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
-      const pendingList = getPendingWorkers();
+      const localApproved = getLocalWorkers().filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
+      const passedApproved = (propWorkers || []).filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
+      
+      const map = new Map();
+      localApproved.forEach(w => { if (w?.id) map.set(w.id, w); });
+      passedApproved.forEach(w => { if (w?.id) map.set(w.id, w); });
+      const approvedOnly = Array.from(map.values());
+
+      const pendingList = (propPendingWorkers && propPendingWorkers.length > 0)
+        ? propPendingWorkers
+        : getPendingWorkers();
+
       setWorkers(approvedOnly);
       setPendingWorkers(pendingList);
       if (approvedOnly.length > 0) {
@@ -43,7 +63,7 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
       }
       setError('');
     }
-  }, [isOpen]);
+  }, [isOpen, propWorkers, propPendingWorkers]);
 
   if (!isOpen) return null;
 
@@ -70,6 +90,30 @@ export function PartnerLoginModal({ isOpen, onClose, onSuccess, onOpenWorkerOnbo
           (p.phone && cleanPhone && p.phone.replace(/\D/g, '').slice(-10) === cleanPhone)
         );
         if (targetWorker) isPending = true;
+      }
+
+      // If not in local arrays, query shared database (Firestore & Supabase)
+      if (!targetWorker && isFirebaseConfigured && db) {
+        try {
+          const wSnap = await getDocs(query(collection(db, 'workers'), where('phone', 'in', [`+91 ${cleanPhone}`, cleanPhone, workerEmail])));
+          if (!wSnap.empty) {
+            targetWorker = { id: wSnap.docs[0].id, ...wSnap.docs[0].data() };
+          }
+        } catch {}
+      }
+
+      if (!targetWorker && isSupabaseConfigured && supabase) {
+        try {
+          const { data: supaW } = await supabase
+            .from('workers')
+            .select('*')
+            .or(`phone.eq.+91 ${cleanPhone},phone.eq.${cleanPhone},email.eq.${cleanInput}`)
+            .limit(1)
+            .maybeSingle();
+          if (supaW) {
+            targetWorker = { ...supaW, id: String(supaW.id) };
+          }
+        } catch {}
       }
 
       // If still not found and no registered workers exist

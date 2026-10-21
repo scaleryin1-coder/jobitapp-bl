@@ -710,6 +710,7 @@ function MainLayout() {
         {/* Separate Partner & Staff Portal Modal (Workers & Admins) */}
         <PartnerLoginModal
           isOpen={isPartnerLoginOpen}
+          workers={workers}
           onClose={() => {
             setIsPartnerLoginOpen(false);
             if (window.location.hash) {

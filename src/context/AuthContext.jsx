@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db, isFirebaseConfigured } from '../firebase';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { clearAllBookingAndUserData } from '../data/bookingService';
 
 const defaultAuthContext = {
@@ -82,6 +82,101 @@ export function AuthProvider({ children }) {
     } catch {
       setLoading(false);
     }
+  }, []);
+
+  // Cross-device status refresh: Refresh technician approval status from database on app startup
+  useEffect(() => {
+    const refreshStatusOnStartup = async () => {
+      try {
+        const raw = localStorage.getItem('jobit_user');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const cleanTenDigits = (parsed.phone || '').replace(/\D/g, '').slice(-10);
+        if (!cleanTenDigits || cleanTenDigits.length !== 10) return;
+
+        let remoteData = null;
+
+        // 1. Check Firestore users & workers
+        if (isFirebaseConfigured && db) {
+          try {
+            const userSnap = await safeDbPromise(getDoc(doc(db, 'users', 'usr_' + cleanTenDigits)), 2000);
+            if (userSnap && userSnap.exists && userSnap.exists()) {
+              remoteData = { ...(remoteData || {}), ...userSnap.data() };
+            } else if (parsed.uid) {
+              const uidSnap = await safeDbPromise(getDoc(doc(db, 'users', parsed.uid)), 2000);
+              if (uidSnap && uidSnap.exists && uidSnap.exists()) {
+                remoteData = { ...(remoteData || {}), ...uidSnap.data() };
+              }
+            }
+
+            // Check workers collection in Firestore to see if approved as technician
+            const workersSnap = await safeDbPromise(
+              getDocs(query(collection(db, 'workers'), where('phone', 'in', [parsed.phone, `+91 ${cleanTenDigits}`, cleanTenDigits]))),
+              2000
+            );
+            if (workersSnap && !workersSnap.empty) {
+              const wDoc = workersSnap.docs[0].data();
+              if (wDoc.status === 'approved' || wDoc.workerStatus === 'approved' || wDoc.is_approved) {
+                remoteData = {
+                  ...(remoteData || {}),
+                  ...wDoc,
+                  role: 'worker',
+                  status: 'approved',
+                  workerStatus: 'approved',
+                  isOnline: wDoc.isOnline ?? true,
+                  isAvailable: wDoc.isAvailable ?? true
+                };
+              }
+            }
+          } catch (e) {
+            console.warn('Firestore refreshStatusOnStartup notice:', e);
+          }
+        }
+
+        // 2. Check Supabase workers
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { data: supaWorker } = await supabase
+              .from('workers')
+              .select('*')
+              .or(`phone.eq.${parsed.phone},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
+              .limit(1)
+              .maybeSingle();
+
+            if (supaWorker && (supaWorker.status === 'approved' || supaWorker.is_approved)) {
+              remoteData = {
+                ...(remoteData || {}),
+                role: 'worker',
+                status: 'approved',
+                workerStatus: 'approved',
+                workerId: String(supaWorker.id),
+                skill: supaWorker.skill || supaWorker.category || supaWorker.category_name,
+                categoryName: supaWorker.category_name || supaWorker.category || supaWorker.skill,
+                city: supaWorker.city || supaWorker.service_area
+              };
+            }
+          } catch {}
+        }
+
+        if (remoteData) {
+          setCurrentUser(prev => {
+            const updated = {
+              ...(prev || parsed),
+              ...remoteData,
+              status: remoteData.status || (prev ? prev.status : 'approved'),
+              workerStatus: remoteData.workerStatus || (prev ? prev.workerStatus : 'approved')
+            };
+            localStorage.setItem('jobit_user', JSON.stringify(updated));
+            saveLocalUserByPhone(cleanTenDigits, updated);
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.warn('Startup status refresh notice:', err);
+      }
+    };
+
+    refreshStatusOnStartup();
   }, []);
 
   const getLocalUserByPhone = (cleanTenDigits) => {
@@ -231,30 +326,75 @@ export function AuthProvider({ children }) {
 
     const uid = 'usr_' + cleanTenDigits;
 
-    // Single-Account Check: check if this mobile number is already registered
+    // Fetch latest user & worker approval status from shared database (Firestore & Supabase)
     let existingProfile = getLocalUserByPhone(cleanTenDigits);
+    let dbWorkerData = null;
 
-    if (!existingProfile && isFirebaseConfigured && db) {
+    if (isFirebaseConfigured && db) {
       try {
         const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
         if (snap && snap.exists && snap.exists()) {
-          existingProfile = { uid, ...snap.data() };
+          existingProfile = { ...(existingProfile || {}), uid, ...snap.data() };
+        }
+
+        // Query workers collection to see if this technician has been approved
+        const workersSnap = await safeDbPromise(
+          getDocs(query(collection(db, 'workers'), where('phone', 'in', [phone, `+91 ${cleanTenDigits}`, cleanTenDigits]))),
+          1500
+        );
+        if (workersSnap && !workersSnap.empty) {
+          const wDoc = workersSnap.docs[0].data();
+          if (wDoc.status === 'approved' || wDoc.workerStatus === 'approved' || wDoc.is_approved) {
+            dbWorkerData = wDoc;
+          }
+        }
+      } catch (err) {
+        console.warn('Firestore login lookup note:', err);
+      }
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: supaWorker } = await supabase
+          .from('workers')
+          .select('*')
+          .or(`phone.eq.${phone},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (supaWorker && (supaWorker.status === 'approved' || supaWorker.is_approved)) {
+          dbWorkerData = { ...(dbWorkerData || {}), ...supaWorker, is_approved: true, status: 'approved' };
         }
       } catch {}
     }
 
+    const isWorkerApproved = Boolean(
+      dbWorkerData ||
+      (existingProfile && (existingProfile.status === 'approved' || existingProfile.workerStatus === 'approved') && existingProfile.role === 'worker') ||
+      (extraData && (extraData.status === 'approved' || extraData.workerStatus === 'approved'))
+    );
+
     if (existingProfile) {
       // Existing single account found -> Log directly into this existing account
+      const effectiveRole = (isWorkerApproved || role === 'worker' || extraData?.role === 'worker' || extraData?.userRole === 'worker' || existingProfile.role === 'worker')
+        ? 'worker'
+        : (existingProfile.role || role || 'customer');
+
       const mergedProfile = {
         ...existingProfile,
         ...extraData,
+        ...(dbWorkerData ? {
+          skill: dbWorkerData.skill || dbWorkerData.category || dbWorkerData.category_name,
+          categoryName: dbWorkerData.category_name || dbWorkerData.category || dbWorkerData.skill,
+          serviceArea: dbWorkerData.service_area || dbWorkerData.city,
+          city: dbWorkerData.city || dbWorkerData.service_area,
+          workerId: String(dbWorkerData.id)
+        } : {}),
         uid: existingProfile.uid || uid,
         phone: `+91 ${cleanTenDigits}`,
-        role: (role === 'worker' || extraData?.role === 'worker' || extraData?.userRole === 'worker')
-          ? 'worker'
-          : (existingProfile.role || role || 'customer'),
-        status: extraData?.status || existingProfile.status || 'active',
-        workerStatus: extraData?.workerStatus || existingProfile.workerStatus
+        role: effectiveRole,
+        status: isWorkerApproved ? 'approved' : (extraData?.status || existingProfile.status || 'active'),
+        workerStatus: isWorkerApproved ? 'approved' : (extraData?.workerStatus || existingProfile.workerStatus)
       };
       saveLocalUserByPhone(cleanTenDigits, mergedProfile);
       setCurrentUser(mergedProfile);
@@ -263,16 +403,16 @@ export function AuthProvider({ children }) {
     }
 
     // Brand new user registration for this mobile number
-    const finalName = (name && name.trim()) ? name.trim() : (role === 'worker' ? 'Partner Pro' : 'Customer');
-    const selectedRole = role === 'worker' ? 'worker' : 'customer';
+    const finalName = (name && name.trim()) ? name.trim() : (role === 'worker' || isWorkerApproved ? 'Partner Pro' : 'Customer');
+    const selectedRole = (role === 'worker' || isWorkerApproved) ? 'worker' : 'customer';
     const profile = {
       uid,
       phone: `+91 ${cleanTenDigits}`,
       name: finalName,
       email: `${finalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}@example.com`,
       role: selectedRole,
-      status: selectedRole === 'worker' ? (extraData.status || 'pending') : undefined,
-      workerStatus: selectedRole === 'worker' ? (extraData.workerStatus || extraData.status || 'pending') : undefined,
+      status: isWorkerApproved ? 'approved' : (selectedRole === 'worker' ? (extraData.status || 'pending') : undefined),
+      workerStatus: isWorkerApproved ? 'approved' : (selectedRole === 'worker' ? (extraData.workerStatus || extraData.status || 'pending') : undefined),
       city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
       photo: selectedRole === 'worker' 
         ? 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'

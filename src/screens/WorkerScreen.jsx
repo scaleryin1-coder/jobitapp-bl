@@ -574,15 +574,27 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
 
 
   const userPhoneClean = (currentUser?.phone || '').replace(/\D/g, '').slice(-10);
-  const myPendingApp = pendingWorkers.find(p => 
+
+  // A technician is approved if found in approvedRealWorkers or if currentUser / activeWorker is marked approved
+  const isApprovedWorker = Boolean(
+    approvedRealWorkers.some(w => 
+      (w.id && (w.id === currentUser?.workerId || w.id === currentUser?.uid || w.id === activeWorker?.id)) ||
+      (userPhoneClean && w.phone && w.phone.replace(/\D/g, '').slice(-10) === userPhoneClean)
+    ) ||
+    (currentUser?.role === 'worker' && (currentUser?.status === 'approved' || currentUser?.workerStatus === 'approved')) ||
+    (activeWorker && (activeWorker.status === 'approved' || activeWorker.workerStatus === 'approved' || activeWorker.is_approved === true))
+  );
+
+  const myPendingApp = isApprovedWorker ? null : pendingWorkers.find(p => 
     (userPhoneClean && p.phone && p.phone.replace(/\D/g, '').slice(-10) === userPhoneClean) ||
     (p.id === currentUser?.workerId || p.id === currentUser?.uid)
   );
 
-  const isPendingVerification = 
+  const isPendingVerification = !isApprovedWorker && (
     Boolean(myPendingApp) ||
     (currentUser?.status === 'pending' || currentUser?.workerStatus === 'pending' || currentUser?.workerStatus === 'pending_verification') || 
-    (activeWorker?.status === 'pending' || activeWorker?.workerStatus === 'pending' || activeWorker?.status === 'pending_verification' || activeWorker?.workerStatus === 'pending_verification');
+    (activeWorker?.status === 'pending' || activeWorker?.workerStatus === 'pending' || activeWorker?.status === 'pending_verification' || activeWorker?.workerStatus === 'pending_verification')
+  );
 
   // IF WORKER IS AWAITING ADMIN APPROVAL -> RENDER DEDICATED REVIEW SCREEN
   if (isPendingVerification) {

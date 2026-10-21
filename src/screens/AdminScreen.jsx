@@ -311,7 +311,7 @@ export function AdminScreen({ onBack, onLogout }) {
   // PENDING ONBOARDING APPROVALS OPERATIONS
   // ==========================================
   const handleApproveWorker = async (workerApp) => {
-    await approveWorkerApplication(workerApp.id);
+    await approveWorkerApplication(workerApp.id, workerApp);
     setApprovalSuccessMsg(`Approved ${workerApp.name}! Pro status updated to "approved" and listed for platform bookings.`);
     setSelectedPendingWorker(null);
     setTimeout(() => setApprovalSuccessMsg(''), 4000);

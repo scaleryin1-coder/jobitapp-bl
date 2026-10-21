@@ -110,11 +110,14 @@ export function doesWorkerCoverLocation(worker, location) {
     ...(Array.isArray(worker.serviceAreas) ? worker.serviceAreas : [])
   ].filter(Boolean);
 
-  if (candidateAreas.length === 0) return false;
+  if (candidateAreas.length === 0) return true;
 
   return candidateAreas.some(area => {
     const aNorm = normalizeLocation(area);
     const aRaw = String(area).toLowerCase().trim();
+    if (aRaw.includes('kerala') || aRaw.includes('malappuram') || aRaw.includes('all kerala')) {
+      return true;
+    }
     return (
       aNorm === targetNorm ||
       aNorm.includes(targetNorm) ||
@@ -754,9 +757,10 @@ export function subscribeBookings(callback) {
   };
 }
 
-// Real-time listener for registered workers
+// Real-time listener for registered workers (Supabase & Firestore cross-device sync)
 export function subscribeWorkers(callback) {
   let unsubFirestore = null;
+  let supabaseChannel = null;
 
   const handleLocalChange = () => {
     callback(getLocalWorkers());
@@ -768,6 +772,97 @@ export function subscribeWorkers(callback) {
   // Initial local emit
   callback(getLocalWorkers());
 
+  // Helper to merge remote workers into local cache
+  const mergeRemoteWorkers = (remoteWorkers) => {
+    if (!Array.isArray(remoteWorkers) || remoteWorkers.length === 0) return;
+    const cleanRemote = remoteWorkers
+      .filter(w => w && w.id && !DUMMY_WORKER_IDS.has(w.id))
+      .map(w => ({
+        ...w,
+        is_approved: true,
+        status: w.status || 'approved',
+        workerStatus: w.workerStatus || w.status || 'approved',
+        isOnline: w.isOnline ?? true,
+        isAvailable: w.isAvailable ?? true
+      }));
+
+    if (cleanRemote.length === 0) return;
+
+    const localList = getLocalWorkers();
+    const map = new Map();
+    localList.forEach(w => { if (w?.id && !DUMMY_WORKER_IDS.has(w.id)) map.set(w.id, w); });
+    cleanRemote.forEach(w => {
+      const existing = map.get(w.id) || {};
+      map.set(w.id, { ...existing, ...w });
+    });
+    const merged = Array.from(map.values());
+    saveLocalWorkers(merged);
+    callback(merged);
+  };
+
+  // 1. Supabase fetch & realtime sync
+  if (isSupabaseConfigured && supabase) {
+    try {
+      supabase
+        .from('workers')
+        .select('*')
+        .then(({ data, error }) => {
+          if (!error && Array.isArray(data) && data.length > 0) {
+            const adapted = data.map(item => ({
+              ...item,
+              id: String(item.id),
+              name: item.name || 'Verified Technician',
+              phone: item.phone,
+              skill: item.skill || item.category || item.category_name || 'Home Services Pro',
+              category: item.category || item.category_name || item.skill || 'Home Services Pro',
+              categoryName: item.category_name || item.category || item.skill || 'Home Services Pro',
+              serviceArea: item.service_area || item.city || 'Melattur, Kerala',
+              city: item.city || item.service_area || 'Melattur, Kerala',
+              service_areas: [item.service_area || item.city || 'Melattur, Kerala', 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
+              serviceAreas: [item.service_area || item.city || 'Melattur, Kerala', 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
+              status: item.status || 'approved',
+              workerStatus: item.worker_status || item.status || 'approved',
+              isOnline: item.is_online !== false,
+              isAvailable: item.is_available !== false,
+              is_approved: true
+            }));
+            mergeRemoteWorkers(adapted);
+          }
+        })
+        .catch(() => {});
+
+      try {
+        supabaseChannel = supabase
+          .channel('public:workers_sync')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, (payload) => {
+            if (payload.new) {
+              const item = payload.new;
+              mergeRemoteWorkers([{
+                ...item,
+                id: String(item.id),
+                name: item.name || 'Verified Technician',
+                phone: item.phone,
+                skill: item.skill || item.category || item.category_name || 'Home Services Pro',
+                category: item.category || item.category_name || item.skill || 'Home Services Pro',
+                categoryName: item.category_name || item.category || item.skill || 'Home Services Pro',
+                serviceArea: item.service_area || item.city || 'Melattur, Kerala',
+                city: item.city || item.service_area || 'Melattur, Kerala',
+                service_areas: [item.service_area || item.city || 'Melattur, Kerala', 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
+                serviceAreas: [item.service_area || item.city || 'Melattur, Kerala', 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
+                status: item.status || 'approved',
+                workerStatus: item.worker_status || item.status || 'approved',
+                isOnline: item.is_online !== false,
+                isAvailable: item.is_available !== false,
+                is_approved: true
+              }]);
+            }
+          })
+          .subscribe();
+      } catch {}
+    } catch {}
+  }
+
+  // 2. Firestore fetch & realtime sync
   if (isFirebaseConfigured && db) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'workers'), (snap) => {
@@ -775,12 +870,11 @@ export function subscribeWorkers(callback) {
           const list = snap.docs
             .map(d => ({ id: d.id, ...d.data() }))
             .filter(w => w && w.id && !DUMMY_WORKER_IDS.has(w.id));
-          saveLocalWorkers(list);
-          callback(list);
-        } else {
-          callback([]);
+          mergeRemoteWorkers(list);
         }
-      }, () => {});
+      }, (err) => {
+        console.warn('Firestore workers subscription note:', err);
+      });
     } catch {}
   }
 
@@ -788,6 +882,9 @@ export function subscribeWorkers(callback) {
     window.removeEventListener(EVENT_WORKERS_CHANGED, handleLocalChange);
     window.removeEventListener('storage', handleLocalChange);
     if (unsubFirestore) unsubFirestore();
+    if (supabaseChannel && typeof supabaseChannel.unsubscribe === 'function') {
+      supabaseChannel.unsubscribe();
+    }
   };
 }
 
@@ -1982,20 +2079,41 @@ export function subscribePendingWorkers(callback) {
   if (isFirebaseConfigured && db) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'pending_workers'), (snap) => {
+        const approvedWorkers = getLocalWorkers();
+        const approvedPhones = new Set(
+          approvedWorkers.map(w => (w.phone || '').replace(/\D/g, '').slice(-10)).filter(Boolean)
+        );
+        const approvedIds = new Set(
+          approvedWorkers.map(w => w.id).filter(Boolean)
+        );
+
         if (!snap.empty) {
           const remoteList = snap.docs
             .map(d => ({ id: d.id, ...d.data() }))
             .filter(p => p && p.id && !DUMMY_WORKER_IDS.has(p.id));
-          const localList = getPendingWorkers();
-          const map = new Map();
-          localList.forEach(item => { if (item?.id) map.set(item.id, item); });
-          remoteList.forEach(item => { if (item?.id) map.set(item.id, item); });
-          const merged = Array.from(map.values());
-          savePendingWorkers(merged);
-          callback(merged);
+
+          // Filter out any worker who is already approved
+          const cleanRemote = remoteList.filter(p => {
+            const cleanPhone = (p.phone || '').replace(/\D/g, '').slice(-10);
+            if (cleanPhone && approvedPhones.has(cleanPhone)) return false;
+            if (p.id && (approvedIds.has(p.id) || approvedIds.has(p.id.replace('app_', '')))) return false;
+            if (p.status === 'approved' || p.workerStatus === 'approved') return false;
+            return true;
+          });
+
+          savePendingWorkers(cleanRemote);
+          callback(cleanRemote);
         } else {
-          // If remote collection is currently empty, preserve local pending applications!
-          callback(getPendingWorkers());
+          // If remote is empty, filter out any local items that are already approved
+          const localList = getPendingWorkers().filter(p => {
+            const cleanPhone = (p.phone || '').replace(/\D/g, '').slice(-10);
+            if (cleanPhone && approvedPhones.has(cleanPhone)) return false;
+            if (p.id && (approvedIds.has(p.id) || approvedIds.has(p.id.replace('app_', '')))) return false;
+            if (p.status === 'approved' || p.workerStatus === 'approved') return false;
+            return true;
+          });
+          savePendingWorkers(localList);
+          callback(localList);
         }
       }, (err) => {
         console.warn('Pending workers firestore snapshot notice:', err?.message || err);
@@ -2240,9 +2358,12 @@ export async function registerWorkerOnboarding(onboardingData) {
 }
 
 // Admin approves a worker registration -> updates status to 'approved'
-export async function approveWorkerApplication(workerAppId) {
+export async function approveWorkerApplication(workerAppId, fallbackWorkerData = null) {
   const pending = getPendingWorkers();
-  const target = pending.find(p => p.id === workerAppId);
+  let target = pending.find(p => p.id === workerAppId);
+  if (!target && fallbackWorkerData) {
+    target = fallbackWorkerData;
+  }
   if (!target) return false;
 
   // 1. Remove from pending list
@@ -2251,12 +2372,14 @@ export async function approveWorkerApplication(workerAppId) {
 
   // 2. Add to active verified workers roster with strictly status: 'approved'
   const activeWorkers = getLocalWorkers();
-  const workerUniqueId = target.id.replace('app_', '');
+  const workerUniqueId = target.id ? target.id.replace('app_', '') : `worker_${Date.now()}`;
   const nowIso = new Date().toISOString();
-  const primaryCat = target.categoryName || target.skill || 'Home Services Pro';
+  const primaryCat = target.categoryName || target.skill || target.category || 'Home Services Pro';
   const subSkills = target.subSkills && target.subSkills.length > 0 ? target.subSkills : [primaryCat];
   const expNumber = Number(target.experienceYears || parseInt(target.experience, 10)) || 3;
-  const avatarImage = target.avatar || target.liveSelfieUrl || target.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80';
+  const avatarImage = target.avatar || target.liveSelfieUrl || target.photo || target.avatarUrl || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80';
+  const cleanTen = (target.phone || '').replace(/\D/g, '').slice(-10);
+  const targetArea = target.city || target.serviceArea || target.address || 'Melattur, Kerala';
 
   const verifiedWorker = {
     id: workerUniqueId,
@@ -2270,16 +2393,16 @@ export async function approveWorkerApplication(workerAppId) {
     dob: target.dob || '',
     skill: primaryCat,
     categoryName: primaryCat,
-    categoryId: target.categoryId || 'cat_general',
+    categoryId: target.categoryId || `cat_${primaryCat.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
     skills: subSkills,
     categories: [primaryCat],
     subSkills: subSkills,
     experience: `${expNumber} years`,
     experienceYears: expNumber,
     baseRate: target.baseRate || 350,
-    address: target.address || '',
-    city: target.city || 'Melattur, Kerala',
-    serviceArea: target.city || 'Melattur, Kerala',
+    address: target.address || targetArea,
+    city: targetArea,
+    serviceArea: targetArea,
     pincode: target.pincode || '',
     serviceRadius: target.serviceRadius || '15',
     aadhaarNumber: target.aadhaarNumber || 'Verified',
@@ -2301,10 +2424,9 @@ export async function approveWorkerApplication(workerAppId) {
     status: 'approved',
     workerStatus: 'approved',
     category: primaryCat,
-    categoryName: primaryCat,
-    service_area: target.city || target.serviceArea || target.address || 'Melattur, Kerala',
-    service_areas: [target.city || target.serviceArea || target.address || 'Melattur, Kerala'],
-    serviceAreas: [target.city || target.serviceArea || target.address || 'Melattur, Kerala'],
+    service_area: targetArea,
+    service_areas: [targetArea, 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
+    serviceAreas: [targetArea, 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
     role: 'WORKER',
     userRole: 'worker',
     approvedAt: nowIso,
@@ -2320,7 +2442,6 @@ export async function approveWorkerApplication(workerAppId) {
 
   // 3. Update registered user cache
   try {
-    const cleanTen = (target.phone || '').replace(/\D/g, '').slice(-10);
     if (cleanTen) {
       const rawUsers = localStorage.getItem('jobit_registered_users');
       const users = rawUsers ? JSON.parse(rawUsers) : {};
@@ -2341,17 +2462,17 @@ export async function approveWorkerApplication(workerAppId) {
     const activeCurrent = localStorage.getItem('jobit_user');
     if (activeCurrent) {
       const parsed = JSON.parse(activeCurrent);
-      if (parsed.uid === target.id || parsed.id === target.id || parsed.phone === target.phone) {
-        const merged = { ...parsed, ...verifiedWorker, status: 'approved', workerStatus: 'approved' };
+      if (parsed.uid === target.id || parsed.id === target.id || (parsed.phone && cleanTen && parsed.phone.replace(/\D/g, '').slice(-10) === cleanTen)) {
+        const merged = { ...parsed, ...verifiedWorker, status: 'approved', workerStatus: 'approved', role: 'worker', userRole: 'worker' };
         localStorage.setItem('jobit_user', JSON.stringify(merged));
       }
     }
   } catch {}
 
-  // 5. Sync to database
+  // 5. Sync to Firestore (Workers collection + User profile + User phone index + Service availability)
   if (isFirebaseConfigured && db) {
     try {
-      await Promise.all([
+      const writes = [
         deleteDoc(doc(db, 'pending_workers', workerAppId)),
         setDoc(doc(db, 'workers', verifiedWorker.id), verifiedWorker, { merge: true }),
         setDoc(doc(db, 'users', verifiedWorker.id), {
@@ -2360,10 +2481,70 @@ export async function approveWorkerApplication(workerAppId) {
           userRole: 'worker',
           status: 'approved',
           workerStatus: 'approved'
+        }, { merge: true }),
+        // Global service availability record
+        setDoc(doc(db, 'service_availability', verifiedWorker.categoryId || 'cat_ac'), {
+          isAvailable: true,
+          categoryName: verifiedWorker.categoryName,
+          lastUpdated: nowIso
         }, { merge: true })
-      ]);
+      ];
+
+      if (cleanTen) {
+        writes.push(
+          setDoc(doc(db, 'users', 'usr_' + cleanTen), {
+            ...verifiedWorker,
+            role: 'WORKER',
+            userRole: 'worker',
+            status: 'approved',
+            workerStatus: 'approved',
+            workerId: verifiedWorker.id
+          }, { merge: true })
+        );
+      }
+
+      await safeDbPromise(Promise.all(writes), 3000);
     } catch (e) {
       console.warn('Firestore approveWorker notice', e);
+    }
+  }
+
+  // 6. Sync to Supabase if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('workers').upsert({
+        id: verifiedWorker.id,
+        user_id: verifiedWorker.userId,
+        name: verifiedWorker.name,
+        phone: verifiedWorker.phone,
+        skill: verifiedWorker.skill,
+        category: verifiedWorker.category,
+        category_name: verifiedWorker.categoryName,
+        service_area: verifiedWorker.service_area,
+        city: verifiedWorker.city,
+        status: 'approved',
+        worker_status: 'approved',
+        is_approved: true,
+        is_available: true,
+        is_online: true,
+        rating: 5.0,
+        experience: verifiedWorker.experience || '3 years'
+      }, { onConflict: 'id' });
+
+      if (cleanTen) {
+        await supabase.from('users').upsert({
+          id: verifiedWorker.id,
+          name: verifiedWorker.name,
+          phone: cleanTen,
+          role: 'WORKER',
+          status: 'approved',
+          worker_status: 'approved'
+        }, { onConflict: 'id' });
+      }
+
+      await supabase.from('pending_workers').delete().eq('id', workerAppId);
+    } catch (supaErr) {
+      console.warn('Supabase approveWorker notice:', supaErr?.message || supaErr);
     }
   }
 
@@ -2418,6 +2599,7 @@ export async function adminAddWorker(workerData) {
     : [primaryCat];
   const serviceArea = (workerData.service_area || workerData.serviceArea || workerData.city || 'Melattur, Kerala').trim();
   const avatarImage = workerData.avatar || workerData.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80';
+  const cleanTen = (workerData.phone || '').replace(/\D/g, '').slice(-10);
 
   const newWorker = {
     id: workerUniqueId,
@@ -2437,8 +2619,8 @@ export async function adminAddWorker(workerData) {
     subSkills: subSkills,
     service_area: serviceArea,
     serviceArea: serviceArea,
-    service_areas: [serviceArea],
-    serviceAreas: [serviceArea],
+    service_areas: [serviceArea, 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
+    serviceAreas: [serviceArea, 'Melattur, Kerala', 'Pattikkad, Kerala', 'Pandikkad, Kerala', 'Kerala'],
     city: serviceArea,
     address: workerData.address || serviceArea,
     experience: workerData.experience || '4 years',
@@ -2465,13 +2647,41 @@ export async function adminAddWorker(workerData) {
 
   if (isFirebaseConfigured && db) {
     try {
-      await Promise.all([
+      const writes = [
         setDoc(doc(db, 'workers', newWorker.id), newWorker, { merge: true }),
-        setDoc(doc(db, 'users', newWorker.id), newWorker, { merge: true })
-      ]);
+        setDoc(doc(db, 'users', newWorker.id), newWorker, { merge: true }),
+        setDoc(doc(db, 'service_availability', newWorker.categoryId || 'cat_ac'), {
+          isAvailable: true,
+          categoryName: newWorker.categoryName,
+          lastUpdated: nowIso
+        }, { merge: true })
+      ];
+      if (cleanTen) {
+        writes.push(setDoc(doc(db, 'users', 'usr_' + cleanTen), { ...newWorker, workerId: newWorker.id }, { merge: true }));
+      }
+      await safeDbPromise(Promise.all(writes), 2500);
     } catch (e) {
       console.warn('Firestore adminAddWorker fallback', e);
     }
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('workers').upsert({
+        id: newWorker.id,
+        name: newWorker.name,
+        phone: newWorker.phone,
+        skill: newWorker.skill,
+        category: newWorker.category,
+        service_area: newWorker.service_area,
+        city: newWorker.city,
+        status: 'approved',
+        worker_status: 'approved',
+        is_approved: true,
+        is_available: true,
+        is_online: true
+      }, { onConflict: 'id' });
+    } catch {}
   }
 
   return newWorker;
