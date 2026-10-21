@@ -250,7 +250,11 @@ export function AuthProvider({ children }) {
         ...extraData,
         uid: existingProfile.uid || uid,
         phone: `+91 ${cleanTenDigits}`,
-        role: existingProfile.role || role || 'customer'
+        role: (role === 'worker' || extraData?.role === 'worker' || extraData?.userRole === 'worker')
+          ? 'worker'
+          : (existingProfile.role || role || 'customer'),
+        status: extraData?.status || existingProfile.status || 'active',
+        workerStatus: extraData?.workerStatus || existingProfile.workerStatus
       };
       saveLocalUserByPhone(cleanTenDigits, mergedProfile);
       setCurrentUser(mergedProfile);

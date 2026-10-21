@@ -46,7 +46,8 @@ import {
   addWorkerPortfolio,
   deleteWorkerPortfolio,
   DUMMY_WORKER_IDS,
-  calculateJobBilling
+  calculateJobBilling,
+  subscribePendingWorkers
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
@@ -54,6 +55,7 @@ import { PaymentQRModal } from '../components/billing/PaymentQRModal';
 import { compressImage } from '../utils/imageUtils';
 import { WorkerCateringShiftsCard } from '../components/catering/WorkerCateringShiftsCard';
 import { subscribeCateringBookings, seedSampleCateringShiftIfEmpty } from '../data/cateringShiftService';
+import { WorkerOnboardingModal } from './WorkerOnboardingModal';
 
 /**
  * Generates direct Google Maps Navigation URL using exact GPS coordinates:
@@ -68,9 +70,11 @@ export function getGoogleMapsNavigationUrl(booking) {
   return `https://www.google.com/maps/dir/?api=1&destination=${latNum},${lngNum}&travelmode=driving`;
 }
 
-export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
+export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboarding }) {
   const { currentUser } = useAuth();
   const [workers, setWorkers] = useState([]);
+  const [pendingWorkers, setPendingWorkers] = useState([]);
+  const [isWorkerOnboardingOpen, setIsWorkerOnboardingOpen] = useState(false);
   const [selectedWorkerId, setSelectedWorkerId] = useState(() => currentUser?.workerId || currentUser?.uid || '');
   const [bookings, setBookings] = useState([]);
   const [cateringShifts, setCateringShifts] = useState([]);
@@ -125,6 +129,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
     const unsub = subscribeWorkers((list) => {
       const realOnly = (list || []).filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
       setWorkers(realOnly);
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to real-time pending worker applications
+  useEffect(() => {
+    const unsub = subscribePendingWorkers((list) => {
+      setPendingWorkers(list || []);
     });
     return () => unsub();
   }, []);
@@ -561,7 +573,14 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
   };
 
 
+  const userPhoneClean = (currentUser?.phone || '').replace(/\D/g, '').slice(-10);
+  const myPendingApp = pendingWorkers.find(p => 
+    (userPhoneClean && p.phone && p.phone.replace(/\D/g, '').slice(-10) === userPhoneClean) ||
+    (p.id === currentUser?.workerId || p.id === currentUser?.uid)
+  );
+
   const isPendingVerification = 
+    Boolean(myPendingApp) ||
     (currentUser?.status === 'pending' || currentUser?.workerStatus === 'pending' || currentUser?.workerStatus === 'pending_verification') || 
     (activeWorker?.status === 'pending' || activeWorker?.workerStatus === 'pending' || activeWorker?.status === 'pending_verification' || activeWorker?.workerStatus === 'pending_verification');
 
@@ -606,7 +625,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
               </span>
               <h4 className="text-lg font-black text-slate-900">Application Under Verification</h4>
               <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
-                Welcome, <strong>{currentUser?.name || activeWorker?.name}</strong>. Your KYC credentials and trade certificates are being verified by the JOBit Master Admin.
+                Welcome, <strong>{myPendingApp?.name || currentUser?.name || activeWorker?.name || 'Partner'}</strong>. Your application and credentials are under review by the JOBit Master Admin.
               </p>
             </div>
 
@@ -614,50 +633,50 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-left text-xs space-y-2 mt-2">
               <div className="flex justify-between items-center text-slate-600">
                 <span className="font-semibold">Registered Trade:</span>
-                <span className="font-black text-slate-900">{currentUser?.categoryName || activeWorker?.skill || 'Home Services'}</span>
+                <span className="font-black text-slate-900">{myPendingApp?.categoryName || currentUser?.categoryName || activeWorker?.skill || 'Catering Staff'}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
                 <span className="font-semibold">Service Location:</span>
-                <span className="font-black text-slate-900">{currentUser?.city || activeWorker?.city || 'Kerala'}</span>
+                <span className="font-black text-slate-900">{myPendingApp?.city || currentUser?.city || activeWorker?.city || 'Melattur, Kerala'}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
                 <span className="font-semibold">Registered Contact:</span>
-                <span className="font-black text-slate-900">{currentUser?.phone || activeWorker?.phone}</span>
+                <span className="font-black text-slate-900">{myPendingApp?.phone || currentUser?.phone || activeWorker?.phone}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
                 <span className="font-semibold">Aadhaar Card:</span>
                 <span className="font-bold text-amber-600">
-                  {currentUser?.aadhaarNumber ? `Verified (${currentUser.aadhaarNumber.slice(-4).padStart(12, '•')})` : 'Attached & Under KYC Check'}
+                  {myPendingApp?.aadhaarNumber || currentUser?.aadhaarNumber ? `Attached (${(myPendingApp?.aadhaarNumber || currentUser?.aadhaarNumber).slice(-4).padStart(12, '•')})` : 'Optional / Self-Declaration'}
                 </span>
               </div>
               <div className="flex justify-between items-center text-slate-600">
                 <span className="font-semibold">Driving License:</span>
                 <span className="font-bold text-amber-600">
-                  {currentUser?.drivingLicenseNumber || currentUser?.drivingLicenseDocUrl ? 'Attached & Under KYC Check' : 'Optional / Attached'}
+                  {myPendingApp?.drivingLicenseNumber || myPendingApp?.drivingLicenseDocUrl || currentUser?.drivingLicenseNumber || currentUser?.drivingLicenseDocUrl ? 'Attached & Under KYC Check' : 'Optional (Not required for this role)'}
                 </span>
               </div>
 
               {/* Uploaded Documents Thumbnails */}
-              {(currentUser?.aadhaarDocUrl || currentUser?.drivingLicenseDocUrl || currentUser?.idProofUrl) && (
+              {(myPendingApp?.aadhaarDocUrl || myPendingApp?.drivingLicenseDocUrl || myPendingApp?.idProofUrl || currentUser?.aadhaarDocUrl || currentUser?.drivingLicenseDocUrl) && (
                 <div className="pt-2 border-t border-slate-200/80">
                   <span className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase tracking-wider">
                     Uploaded Documents
                   </span>
                   <div className="grid grid-cols-2 gap-2">
-                    {(currentUser?.aadhaarDocUrl || currentUser?.idProofUrl) && (
+                    {(myPendingApp?.aadhaarDocUrl || myPendingApp?.idProofUrl || currentUser?.aadhaarDocUrl) && (
                       <div className="rounded-xl overflow-hidden border border-slate-200 bg-white p-1 text-center">
                         <img 
-                          src={currentUser?.aadhaarDocUrl || currentUser?.idProofUrl} 
+                          src={myPendingApp?.aadhaarDocUrl || myPendingApp?.idProofUrl || currentUser?.aadhaarDocUrl} 
                           alt="Aadhaar" 
                           className="w-full h-16 object-cover rounded-lg mb-1" 
                         />
-                        <span className="text-[10px] font-bold text-slate-700 block truncate">Aadhaar Card</span>
+                        <span className="text-[10px] font-bold text-slate-700 block truncate">Aadhaar / ID Card</span>
                       </div>
                     )}
-                    {currentUser?.drivingLicenseDocUrl && (
+                    {(myPendingApp?.drivingLicenseDocUrl || currentUser?.drivingLicenseDocUrl) && (
                       <div className="rounded-xl overflow-hidden border border-slate-200 bg-white p-1 text-center">
                         <img 
-                          src={currentUser.drivingLicenseDocUrl} 
+                          src={myPendingApp?.drivingLicenseDocUrl || currentUser?.drivingLicenseDocUrl} 
                           alt="Driving License" 
                           className="w-full h-16 object-cover rounded-lg mb-1" 
                         />
@@ -673,14 +692,28 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100 text-[11px] text-sky-900 font-semibold text-left flex items-start gap-2">
               <Sparkles className="w-4 h-4 text-[#0EA5E0] shrink-0 mt-0.5" />
               <span>
-                Once approved, your profile will immediately unlock the live dispatch radar, job notifications, and daily earnings dashboard.
+                Once approved, your profile will immediately unlock the live dispatch radar, daily catering gigs, job notifications, and earnings dashboard.
               </span>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="pt-6 space-y-2">
+        <div className="pt-6 space-y-2.5">
+          <button
+            onClick={() => {
+              if (onOpenWorkerOnboarding) {
+                onOpenWorkerOnboarding();
+              } else {
+                setIsWorkerOnboardingOpen(true);
+              }
+            }}
+            className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition cursor-pointer shadow-md flex items-center justify-center gap-2 active:scale-98"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Submit / Update Trade Application</span>
+          </button>
+
           <button
             onClick={onLogout || onBack}
             className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition cursor-pointer shadow-sm"
@@ -688,6 +721,16 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             Switch to Customer Browsing
           </button>
         </div>
+
+        {/* In-Dashboard Worker Onboarding Modal */}
+        <WorkerOnboardingModal
+          isOpen={isWorkerOnboardingOpen}
+          onClose={() => setIsWorkerOnboardingOpen(false)}
+          onSuccess={() => {
+            setIsWorkerOnboardingOpen(false);
+            showToast('Registration application submitted successfully! Under admin review.', 'success');
+          }}
+        />
       </div>
     );
   }
@@ -720,21 +763,35 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             </button>
           </div>
 
-          <div className="mt-10 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-md text-center space-y-4">
+          <div className="mt-8 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-md text-center space-y-4">
             <div className="w-16 h-16 bg-sky-50 rounded-3xl border-2 border-sky-200 flex items-center justify-center mx-auto text-[#0EA5E0] shadow-xs">
               <User className="w-8 h-8" />
             </div>
 
             <div>
-              <h4 className="text-lg font-black text-slate-900">No Approved Technician Found</h4>
+              <h4 className="text-lg font-black text-slate-900">Partner Registration & Onboarding</h4>
               <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
-                Only real registered and approved technicians can access the Worker Dashboard. Please register as a verified partner or log in with your registered phone number.
+                Join JOBit certified service network. Register your trade category (Catering Staff, Electrician, Plumber, etc.) to access live job requests and daily gig shifts.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="pt-6 space-y-2">
+        <div className="pt-6 space-y-2.5">
+          <button
+            onClick={() => {
+              if (onOpenWorkerOnboarding) {
+                onOpenWorkerOnboarding();
+              } else {
+                setIsWorkerOnboardingOpen(true);
+              }
+            }}
+            className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition cursor-pointer shadow-md flex items-center justify-center gap-2 active:scale-98"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Register as Verified Partner / Apply Now</span>
+          </button>
+
           <button
             onClick={onLogout || onBack}
             className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition cursor-pointer shadow-sm"
@@ -742,6 +799,16 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
             Back to Customer Home
           </button>
         </div>
+
+        {/* In-Dashboard Worker Onboarding Modal */}
+        <WorkerOnboardingModal
+          isOpen={isWorkerOnboardingOpen}
+          onClose={() => setIsWorkerOnboardingOpen(false)}
+          onSuccess={() => {
+            setIsWorkerOnboardingOpen(false);
+            showToast('Registration application submitted successfully! Under admin review.', 'success');
+          }}
+        />
       </div>
     );
   }
@@ -779,6 +846,21 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
 
           {/* Real Worker Profile Status & Exit Button */}
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                if (onOpenWorkerOnboarding) {
+                  onOpenWorkerOnboarding();
+                } else {
+                  setIsWorkerOnboardingOpen(true);
+                }
+              }}
+              className="text-[10px] font-black text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-1 rounded-full flex items-center gap-1 transition cursor-pointer"
+              title="Apply for additional trade category or daily catering gigs"
+            >
+              <Plus className="w-3 h-3 stroke-[2.5]" />
+              <span>Add Trade</span>
+            </button>
+
             <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>Verified Pro</span>
@@ -2020,6 +2102,16 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack }) {
           <span>{toastMsg}</span>
         </div>
       )}
+
+      {/* In-Dashboard Worker Onboarding & New Trade Registration Modal */}
+      <WorkerOnboardingModal
+        isOpen={isWorkerOnboardingOpen}
+        onClose={() => setIsWorkerOnboardingOpen(false)}
+        onSuccess={() => {
+          setIsWorkerOnboardingOpen(false);
+          showToast('Trade application submitted successfully! Under review.', 'success');
+        }}
+      />
 
     </div>
   );

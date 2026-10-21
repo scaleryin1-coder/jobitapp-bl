@@ -368,6 +368,15 @@ function MainLayout() {
               setCurrentScreen('chat');
             }}
             onLogout={handleLogoutToCustomer}
+            onOpenWorkerOnboarding={() => setIsWorkerOnboardingOpen(true)}
+          />
+
+          <WorkerOnboardingModal
+            isOpen={isWorkerOnboardingOpen}
+            onClose={() => setIsWorkerOnboardingOpen(false)}
+            onSuccess={() => {
+              setIsWorkerOnboardingOpen(false);
+            }}
           />
         </div>
       </div>
