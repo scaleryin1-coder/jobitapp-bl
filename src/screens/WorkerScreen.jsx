@@ -47,7 +47,9 @@ import {
   deleteWorkerPortfolio,
   DUMMY_WORKER_IDS,
   calculateJobBilling,
-  subscribePendingWorkers
+  subscribePendingWorkers,
+  TEMPORARY_TESTING_OVERRIDE,
+  playNotificationChime
 } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
@@ -98,6 +100,9 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
   const [congratulationsData, setCongratulationsData] = useState(null); // "Job done! Congratulations 👏" modal
   const [confirmRejectJob, setConfirmRejectJob] = useState(null); // Job rejection confirmation popup
   const [isRejecting, setIsRejecting] = useState(false);
+  const [incomingPopupJob, setIncomingPopupJob] = useState(null);
+  const [popupRaceMessage, setPopupRaceMessage] = useState('');
+  const [isAcceptingJob, setIsAcceptingJob] = useState(false);
   
   // Portfolio / Work Albums State
   const [portfolios, setPortfolios] = useState([]);
@@ -123,6 +128,49 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
       setSelectedWorkerId(currentUser.workerId || currentUser.uid);
     }
   }, [currentUser]);
+
+  // Listen for real-time incoming job alerts triggered when a customer books
+  useEffect(() => {
+    const handleIncomingJob = (e) => {
+      const job = e?.detail;
+      if (!job || !job.id) return;
+      if (declinedJobIds.includes(job.id)) return;
+
+      // Check if job matches this worker's trade (or testing override)
+      const bookingCategory = job.categoryId || job.categoryName || job.serviceTitle || job.service_type;
+      const matchesTrade = doesWorkerMatchCategory(activeWorker, bookingCategory);
+
+      if (TEMPORARY_TESTING_OVERRIDE || matchesTrade) {
+        playNotificationChime();
+        setIncomingPopupJob(job);
+        setPopupRaceMessage('');
+      }
+    };
+
+    window.addEventListener('jobit_worker_incoming_job', handleIncomingJob);
+    return () => window.removeEventListener('jobit_worker_incoming_job', handleIncomingJob);
+  }, [activeWorker, declinedJobIds]);
+
+  // First-Come-First-Serve real-time monitoring for the popup modal
+  useEffect(() => {
+    if (!incomingPopupJob) return;
+    const latestState = bookings.find(b => b.id === incomingPopupJob.id || b.supabaseId === incomingPopupJob.id);
+    if (!latestState) return;
+
+    // If another worker accepted/assigned it before this worker:
+    if (
+      (latestState.status === 'assigned' || latestState.status === 'accepted') &&
+      latestState.workerId &&
+      latestState.workerId !== activeWorker?.id
+    ) {
+      setPopupRaceMessage(`This job was just claimed by ${latestState.workerName || 'another professional'} on a first-come, first-served basis.`);
+      const timer = setTimeout(() => {
+        setIncomingPopupJob(null);
+        setPopupRaceMessage('');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [bookings, incomingPopupJob, activeWorker?.id]);
 
   // Subscribe to real-time workers (only real approved workers are passed down)
   useEffect(() => {
@@ -268,43 +316,47 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
 
     // 2. Category matching: Worker must specialize in this trade
     const bookingCategory = b.categoryId || b.categoryName || b.serviceTitle || b.service_type;
-    if (!doesWorkerMatchCategory(activeWorker, bookingCategory)) {
+    const matchesTrade = doesWorkerMatchCategory(activeWorker, bookingCategory);
+    if (!TEMPORARY_TESTING_OVERRIDE && !matchesTrade) {
       return false;
     }
 
     // 3. Proximity Matching Algorithm (Haversine Formula):
     // Match and broadcast the job ONLY to workers where Calculated_Distance <= Worker_Preferred_Radius
-    const workerRadiusKm = Math.max(1, Number(activeWorker?.serviceRadius || activeWorker?.radius || 15));
-    const custLat = b.user_latitude ?? b.latitude ?? b.lat ?? b.coordinates?.lat;
-    const custLng = b.user_longitude ?? b.longitude ?? b.lng ?? b.coordinates?.lng;
+    if (!TEMPORARY_TESTING_OVERRIDE) {
+      const workerRadiusKm = Math.max(1, Number(activeWorker?.serviceRadius || activeWorker?.radius || 15));
+      const custLat = b.user_latitude ?? b.latitude ?? b.lat ?? b.coordinates?.lat;
+      const custLng = b.user_longitude ?? b.longitude ?? b.lng ?? b.coordinates?.lng;
 
-    if (
-      custLat !== undefined && custLat !== null && custLng !== undefined && custLng !== null &&
-      !isNaN(Number(custLat)) && !isNaN(Number(custLng)) && Number(custLat) !== 0
-    ) {
-      const workerCoords = getWorkerCoordinates(activeWorker);
-      if (workerCoords && workerCoords.lat && workerCoords.lng) {
-        const distanceKm = calculateHaversineDistanceKm(
-          Number(custLat), 
-          Number(custLng), 
-          Number(workerCoords.lat), 
-          Number(workerCoords.lng)
-        );
-        if (distanceKm !== null) {
-          // Strict condition: Calculated_Distance <= Worker_Preferred_Radius
-          return distanceKm <= workerRadiusKm;
+      if (
+        custLat !== undefined && custLat !== null && custLng !== undefined && custLng !== null &&
+        !isNaN(Number(custLat)) && !isNaN(Number(custLng)) && Number(custLat) !== 0
+      ) {
+        const workerCoords = getWorkerCoordinates(activeWorker);
+        if (workerCoords && workerCoords.lat && workerCoords.lng) {
+          const distanceKm = calculateHaversineDistanceKm(
+            Number(custLat), 
+            Number(custLng), 
+            Number(workerCoords.lat), 
+            Number(workerCoords.lng)
+          );
+          if (distanceKm !== null) {
+            return distanceKm <= workerRadiusKm;
+          }
         }
       }
+
+      // Fallback if coordinates missing: textual location coverage check
+      return doesWorkerCoverLocation(activeWorker, b.address || b.city);
     }
 
-    // Fallback if coordinates missing: textual location coverage check
-    return doesWorkerCoverLocation(activeWorker, b.address || b.city);
+    return true;
   });
 
-  // My accepted or ongoing jobs
+  // My accepted or ongoing jobs (Supports both 'assigned' and 'accepted' status)
   const myAssignedJobs = bookings.filter(b => 
     b.workerId === activeWorker?.id && 
-    ['confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status) &&
+    ['assigned', 'confirmed', 'accepted', 'on_the_way', 'in_progress'].includes(b.status) &&
     !declinedJobIds.includes(b.id) &&
     b.status !== 'rejected' &&
     b.status !== 'declined'
@@ -355,8 +407,6 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
   );
 
   // Total earnings calculation (Worker's Net Share)
-  // Rule 2: Deduct 10% from the Service Charge as platform commission for worker earnings.
-  // Worker Final Earning for the job = (Service Charge * 0.90) + Spare Price.
   const totalEarnings = myCompletedJobs.reduce((sum, b) => {
     if (b.workerFinalEarning !== undefined && b.workerFinalEarning !== null) {
       return sum + Number(b.workerFinalEarning);
@@ -370,9 +420,26 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
     return sum + workerFinal;
   }, 0);
 
+  // First-Come-First-Serve Job Acceptance
   const handleAcceptJob = async (booking) => {
-    await acceptJobAsWorker(booking.id, activeWorker);
-    setActiveTab('active');
+    if (!booking || !activeWorker) return;
+    setIsAcceptingJob(true);
+    const result = await acceptJobAsWorker(booking.id, activeWorker);
+    setIsAcceptingJob(false);
+
+    if (result?.success) {
+      setIncomingPopupJob(null);
+      setPopupRaceMessage('');
+      showToast('🎉 Job accepted! Successfully assigned to you.');
+      setActiveTab('active');
+    } else {
+      setPopupRaceMessage(result?.message || 'This job was already claimed by another professional.');
+      showToast(result?.message || 'Job already claimed.');
+      setTimeout(() => {
+        setIncomingPopupJob(null);
+        setPopupRaceMessage('');
+      }, 2500);
+    }
   };
 
   const handleOpenRejectConfirm = (job) => {
@@ -390,6 +457,9 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
       const idsToAdd = [bookingId];
       if (supabaseId) idsToAdd.push(supabaseId);
       setDeclinedJobIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
+      if (incomingPopupJob?.id === bookingId) {
+        setIncomingPopupJob(null);
+      }
 
       // 2. Persist in database (Supabase, Firestore, and storage)
       const currentWorkerId = activeWorker?.id || currentUser?.workerId || currentUser?.uid || 'worker_active';
@@ -414,7 +484,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
 
   // Step-by-step sequential progress updater
   const handleAdvanceStep = async (booking) => {
-    if (booking.status === 'confirmed' || booking.status === 'accepted') {
+    if (booking.status === 'confirmed' || booking.status === 'accepted' || booking.status === 'assigned') {
       await updateBookingStatus(booking.id, 'on_the_way', {
         onTheWayAt: new Date().toISOString()
       });
@@ -1171,8 +1241,20 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
 
             {myAssignedJobs.map((job) => {
               const stepInfo = {
+                assigned: {
+                  label: 'Step 1: Worker Assigned',
+                  badge: 'bg-sky-50 text-[#0EA5E0]',
+                  nextAction: '🚗 I am On The Way',
+                  nextHint: 'Tap when you leave your base to head to customer'
+                },
                 accepted: {
                   label: 'Step 1: Worker Accepted',
+                  badge: 'bg-sky-50 text-[#0EA5E0]',
+                  nextAction: '🚗 I am On The Way',
+                  nextHint: 'Tap when you leave your base to head to customer'
+                },
+                confirmed: {
+                  label: 'Step 1: Worker Assigned',
                   badge: 'bg-sky-50 text-[#0EA5E0]',
                   nextAction: '🚗 I am On The Way',
                   nextHint: 'Tap when you leave your base to head to customer'
@@ -1207,7 +1289,7 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
                       {job.categoryName || 'Home Service'}
                     </span>
                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${stepInfo.badge}`}>
-                      {job.status === 'confirmed' ? 'ASSIGNED' : job.status === 'accepted' ? 'ACCEPTED' : job.status === 'on_the_way' ? 'EN ROUTE' : 'IN PROGRESS'}
+                      {['confirmed', 'assigned'].includes(job.status) ? 'ASSIGNED' : job.status === 'accepted' ? 'ACCEPTED' : job.status === 'on_the_way' ? 'EN ROUTE' : 'IN PROGRESS'}
                     </span>
                   </div>
 
@@ -2052,6 +2134,129 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
               <span>Done • View in History</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* INCOMING REQUEST POPUP MODAL (First-Come-First-Serve UI)  */}
+      {/* ======================================================== */}
+      {incomingPopupJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl relative border-2 border-sky-200 flex flex-col gap-3.5 animate-scale-up">
+            
+            {/* Top alert bar */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600">
+                  New Instant Work Request
+                </span>
+              </div>
+              <span className="text-[9.5px] font-black bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                First-Come First-Serve
+              </span>
+            </div>
+
+            {popupRaceMessage ? (
+              /* Notice if another worker claimed it first */
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-2 animate-fade-in">
+                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <h4 className="text-sm font-black text-amber-900">Already Claimed</h4>
+                <p className="text-xs text-amber-700 font-medium leading-relaxed">
+                  {popupRaceMessage}
+                </p>
+                <p className="text-[10px] text-slate-400 font-semibold pt-1">Closing notice...</p>
+              </div>
+            ) : (
+              /* Active Pending Job Details */
+              <>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0EA5E0] bg-sky-50 px-2.5 py-0.5 rounded-full inline-block">
+                      {incomingPopupJob.categoryName || 'Service Trade'}
+                    </span>
+                    <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      ₹99 Visiting Paid
+                    </span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight pt-1">
+                    {incomingPopupJob.serviceTitle}
+                  </h3>
+                  {incomingPopupJob.customerName && (
+                    <p className="text-xs text-slate-500 font-medium">
+                      Customer: <strong className="text-slate-800">{incomingPopupJob.customerName}</strong>
+                    </p>
+                  )}
+                </div>
+
+                {/* Location & Slot card */}
+                <div className="bg-[#F8FAFC] p-3 rounded-2xl border border-slate-200/80 text-xs space-y-2">
+                  <div className="flex items-start gap-2 text-slate-700">
+                    <MapPin className="w-4 h-4 text-[#0EA5E0] shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900 break-words leading-relaxed">
+                        {incomingPopupJob.address || incomingPopupJob.city || 'Melattur, Kerala'}
+                      </p>
+                      {calculateDistanceToJob(incomingPopupJob) !== null && (
+                        <span className="text-[10px] font-bold text-sky-600 block mt-0.5">
+                          Approx. {calculateDistanceToJob(incomingPopupJob)} km from your base
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700 pt-1 border-t border-slate-200/60">
+                    <Clock className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span className="font-medium text-slate-800">
+                      Schedule: <strong>{incomingPopupJob.dateTime || 'Today'}</strong>
+                    </span>
+                  </div>
+
+                  {incomingPopupJob.note && (
+                    <div className="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-200/60 leading-relaxed">
+                      <strong className="text-slate-800">Customer Note:</strong> {incomingPopupJob.note}
+                    </div>
+                  )}
+                </div>
+
+                {/* Accept and Reject Buttons */}
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDeclineJob(incomingPopupJob);
+                      setIncomingPopupJob(null);
+                    }}
+                    disabled={isAcceptingJob}
+                    className="py-3 px-3 rounded-2xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-black transition active:scale-95 cursor-pointer text-center"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptJob(incomingPopupJob)}
+                    disabled={isAcceptingJob}
+                    className="py-3 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {isAcceptingJob ? (
+                      <span>Claiming...</span>
+                    ) : (
+                      <>
+                        <span>Accept Job</span>
+                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}

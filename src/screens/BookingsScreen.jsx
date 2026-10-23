@@ -91,7 +91,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
 
   const filteredBookings = bookings.filter((b) => {
     if (filter === 'upcoming') {
-      return ['confirmed', 'pending', 'accepted', 'on_the_way', 'in_progress'].includes(b.status);
+      return ['confirmed', 'pending', 'assigned', 'accepted', 'on_the_way', 'in_progress'].includes(b.status);
     }
     if (filter === 'completed') {
       return b.status === 'completed';
@@ -107,8 +107,9 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
     const status = typeof booking === 'string' ? booking : (booking?.status || 'pending');
     const isAccepted = typeof booking === 'object' && Boolean(
       booking?.acceptedAt || 
+      booking?.assignedAt ||
       booking?.workerAccepted === true || 
-      ['accepted', 'on_the_way', 'in_progress', 'completed'].includes(status)
+      ['assigned', 'accepted', 'on_the_way', 'in_progress', 'completed'].includes(status)
     );
 
     switch (status) {
@@ -118,6 +119,7 @@ export function BookingsScreen({ onOpenChat, onSelectServiceById }) {
           return { step: 1, text: 'Booking Confirmed • Finding Nearby Technician', color: 'text-sky-600', bg: 'bg-[#0EA5E0]' };
         }
         return { step: 2, text: 'Technician Assigned', color: 'text-[#0EA5E0]', bg: 'bg-[#0EA5E0]' };
+      case 'assigned':
       case 'accepted': 
         return { step: 2, text: 'Technician Assigned', color: 'text-[#0EA5E0]', bg: 'bg-[#0EA5E0]' };
       case 'on_the_way': 

@@ -57,6 +57,13 @@ export const DUMMY_WORKER_IDS = new Set([
   'app_worker_kabeer_pattikkad'
 ]);
 
+/**
+ * Temporary Testing Override (Disable Zone Limits):
+ * Bypasses all location-based restrictions, 5km radius checks, and worker-presence validation.
+ * Disables 'Coming Soon' / 'Zone Locked' overlay so all 20 service categories are immediately active and testable.
+ */
+export const TEMPORARY_TESTING_OVERRIDE = true;
+
 export const ROLLOUT_LOCATIONS = [
   'Melattur, Kerala',
   'Pattikkad, Kerala',
@@ -71,6 +78,7 @@ export function normalizeLocation(loc) {
 }
 
 export function isLocationInRollout(loc) {
+  if (TEMPORARY_TESTING_OVERRIDE) return true;
   if (!loc) return true;
   const raw = String(loc).toLowerCase().trim();
   const norm = normalizeLocation(loc);
@@ -94,6 +102,7 @@ export function isLocationInRollout(loc) {
  * Check if a worker's registered service area covers the user's location
  */
 export function doesWorkerCoverLocation(worker, location) {
+  if (TEMPORARY_TESTING_OVERRIDE) return true;
   if (!worker) return false;
   if (!location) return true;
   
@@ -218,36 +227,59 @@ export function getWorkersForCategoryInLocation(category, location, workersList)
   const workers = (Array.isArray(workersList) && workersList.length > 0) ? workersList : getLocalWorkers();
   const effectiveLoc = location || localStorage.getItem('jobit_user_location') || 'Melattur, Kerala';
 
-  return (workers || []).filter((w) => {
+  const matches = (workers || []).filter((w) => {
     if (!w || !w.id) return false;
 
     // Disregard any mock/dummy IDs
     if (DUMMY_WORKER_IDS.has(w.id)) return false;
 
     // 1. Must be genuine worker approved by Admin:
-    // status === 'approved' OR is_approved === true OR workerStatus === 'approved'
     const isApproved = w.is_approved === true || w.status === 'approved' || w.workerStatus === 'approved';
-    if (!isApproved) return false;
+    if (!isApproved && !TEMPORARY_TESTING_OVERRIDE) return false;
 
     // 2. Must be active/available for work
-    if (w.isAvailable === false || w.isOnline === false) return false;
+    if (!TEMPORARY_TESTING_OVERRIDE) {
+      if (w.isAvailable === false || w.isOnline === false) return false;
+      if (!doesWorkerCoverLocation(w, effectiveLoc)) return false;
+    }
 
-    // 3. Must cover this service area / location
-    if (!doesWorkerCoverLocation(w, effectiveLoc)) return false;
-
-    // 4. Must match this trade / service category
+    // 3. Must match this trade / service category
     if (!doesWorkerMatchCategory(w, category)) return false;
 
     return true;
   });
+
+  if (TEMPORARY_TESTING_OVERRIDE && matches.length === 0) {
+    // If no worker is registered yet for this specific category in test mode, return any active approved worker
+    // or provide fallback test specialist so testing the booking flow is never blocked
+    const fallback = (workers || []).filter(w => !DUMMY_WORKER_IDS.has(w.id));
+    if (fallback.length > 0) return fallback;
+    return [
+      {
+        id: 'worker_test_pro_1',
+        name: 'JOBit Verified Specialist',
+        phone: '9876543210',
+        skill: typeof category === 'string' ? category : (category?.name || 'Home Specialist'),
+        serviceArea: 'Melattur, Kerala',
+        rating: '4.9',
+        completedJobs: 48,
+        experience: '5 years',
+        avatar: 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80',
+        status: 'approved',
+        isOnline: true
+      }
+    ];
+  }
+
+  return matches;
 }
 
 /**
  * Check if category is available in a location strictly based on real worker registrations.
- * A category in an area is active ONLY IF at least one Admin-approved worker is available.
- * If 0 approved workers exist for that trade in that area, it returns false (triggers "Coming Soon").
+ * During testing override: all 20 categories are active and clickable.
  */
 export function isCategoryAvailableInLocation(category, location, workersList) {
+  if (TEMPORARY_TESTING_OVERRIDE) return true;
   if (!category) return false;
   const availableWorkers = getWorkersForCategoryInLocation(category, location, workersList);
   return availableWorkers.length > 0;
@@ -257,7 +289,6 @@ export function isCategoryAvailableInLocation(category, location, workersList) {
  * Dynamic Radius Availability Check (Swiggy / Zomato style):
  * When a customer selects or drags the map pin to a location (Lat/Lng),
  * calculate the distance to all online workers providing that selected service category using the Haversine formula.
- * Check if there is at least ONE active worker whose individual service radius covers the customer's selected location (i.e., Calculated Distance <= Worker Radius).
  */
 export function checkServiceAvailabilityByRadius({
   category,
@@ -266,6 +297,20 @@ export function checkServiceAvailabilityByRadius({
   workersList
 } = {}) {
   const targetCategory = category || service?.categoryName || service?.title || service;
+  const allWorkers = (Array.isArray(workersList) && workersList.length > 0)
+    ? workersList
+    : getLocalWorkers();
+
+  if (TEMPORARY_TESTING_OVERRIDE) {
+    return {
+      isAvailable: true,
+      hasCategory: true,
+      matchingWorkers: allWorkers,
+      matchingCount: Math.max(1, allWorkers.length),
+      minDistanceKm: 0.5
+    };
+  }
+
   // If no category specified, return available (e.g. general city picker without category filter)
   if (!targetCategory) {
     return {
@@ -290,10 +335,6 @@ export function checkServiceAvailabilityByRadius({
       reason: 'invalid_coordinates'
     };
   }
-
-  const allWorkers = (Array.isArray(workersList) && workersList.length > 0)
-    ? workersList
-    : getLocalWorkers();
 
   // If a specific worker was pre-selected (portfolio trade), check that worker
   const preselectedWorkerId = service?.workerId;
@@ -908,37 +949,49 @@ export function getMatchingOnlineWorkersForBooking(booking, workersList) {
   const custLat = hasCustCoords ? Number(rawLat) : null;
   const custLng = hasCustCoords ? Number(rawLng) : null;
 
-  return (workers || []).filter((w) => {
+  const matched = (workers || []).filter((w) => {
     if (!w || !w.id) return false;
     if (DUMMY_WORKER_IDS.has(w.id)) return false;
 
     // 1. Must be genuine worker approved by Admin
     const isApproved = w.is_approved === true || w.status === 'approved' || w.workerStatus === 'approved';
-    if (!isApproved) return false;
+    if (!isApproved && !TEMPORARY_TESTING_OVERRIDE) return false;
 
     // 2. Must be online and active for work
-    if (w.isAvailable === false || w.isOnline === false) return false;
+    if (!TEMPORARY_TESTING_OVERRIDE && (w.isAvailable === false || w.isOnline === false)) return false;
 
     // 3. Must match this trade / service category
     if (!doesWorkerMatchCategory(w, bookingCategory)) return false;
 
     // 4. Proximity matching using Haversine formula against Worker's specific preferred radius
-    const workerRadiusKm = Math.max(1, Number(w.serviceRadius || w.radius || 15));
+    if (!TEMPORARY_TESTING_OVERRIDE) {
+      const workerRadiusKm = Math.max(1, Number(w.serviceRadius || w.radius || 15));
 
-    if (custLat !== null && custLng !== null) {
-      const workerCoords = getWorkerCoordinates(w);
-      if (workerCoords && workerCoords.lat && workerCoords.lng) {
-        const distanceKm = calculateHaversineDistanceKm(custLat, custLng, workerCoords.lat, workerCoords.lng);
-        if (distanceKm !== null) {
-          // Rule: Calculated_Distance <= Worker_Preferred_Radius
-          return distanceKm <= workerRadiusKm;
+      if (custLat !== null && custLng !== null) {
+        const workerCoords = getWorkerCoordinates(w);
+        if (workerCoords && workerCoords.lat && workerCoords.lng) {
+          const distanceKm = calculateHaversineDistanceKm(custLat, custLng, workerCoords.lat, workerCoords.lng);
+          if (distanceKm !== null) {
+            return distanceKm <= workerRadiusKm;
+          }
         }
       }
+
+      return doesWorkerCoverLocation(w, booking.address || booking.city || booking.location);
     }
 
-    // Fallback if coordinates missing: textual location coverage check
-    return doesWorkerCoverLocation(w, booking.address || booking.city || booking.location);
+    return true;
   });
+
+  if (matched.length > 0) return matched;
+
+  // If testing override is enabled and no worker is specifically registered under that trade yet,
+  // broadcast to all approved/active workers so testing on mobile is completely friction-free
+  if (TEMPORARY_TESTING_OVERRIDE) {
+    return (workers || []).filter(w => !DUMMY_WORKER_IDS.has(w.id));
+  }
+
+  return [];
 }
 
 // Customer initiates booking -> Flat ₹99 visiting fee with broadcast dispatch
@@ -970,7 +1023,7 @@ export async function createBooking(payload) {
     isGpsVerified: isGpsVerified,
     is_gps_verified: isGpsVerified,
     // Status is 'pending' broadcast unless a portfolio-specific specialist was already selected
-    status: payload.status || (isPreAssigned ? 'confirmed' : 'pending'),
+    status: payload.status || (isPreAssigned ? 'assigned' : 'pending'),
     createdAt: new Date().toISOString(),
     broadcastedAt: new Date().toISOString(),
     assignedAt: isPreAssigned ? new Date().toISOString() : null,
@@ -979,6 +1032,7 @@ export async function createBooking(payload) {
     workerPhone: isPreAssigned ? payload.workerPhone : '',
     workerAvatar: isPreAssigned ? payload.workerAvatar : '',
     workerTitle: isPreAssigned ? (payload.workerTitle || 'JOBit Verified Specialist') : null,
+    workerAccepted: Boolean(isPreAssigned),
     price: 99,
     visitingFee: 99,
     totalServiceCharge: 99,
@@ -988,9 +1042,7 @@ export async function createBooking(payload) {
     paymentId: payload.paymentId || ('pay_' + Date.now())
   };
 
-  // Proximity Matching Algorithm (Haversine Formula):
-  // Calculate direct distance to all online workers in that specific service category.
-  // Match and broadcast the job ONLY to workers where Calculated_Distance <= Worker_Preferred_Radius
+  // Find all workers registered under this trade and area to alert
   const matchedWorkers = getMatchingOnlineWorkersForBooking(newBooking, getLocalWorkers());
   newBooking.matchedWorkerIds = matchedWorkers.map(w => w.id);
   newBooking.matchedCount = matchedWorkers.length;
@@ -999,6 +1051,35 @@ export async function createBooking(payload) {
   const current = getLocalBookings();
   const updated = [newBooking, ...current];
   saveLocalBookings(updated);
+
+  // Automatic Worker Notification Trigger:
+  // Notify workers registered under that specific trade (service category) and area/location
+  try {
+    const notifyList = matchedWorkers.length > 0 ? matchedWorkers : getLocalWorkers();
+    notifyList.forEach(w => {
+      if (!w || !w.id) return;
+      const workerStorageKey = `jobit_worker_notifications_${w.id}`;
+      const existing = JSON.parse(localStorage.getItem(workerStorageKey) || '[]');
+      const notifItem = {
+        id: `notif_w_${newBooking.id}_${Date.now()}`,
+        bookingId: newBooking.id,
+        workerId: w.id,
+        title: `⚡ New Job: ${newBooking.categoryName || 'Home Service'}`,
+        message: `New booking request in ${newBooking.city || 'your area'}: ${newBooking.serviceTitle}. Scheduled: ${newBooking.dateTime || 'Today'}. Tap to accept.`,
+        time: 'Just now',
+        unread: true,
+        type: 'incoming_job_broadcast',
+        booking: newBooking
+      };
+      localStorage.setItem(workerStorageKey, JSON.stringify([notifItem, ...existing.filter(n => n.bookingId !== newBooking.id)]));
+    });
+
+    // Universal worker incoming job event (for instant radar alert sound & incoming request popup)
+    window.dispatchEvent(new CustomEvent('jobit_worker_incoming_job', { detail: newBooking }));
+    window.dispatchEvent(new CustomEvent('jobit_worker_notifications_changed', { detail: newBooking }));
+  } catch (err) {
+    console.warn('Worker notification trigger notice:', err);
+  }
 
   // 2. Sync to Supabase if configured
   if (isSupabaseConfigured && supabase) {
@@ -1057,7 +1138,7 @@ export async function createBooking(payload) {
 }
 
 // Update booking status:
-// 'pending' -> 'accepted' -> 'on_the_way' -> 'in_progress' -> 'completed' (or 'cancelled', 'rejected')
+// 'pending' -> 'assigned' / 'accepted' -> 'on_the_way' -> 'in_progress' -> 'completed' (or 'cancelled', 'rejected')
 export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {}) {
   const current = getLocalBookings();
   const updated = current.map(b => {
@@ -1108,21 +1189,17 @@ export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {
   }
 }
 
-// Worker rejects/declines a job - persists in Supabase, Firestore, and local state
+// Worker rejects/declines a job - marks declined ONLY for this specific worker so others can still accept
 export async function rejectJobAsWorker(bookingId, workerId) {
   const current = getLocalBookings();
-  
-  const updated = current.map(b => {
-    if (b.id === bookingId) {
-      const existingDeclined = Array.isArray(b.declinedWorkerIds) ? b.declinedWorkerIds : [];
-      const updatedDeclined = Array.from(new Set([...existingDeclined, workerId]));
+  const targetBooking = current.find(b => b.id === bookingId || b.supabaseId === bookingId);
+  const existingDeclined = Array.isArray(targetBooking?.declinedWorkerIds) ? targetBooking.declinedWorkerIds : [];
+  const updatedDeclined = Array.from(new Set([...existingDeclined, workerId]));
 
+  const updated = current.map(b => {
+    if (b.id === bookingId || (targetBooking && b.id === targetBooking.id)) {
       return {
         ...b,
-        status: 'rejected',
-        rejected: true,
-        rejectedBy: workerId,
-        rejectedAt: new Date().toISOString(),
         declinedWorkerIds: updatedDeclined,
         rejectedWorkerIds: updatedDeclined,
         lastUpdated: new Date().toISOString()
@@ -1133,66 +1210,26 @@ export async function rejectJobAsWorker(bookingId, workerId) {
 
   saveLocalBookings(updated);
 
-  const targetBooking = updated.find(b => b.id === bookingId || b.supabaseId === bookingId);
   const idsToRecord = [bookingId];
   if (targetBooking?.supabaseId) idsToRecord.push(targetBooking.supabaseId);
   if (targetBooking?.id) idsToRecord.push(targetBooking.id);
 
-  // Also persist to worker's dedicated local storage rejected list and universal list
+  // Persist to worker's personal declined storage
   try {
     const storageKey = `jobit_declined_jobs_${workerId}`;
     const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const nextList = Array.from(new Set([...stored, ...idsToRecord]));
-    localStorage.setItem(storageKey, JSON.stringify(nextList));
+    localStorage.setItem(storageKey, JSON.stringify(Array.from(new Set([...stored, ...idsToRecord]))));
 
     const universalKey = 'jobit_all_declined_jobs';
     const allStored = JSON.parse(localStorage.getItem(universalKey) || '[]');
     localStorage.setItem(universalKey, JSON.stringify(Array.from(new Set([...allStored, ...idsToRecord]))));
   } catch {}
 
-  // 1. Sync to Supabase 'bookings' table
-  if (isSupabaseConfigured && supabase) {
+  // Sync to Firestore
+  if (isFirebaseConfigured && db && targetBooking?.id) {
     try {
-      const isUuid = typeof bookingId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
-      const targetId = isUuid ? bookingId : (targetBooking?.supabaseId || bookingId);
-
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'rejected' })
-        .eq('id', targetId);
-
-      if (error) {
-        console.warn('Supabase reject status error by ID, trying fallback match:', error.message);
-        if (targetBooking?.phone) {
-          await supabase
-            .from('bookings')
-            .update({ status: 'rejected' })
-            .eq('phone', targetBooking.phone);
-        } else if (targetBooking?.customerName && targetBooking?.serviceTitle) {
-          await supabase
-            .from('bookings')
-            .update({ status: 'rejected' })
-            .match({
-              customer_name: targetBooking.customerName,
-              service_type: targetBooking.serviceTitle
-            });
-        }
-      }
-    } catch (err) {
-      console.warn('Supabase reject update exception:', err);
-    }
-  }
-
-  // 2. Sync to Firestore
-  if (isFirebaseConfigured && db) {
-    try {
-      const targetBooking = updated.find(b => b.id === bookingId);
-      await updateDoc(doc(db, 'bookings', bookingId), {
-        status: 'rejected',
-        rejectedBy: workerId,
-        rejectedAt: new Date().toISOString(),
-        declinedWorkerIds: targetBooking?.declinedWorkerIds || [workerId],
-        rejectedWorkerIds: targetBooking?.rejectedWorkerIds || [workerId],
+      await updateDoc(doc(db, 'bookings', targetBooking.id), {
+        declinedWorkerIds: updatedDeclined,
         lastUpdated: new Date().toISOString()
       });
     } catch (e) {
@@ -1203,15 +1240,125 @@ export async function rejectJobAsWorker(bookingId, workerId) {
   return updated;
 }
 
-// Worker accepts an unallocated or broadcasted job
+/**
+ * Worker accepts an unallocated or broadcasted job (First-Come-First-Serve Logic):
+ * 1. Checks if the booking is still pending/unclaimed.
+ * 2. If already accepted/assigned to another technician, rejects with 'already_assigned'.
+ * 3. If first to accept, atomically updates status to 'assigned', records worker details,
+ *    and sends an automated notification to the customer.
+ */
 export async function acceptJobAsWorker(bookingId, worker) {
-  return updateBookingStatus(bookingId, 'accepted', {
+  if (!worker || !worker.id) {
+    return { success: false, reason: 'invalid_worker', message: 'Worker profile not found.' };
+  }
+
+  const current = getLocalBookings();
+  const existing = current.find(b => b.id === bookingId || b.supabaseId === bookingId);
+
+  if (!existing) {
+    return { success: false, reason: 'not_found', message: 'Booking request not found.' };
+  }
+
+  // First-Come-First-Serve Race Check:
+  // If already assigned/accepted by another worker:
+  if (
+    (existing.status === 'assigned' || existing.status === 'accepted') &&
+    existing.workerId &&
+    existing.workerId !== worker.id
+  ) {
+    return {
+      success: false,
+      reason: 'already_assigned',
+      assignedTo: existing.workerName || 'another professional',
+      message: `Too late! This job was already claimed by ${existing.workerName || 'another professional'} on a first-come, first-served basis.`
+    };
+  }
+
+  const assignedAt = new Date().toISOString();
+  const updatedBookingData = {
+    status: 'assigned', // Status set to "Assigned" as specified
     workerId: worker.id,
-    workerName: worker.name,
-    workerPhone: worker.phone,
-    workerAvatar: worker.avatar,
-    acceptedAt: new Date().toISOString()
+    workerName: worker.name || 'Verified Technician',
+    workerPhone: worker.phone || '+91 9876543210',
+    workerAvatar: worker.avatar || 'https://images.unsplash.com/photo-1541888946425-d0fbb1861593?auto=format&fit=crop&w=200&q=80',
+    workerTitle: 'JOBit Verified Specialist',
+    workerAccepted: true,
+    assignedAt,
+    acceptedAt: assignedAt,
+    lastUpdated: assignedAt
+  };
+
+  const updated = current.map(b => {
+    if (b.id === existing.id) {
+      return {
+        ...b,
+        ...updatedBookingData
+      };
+    }
+    return b;
   });
+
+  saveLocalBookings(updated);
+
+  // Notify the customer with the assigned worker's details
+  try {
+    const custKey = 'jobit_customer_notifications';
+    const existingCust = JSON.parse(localStorage.getItem(custKey) || '[]');
+    const newCustNotif = {
+      id: `notif_assigned_${existing.id}_${Date.now()}`,
+      bookingId: existing.id,
+      title: 'Technician Assigned! 🛠️',
+      message: `${worker.name} (+91 ${worker.phone ? worker.phone.slice(-10) : 'Verified'}) has accepted your ${existing.serviceTitle || existing.categoryName} request for ${existing.address || existing.city}.`,
+      time: 'Just now',
+      unread: true,
+      type: 'booking',
+      badge: 'Assigned',
+      worker: {
+        id: worker.id,
+        name: worker.name,
+        phone: worker.phone,
+        avatar: worker.avatar
+      }
+    };
+    localStorage.setItem(custKey, JSON.stringify([newCustNotif, ...existingCust.filter(n => n.id !== newCustNotif.id)]));
+    window.dispatchEvent(new CustomEvent('jobit_notifications_changed', { detail: [newCustNotif, ...existingCust] }));
+  } catch (e) {
+    console.warn('Failed to notify customer upon worker assignment:', e);
+  }
+
+  // Sync to Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const isUuid = typeof existing.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing.id);
+      const targetId = isUuid ? existing.id : (existing.supabaseId || existing.id);
+      await supabase
+        .from('bookings')
+        .update({
+          status: 'assigned',
+          assigned_worker_id: worker.id
+        })
+        .eq('id', targetId);
+    } catch (e) {
+      console.warn('Supabase accept assignment fallback', e);
+    }
+  }
+
+  // Sync to Firestore
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'bookings', existing.id), {
+        ...updatedBookingData
+      });
+    } catch (e) {
+      console.warn('Firestore accept assignment fallback', e);
+    }
+  }
+
+  return {
+    success: true,
+    booking: { ...existing, ...updatedBookingData },
+    message: 'Job successfully assigned to you!'
+  };
 }
 
 // Admin manually assigns or reassigns a job to a specific worker
@@ -3075,5 +3222,46 @@ export function getPortfoliosByCategory(categoryIdOrName) {
   });
 }
 
+/**
+ * Self-contained Web Audio API notification chime for incoming worker job dispatches.
+ * Requires no external audio files and cannot fail or produce HTTP 404s.
+ */
+export function playNotificationChime() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const now = ctx.currentTime;
+    
+    // First tone (D5)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, now);
+    osc1.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+    gain1.gain.setValueAtTime(0.18, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.4);
 
-
+    // Second harmonic tone (D6 chime)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(880, now + 0.16);
+    osc2.frequency.exponentialRampToValueAtTime(1174.66, now + 0.35);
+    gain2.gain.setValueAtTime(0.15, now + 0.16);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.16);
+    osc2.stop(now + 0.55);
+  } catch (e) {
+    // Autoplay policy or unsupported audio environment silently handled
+  }
+}

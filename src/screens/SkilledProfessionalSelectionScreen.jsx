@@ -113,7 +113,7 @@ export function SkilledProfessionalSelectionScreen({
       </header>
 
       {/* 2. Hero Trust Banner */}
-      <div className="px-5 pt-3 pb-2">
+      <div className="px-5 pt-3 pb-2 space-y-2.5">
         <div className="p-3.5 bg-gradient-to-r from-sky-50 via-indigo-50/50 to-white rounded-2xl border border-sky-100/80 shadow-2xs">
           <div className="flex items-start gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#0EA5E0] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -128,6 +128,32 @@ export function SkilledProfessionalSelectionScreen({
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Instant Broadcast Option for Testing & Speed */}
+        <div className="p-3 bg-white rounded-2xl border border-[#0EA5E0]/30 shadow-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xl shrink-0">⚡</span>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-slate-900 truncate">Instant Dispatch (Broadcast Request)</p>
+              <p className="text-[10px] text-slate-500 font-medium truncate">First available {categoryName} technician accepts</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onSelectWorkerToBook({
+                id: `cat_${categoryId || categoryName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+                title: categoryName,
+                categoryName: categoryName,
+                price: 99,
+                visitingFee: 99
+              });
+            }}
+            className="px-3.5 py-1.5 rounded-full bg-[#0EA5E0] hover:bg-[#0284C7] text-white text-xs font-black shadow-xs shrink-0 cursor-pointer active:scale-95 transition"
+          >
+            Book Now ➔
+          </button>
         </div>
       </div>
 

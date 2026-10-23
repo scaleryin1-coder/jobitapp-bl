@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, ChevronRight, Sparkles } from 'lucide-react';
 import { ALL_MAIN_CATEGORIES, isPortfolioCategory } from '../../data/categoriesData';
-import { isCategoryAvailableInLocation } from '../../data/bookingService';
+import { isCategoryAvailableInLocation, TEMPORARY_TESTING_OVERRIDE } from '../../data/bookingService';
 import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 
 export function AllCategoriesModal({
@@ -75,7 +75,7 @@ export function AllCategoriesModal({
           <div className="grid grid-cols-2 gap-2.5">
             {filteredCategories.map((cat) => {
               const isPortfolio = isPortfolioCategory(cat);
-              const isLive = isCategoryAvailableInLocation(cat, currentLocation, workers);
+              const isLive = TEMPORARY_TESTING_OVERRIDE ? true : isCategoryAvailableInLocation(cat, currentLocation, workers);
 
               return (
                 <div

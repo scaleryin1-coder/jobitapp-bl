@@ -33,7 +33,7 @@ import { LocationPickerModal } from './screens/LocationPickerModal';
 import { ComingSoonCategoryModal } from './components/common/ComingSoonCategoryModal';
 import { CateringBookingModal } from './components/catering/CateringBookingModal';
 import { isPortfolioCategory, isCateringCategory } from './data/categoriesData';
-import { subscribeWorkers, isCategoryAvailableInLocation } from './data/bookingService';
+import { subscribeWorkers, isCategoryAvailableInLocation, TEMPORARY_TESTING_OVERRIDE } from './data/bookingService';
 import { BottomNav } from './components/BottomNav';
 
 function MainLayout() {
@@ -447,7 +447,7 @@ function MainLayout() {
                       ? isLive 
                       : isCategoryAvailableInLocation(cat, currentCity, workers);
 
-                    if (!available) {
+                    if (!available && !TEMPORARY_TESTING_OVERRIDE) {
                       setComingSoonCategory(cat);
                       return;
                     }
@@ -476,7 +476,7 @@ function MainLayout() {
                       setIsCateringBookingModalOpen(true);
                       return;
                     }
-                    if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
+                    if (!isCategoryAvailableInLocation(serv, currentCity, workers) && !TEMPORARY_TESTING_OVERRIDE) {
                       setComingSoonCategory(serv);
                       return;
                     }
@@ -493,7 +493,7 @@ function MainLayout() {
                       setIsCateringBookingModalOpen(true);
                       return;
                     }
-                    if (!isCategoryAvailableInLocation(serv, currentCity, workers)) {
+                    if (!isCategoryAvailableInLocation(serv, currentCity, workers) && !TEMPORARY_TESTING_OVERRIDE) {
                       setComingSoonCategory(serv);
                       return;
                     }

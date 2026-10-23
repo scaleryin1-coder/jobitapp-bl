@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { LayoutGrid, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { CategoryBadgeIcon } from './CategoryBadgeIcon';
 import { isPortfolioCategory } from '../../data/categoriesData';
-import { isCategoryAvailableInLocation } from '../../data/bookingService';
+import { isCategoryAvailableInLocation, TEMPORARY_TESTING_OVERRIDE } from '../../data/bookingService';
 
 export function CategoryRow({
   categories = [],
@@ -43,7 +43,7 @@ export function CategoryRow({
       <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-3.5">
         {displayCategories.map((cat) => {
           const isPortfolio = isPortfolioCategory(cat);
-          const isLive = isCategoryAvailableInLocation(cat, currentLocation, workers);
+          const isLive = TEMPORARY_TESTING_OVERRIDE ? true : isCategoryAvailableInLocation(cat, currentLocation, workers);
 
           return (
             <button

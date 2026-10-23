@@ -18,7 +18,7 @@ import {
   Navigation,
   ExternalLink
 } from 'lucide-react';
-import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber, checkServiceAvailabilityByRadius } from '../data/bookingService';
+import { createBooking, getWorkersForCategoryInLocation, maskPhoneNumber, checkServiceAvailabilityByRadius, TEMPORARY_TESTING_OVERRIDE } from '../data/bookingService';
 import { useAuth } from '../context/AuthContext';
 import { getSubCategoriesForCategory, isPortfolioCategory } from '../data/categoriesData';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
@@ -139,7 +139,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     });
   }, [service, coordinates?.lat, coordinates?.lng, workers]);
 
-  const isLocationAvailable = Boolean(radiusAvailability?.isAvailable);
+  const isLocationAvailable = TEMPORARY_TESTING_OVERRIDE ? true : Boolean(radiusAvailability?.isAvailable);
   const isDateValid = Boolean(date && date.trim().length > 0);
   const isTimeSlotValid = Boolean(timeSlot && timeSlot.trim().length > 0 && !isTimeSlotPassed(timeSlot, date));
   const isFormValid = isAddressValid && isCoordinatesValid && isDateValid && isTimeSlotValid && isLocationAvailable;
@@ -159,7 +159,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
     ? (service.subCategories && service.subCategories.length > 0
         ? service.subCategories
         : getSubCategoriesForCategory(service.categoryName || service.title))
-    : [];
+  : [];
 
   const [selectedSubCategory, setSelectedSubCategory] = useState(
     availableSubCategories[0] || 'Standard Inspection & Service'
@@ -171,7 +171,7 @@ export function BookingModal({ service, isOpen, onClose, onSuccess, currentCity,
 
   // Check if at least one Admin-approved worker is available in this area
   const availableWorkers = getWorkersForCategoryInLocation(service, effectiveCity, workers);
-  const isAvailable = availableWorkers.length > 0;
+  const isAvailable = TEMPORARY_TESTING_OVERRIDE ? true : availableWorkers.length > 0;
 
   useEffect(() => {
     if (service) {
