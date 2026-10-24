@@ -69,8 +69,11 @@ import {
   uploadCategoryImage,
   uploadServiceImage,
   subscribeDailyGigs,
-  updateDailyGigStatus
+  updateDailyGigStatus,
+  parseSupabaseBooking,
+  getLocalBookings
 } from '../data/bookingService';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { PostGigModal } from '../components/gigs/PostGigModal';
 import { ChatAuditModal } from '../components/admin/ChatAuditModal';
 import { CateringShiftManagementAdmin } from '../components/catering/CateringShiftManagementAdmin';
@@ -257,6 +260,76 @@ export function AdminScreen({ onBack, onLogout }) {
       unsubC();
       unsubGigs();
       unsubCater();
+    };
+  }, []);
+
+  // Direct Supabase Real-Time Listener (.on('postgres_changes', ...)) for Admin Dashboard
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // Direct query to fetch fresh bookings on mount
+    const fetchFreshBookings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+          const currentMap = new Map((getLocalBookings() || []).map(b => [b.id, b]));
+          data.forEach(row => {
+            const existing = currentMap.get(row.id) || {};
+            const parsed = parseSupabaseBooking(row, existing);
+            if (parsed) currentMap.set(row.id, parsed);
+          });
+          const merged = Array.from(currentMap.values());
+          merged.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          setBookings(merged);
+        }
+      } catch (err) {
+        console.warn('Admin Supabase fetch notice:', err);
+      }
+    };
+
+    fetchFreshBookings();
+
+    const channel = supabase
+      .channel('jobit_admin_realtime_bookings')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+        if (payload.eventType === 'DELETE' && payload.old?.id) {
+          setBookings(prev => prev.filter(b => b.id !== payload.old.id && b.supabaseId !== payload.old.id));
+        } else if (payload.new && payload.new.id) {
+          setBookings(prev => {
+            const idx = prev.findIndex(b => b.id === payload.new.id || b.supabaseId === payload.new.id);
+            const existing = idx >= 0 ? prev[idx] : {};
+            const parsed = parseSupabaseBooking(payload.new, existing);
+            if (idx >= 0) {
+              return prev.map((b, i) => i === idx ? parsed : b);
+            } else {
+              return [parsed, ...prev];
+            }
+          });
+        }
+      })
+      .on('broadcast', { event: 'booking_created' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setBookings(prev => {
+            if (prev.some(b => b.id === payload.id || b.supabaseId === payload.id)) return prev;
+            return [payload, ...prev];
+          });
+        }
+      })
+      .on('broadcast', { event: 'booking_updated' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setBookings(prev => prev.map(b => (b.id === payload.id || b.supabaseId === payload.id) ? { ...b, ...payload } : b));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      if (channel && typeof channel.unsubscribe === 'function') {
+        channel.unsubscribe();
+      }
     };
   }, []);
 

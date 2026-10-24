@@ -601,45 +601,155 @@ export function saveLocalWorkers(workers) {
   }
 }
 
-// Real-time listener for bookings (Supabase & Firestore with local fallback & sync)
+// Helper to check if string is a valid UUID v4
+export const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+// Helper to parse and adapt Supabase bookings table row into comprehensive booking model
+export function parseSupabaseBooking(row, existingLocal = {}) {
+  if (!row) return null;
+
+  let userLat = null;
+  let userLng = null;
+
+  if (row.user_latitude !== undefined && row.user_latitude !== null) {
+    userLat = Number(row.user_latitude);
+  }
+  if (row.user_longitude !== undefined && row.user_longitude !== null) {
+    userLng = Number(row.user_longitude);
+  }
+
+  // Extract [GPS: lat, lng] from address if embedded
+  if ((userLat === null || userLng === null) && row.address) {
+    const gpsMatch = String(row.address).match(/\[GPS:\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)\]/);
+    if (gpsMatch) {
+      userLat = Number(gpsMatch[1]);
+      userLng = Number(gpsMatch[2]);
+    }
+  }
+
+  if (userLat === null || userLng === null) {
+    userLat = existingLocal.user_latitude ?? existingLocal.latitude ?? existingLocal.lat ?? null;
+    userLng = existingLocal.user_longitude ?? existingLocal.longitude ?? existingLocal.lng ?? null;
+  }
+
+  const cleanAddress = row.address 
+    ? String(row.address).replace(/\s*\[GPS:[^\]]+\]/, '').trim() 
+    : (existingLocal.address || 'Melattur, Kerala');
+
+  const isGpsVerified = Boolean(userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng) && userLat !== 0);
+
+  return {
+    ...existingLocal,
+    id: row.id || existingLocal.id,
+    supabaseId: row.id,
+    customerName: row.customer_name || existingLocal.customerName || 'Valued Client',
+    phone: row.phone || existingLocal.phone || '+91 9876543210',
+    address: cleanAddress,
+    fullAddress: cleanAddress,
+    serviceTitle: row.service_type || existingLocal.serviceTitle || 'Home Service',
+    categoryName: row.service_type || existingLocal.categoryName || 'Home Service',
+    dateTime: row.slot || existingLocal.dateTime || 'Today',
+    timeSlot: row.slot || existingLocal.timeSlot || 'Today',
+    status: row.status || existingLocal.status || 'pending',
+    workerId: row.assigned_worker_id || existingLocal.workerId || null,
+    user_latitude: userLat,
+    user_longitude: userLng,
+    latitude: userLat,
+    longitude: userLng,
+    lat: userLat,
+    lng: userLng,
+    coordinates: isGpsVerified ? { lat: userLat, lng: userLng } : (existingLocal.coordinates || null),
+    isGpsVerified,
+    is_gps_verified: isGpsVerified,
+    createdAt: row.created_at || existingLocal.createdAt || new Date().toISOString()
+  };
+}
+
+// Real-time listener for bookings (Supabase postgres_changes & Firestore with polling sync)
 export function subscribeBookings(callback) {
   let unsubFirestore = null;
   let supabaseChannel = null;
+  let pollTimer = null;
 
   const handleLocalChange = () => {
-    const activeUser = localStorage.getItem('jobit_user');
-    if (!activeUser) {
-      callback([]);
-      return;
-    }
     callback(getLocalBookings());
   };
 
   window.addEventListener(EVENT_BOOKINGS_CHANGED, handleLocalChange);
   window.addEventListener('storage', handleLocalChange);
 
-  // Initial trigger: check if user is logged in
-  const activeUser = localStorage.getItem('jobit_user');
-  if (!activeUser) {
-    callback([]);
-    return () => {
-      window.removeEventListener(EVENT_BOOKINGS_CHANGED, handleLocalChange);
-      window.removeEventListener('storage', handleLocalChange);
-    };
-  }
-
+  // Emit current local bookings immediately
   callback(getLocalBookings());
+
+  // Function to fetch latest bookings from Supabase
+  const fetchSupabaseBookings = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        const current = getLocalBookings();
+        const currentMap = new Map(current.map(b => [b.id, b]));
+
+        let storedDeclined = [];
+        try {
+          const allStored = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
+          if (Array.isArray(allStored)) storedDeclined = allStored;
+        } catch {}
+
+        data.forEach(item => {
+          const local = currentMap.get(item.id) || {};
+          const isLocallyRejected = 
+            local.status === 'rejected' || 
+            local.rejected === true || 
+            item.status === 'rejected' ||
+            item.status === 'declined' ||
+            storedDeclined.includes(item.id) ||
+            storedDeclined.includes(String(item.id)) ||
+            (local.id && storedDeclined.includes(local.id)) ||
+            (local.supabaseId && storedDeclined.includes(local.supabaseId));
+
+          const parsed = parseSupabaseBooking(item, local);
+          if (parsed) {
+            parsed.status = isLocallyRejected ? 'rejected' : parsed.status;
+            currentMap.set(item.id, parsed);
+          }
+        });
+
+        const merged = Array.from(currentMap.values());
+        merged.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
+        saveLocalBookings(merged);
+        callback(merged);
+      }
+    } catch (e) {
+      console.warn('Supabase fetchBookings notice:', e);
+    }
+  };
 
   // Supabase fetch & realtime sync if configured
   if (isSupabaseConfigured && supabase) {
+    fetchSupabaseBookings();
+
     try {
-      supabase
-        .from('bookings')
-        .select('*')
-        .then(({ data, error }) => {
-          if (!error && Array.isArray(data) && data.length > 0) {
-            const current = getLocalBookings();
-            const currentMap = new Map(current.map(b => [b.id, b]));
+      supabaseChannel = supabase
+        .channel('jobit_realtime_bookings')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+          const current = getLocalBookings();
+          
+          if (payload.eventType === 'DELETE' && payload.old?.id) {
+            const nextList = current.filter(b => b.id !== payload.old.id && b.supabaseId !== payload.old.id);
+            saveLocalBookings(nextList);
+            callback(nextList);
+            return;
+          }
+
+          if (payload.new && payload.new.id) {
+            const idx = current.findIndex(b => b.id === payload.new.id || b.supabaseId === payload.new.id);
+            const existingItem = idx >= 0 ? current[idx] : {};
+            const parsed = parseSupabaseBooking(payload.new, existingItem);
 
             let storedDeclined = [];
             try {
@@ -647,129 +757,84 @@ export function subscribeBookings(callback) {
               if (Array.isArray(allStored)) storedDeclined = allStored;
             } catch {}
 
-            data.forEach(item => {
-              const local = currentMap.get(item.id) || {};
-              const isLocallyRejected = 
-                local.status === 'rejected' || 
-                local.rejected === true || 
-                item.status === 'rejected' ||
-                item.status === 'declined' ||
-                storedDeclined.includes(item.id) ||
-                storedDeclined.includes(String(item.id)) ||
-                (local.id && storedDeclined.includes(local.id)) ||
-                (local.supabaseId && storedDeclined.includes(local.supabaseId));
+            const isLocallyRejected = 
+              parsed.status === 'rejected' ||
+              parsed.status === 'declined' ||
+              (existingItem.status === 'rejected' || existingItem.rejected === true) || 
+              storedDeclined.includes(payload.new.id) ||
+              storedDeclined.includes(String(payload.new.id));
 
-              const effectiveStatus = isLocallyRejected ? 'rejected' : (item.status || local.status || 'pending');
+            if (isLocallyRejected) {
+              parsed.status = 'rejected';
+            }
 
-              const rawLat = item.user_latitude ?? item.latitude ?? local.user_latitude ?? local.latitude;
-              const rawLng = item.user_longitude ?? item.longitude ?? local.user_longitude ?? local.longitude;
-              const userLat = (rawLat !== undefined && rawLat !== null && !isNaN(Number(rawLat))) ? Number(Number(rawLat).toFixed(6)) : null;
-              const userLng = (rawLng !== undefined && rawLng !== null && !isNaN(Number(rawLng))) ? Number(Number(rawLng).toFixed(6)) : null;
-              const isGpsVerified = Boolean(userLat !== null && userLng !== null && userLat !== 0 && userLng !== 0);
+            let nextList;
+            if (idx >= 0) {
+              nextList = current.map((b, i) => i === idx ? parsed : b);
+            } else {
+              nextList = [parsed, ...current];
+            }
+            saveLocalBookings(nextList);
+            callback(nextList);
 
-              currentMap.set(item.id, {
-                ...local,
-                ...item,
-                user_latitude: userLat,
-                user_longitude: userLng,
-                latitude: userLat,
-                longitude: userLng,
-                lat: userLat,
-                lng: userLng,
-                coordinates: { lat: userLat, lng: userLng },
-                isGpsVerified,
-                is_gps_verified: isGpsVerified,
-                serviceTitle: item.service_type || item.serviceTitle || local.serviceTitle || 'Home Service',
-                categoryName: item.service_type || item.categoryName || local.categoryName || 'Home Service',
-                dateTime: item.slot || item.dateTime || local.dateTime || 'Today',
-                customerName: item.customer_name || item.customerName || local.customerName || 'Customer',
-                workerId: item.assigned_worker_id || item.workerId || local.workerId || null,
-                status: effectiveStatus,
-                declinedWorkerIds: item.declined_worker_ids || item.declinedWorkerIds || local.declinedWorkerIds || [],
-                rejectedWorkerIds: item.rejected_worker_ids || item.rejectedWorkerIds || local.rejectedWorkerIds || [],
-                rejectedBy: item.rejected_by || item.rejectedBy || local.rejectedBy
-              });
-            });
-
-            const merged = Array.from(currentMap.values());
-            merged.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
-            saveLocalBookings(merged);
-            callback(merged);
+            // If this is a pending incoming job, notify workers
+            if (parsed.status === 'pending' && !isLocallyRejected && idx < 0) {
+              try {
+                const notifyWorkers = getMatchingOnlineWorkersForBooking(parsed, getLocalWorkers());
+                const targetWorkers = notifyWorkers.length > 0 ? notifyWorkers : getLocalWorkers();
+                targetWorkers.forEach(w => {
+                  if (!w?.id) return;
+                  const key = `jobit_worker_notifications_${w.id}`;
+                  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+                  const notif = {
+                    id: `notif_w_${parsed.id}_${Date.now()}`,
+                    bookingId: parsed.id,
+                    workerId: w.id,
+                    title: `⚡ New Job: ${parsed.categoryName || 'Home Service'}`,
+                    message: `New booking request in ${parsed.address || 'your area'}: ${parsed.serviceTitle}. Scheduled: ${parsed.dateTime || 'Today'}. Tap to accept.`,
+                    time: 'Just now',
+                    unread: true,
+                    type: 'incoming_job_broadcast',
+                    booking: parsed
+                  };
+                  localStorage.setItem(key, JSON.stringify([notif, ...existing.filter(n => n.bookingId !== parsed.id)]));
+                });
+                window.dispatchEvent(new CustomEvent('jobit_worker_incoming_job', { detail: parsed }));
+                window.dispatchEvent(new CustomEvent('jobit_worker_notifications_changed', { detail: parsed }));
+              } catch (e) {
+                console.warn('Realtime worker notify error:', e);
+              }
+            }
           }
         })
-        .catch(() => {});
-
-      try {
-        supabaseChannel = supabase
-          .channel('public:bookings_realtime')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-            if (payload.new) {
-              const current = getLocalBookings();
-              const idx = current.findIndex(b => b.id === payload.new.id);
-              
-              let storedDeclined = [];
-              try {
-                const allStored = JSON.parse(localStorage.getItem('jobit_all_declined_jobs') || '[]');
-                if (Array.isArray(allStored)) storedDeclined = allStored;
-              } catch {}
-              
-              const isLocallyRejected = 
-                payload.new.status === 'rejected' ||
-                payload.new.status === 'declined' ||
-                (idx >= 0 && (current[idx].status === 'rejected' || current[idx].rejected === true)) || 
-                storedDeclined.includes(payload.new.id) ||
-                storedDeclined.includes(String(payload.new.id)) ||
-                (idx >= 0 && current[idx].id && storedDeclined.includes(current[idx].id)) ||
-                (idx >= 0 && current[idx].supabaseId && storedDeclined.includes(current[idx].supabaseId));
-              const effectiveStatus = isLocallyRejected ? 'rejected' : (payload.new.status || (idx >= 0 ? current[idx].status : 'pending'));
-
-              const existingItem = idx >= 0 ? current[idx] : {};
-              const rawNewLat = payload.new.user_latitude ?? payload.new.latitude ?? existingItem.user_latitude ?? existingItem.latitude;
-              const rawNewLng = payload.new.user_longitude ?? payload.new.longitude ?? existingItem.user_longitude ?? existingItem.longitude;
-              const newLat = (rawNewLat !== undefined && rawNewLat !== null && !isNaN(Number(rawNewLat))) ? Number(Number(rawNewLat).toFixed(6)) : null;
-              const newLng = (rawNewLng !== undefined && rawNewLng !== null && !isNaN(Number(rawNewLng))) ? Number(Number(rawNewLng).toFixed(6)) : null;
-              const isNewGpsVerified = Boolean(newLat !== null && newLng !== null && newLat !== 0 && newLng !== 0);
-
-              const updatedItem = {
-                ...existingItem,
-                ...payload.new,
-                user_latitude: newLat,
-                user_longitude: newLng,
-                latitude: newLat,
-                longitude: newLng,
-                lat: newLat,
-                lng: newLng,
-                coordinates: { lat: newLat, lng: newLng },
-                isGpsVerified: isNewGpsVerified,
-                is_gps_verified: isNewGpsVerified,
-                serviceTitle: payload.new.service_type || payload.new.serviceTitle || existingItem.serviceTitle || 'Home Service',
-                categoryName: payload.new.service_type || payload.new.categoryName || existingItem.categoryName || 'Home Service',
-                dateTime: payload.new.slot || payload.new.dateTime || existingItem.dateTime || 'Today',
-                customerName: payload.new.customer_name || payload.new.customerName || existingItem.customerName || 'Customer',
-                workerId: payload.new.assigned_worker_id || payload.new.workerId || existingItem.workerId || null,
-                status: effectiveStatus,
-                declinedWorkerIds: payload.new.declined_worker_ids || payload.new.declinedWorkerIds || existingItem.declinedWorkerIds || [],
-                rejectedWorkerIds: payload.new.rejected_worker_ids || payload.new.rejectedWorkerIds || existingItem.rejectedWorkerIds || [],
-                rejectedBy: payload.new.rejected_by || payload.new.rejectedBy || existingItem.rejectedBy || null
-              };
-
-              let nextList;
-              if (idx >= 0) {
-                nextList = current.map((b, i) => i === idx ? updatedItem : b);
-              } else {
-                nextList = [updatedItem, ...current];
-              }
-              saveLocalBookings(nextList);
-              callback(nextList);
-            }
-          })
-          .subscribe();
-      } catch {}
+        .on('broadcast', { event: 'booking_created' }, ({ payload }) => {
+          if (!payload || !payload.id) return;
+          const current = getLocalBookings();
+          if (!current.some(b => b.id === payload.id || b.supabaseId === payload.id)) {
+            const merged = [payload, ...current];
+            saveLocalBookings(merged);
+            callback(merged);
+            window.dispatchEvent(new CustomEvent('jobit_worker_incoming_job', { detail: payload }));
+            window.dispatchEvent(new CustomEvent('jobit_worker_notifications_changed', { detail: payload }));
+          }
+        })
+        .on('broadcast', { event: 'booking_updated' }, ({ payload }) => {
+          if (!payload || !payload.id) return;
+          const current = getLocalBookings();
+          const merged = current.map(b => (b.id === payload.id || b.supabaseId === payload.id) ? { ...b, ...payload } : b);
+          saveLocalBookings(merged);
+          callback(merged);
+        })
+        .subscribe();
     } catch (e) {
       console.warn('Supabase bookings listener fallback', e);
     }
+
+    // Gentle polling interval (every 4s) ensuring real-time reliability across all devices
+    pollTimer = setInterval(fetchSupabaseBookings, 4000);
   }
 
+  // Firestore listener
   if (isFirebaseConfigured && db) {
     try {
       unsubFirestore = onSnapshot(collection(db, 'bookings'), (snap) => {
@@ -777,20 +842,18 @@ export function subscribeBookings(callback) {
           const list = snap.docs
             .map(d => ({ id: d.id, ...d.data() }))
             .filter(b => b.id !== 'bk_sample_1' && b.id !== 'bk_sample_2');
-          // Sort by creation time descending
           list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
           saveLocalBookings(list);
           callback(list);
         }
-      }, () => {
-        // Fallback silently to local state when backend is offline
-      });
+      }, () => {});
     } catch {}
   }
 
   return () => {
     window.removeEventListener(EVENT_BOOKINGS_CHANGED, handleLocalChange);
     window.removeEventListener('storage', handleLocalChange);
+    if (pollTimer) clearInterval(pollTimer);
     if (unsubFirestore) unsubFirestore();
     if (supabaseChannel && typeof supabaseChannel.unsubscribe === 'function') {
       supabaseChannel.unsubscribe();
@@ -1084,21 +1147,27 @@ export async function createBooking(payload) {
   // 2. Sync to Supabase if configured
   if (isSupabaseConfigured && supabase) {
     try {
-      const isUuid = typeof newBooking.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(newBooking.id);
-      
+      // Supabase 'bookings' table schema columns:
+      // ['id', 'customer_name', 'phone', 'address', 'service_type', 'slot', 'status', 'assigned_worker_id', 'created_at']
+      // Encode coordinates into address cleanly: [GPS: lat, lng]
+      let formattedAddress = newBooking.fullAddress || newBooking.address || 'Melattur, Kerala';
+      if (userLat !== null && userLng !== null && !formattedAddress.includes('[GPS:')) {
+        formattedAddress = `${formattedAddress} [GPS: ${userLat}, ${userLng}]`;
+      }
+
+      const isWorkerUuid = isUuid(newBooking.workerId);
+
       const supabaseRow = {
         customer_name: newBooking.customerName || 'Valued Client',
-        phone: newBooking.phone || newBooking.contactPhone || '+91 9876543210',
-        address: newBooking.fullAddress || newBooking.address || 'Melattur, Kerala',
+        phone: newBooking.phone || newBooking.contactPhone || newBooking.customerPhone || '+91 9876543210',
+        address: formattedAddress,
         service_type: newBooking.serviceTitle || newBooking.categoryName || 'Home Service',
         slot: newBooking.dateTime || newBooking.timeSlot || 'Today',
         status: newBooking.status || 'pending',
-        assigned_worker_id: newBooking.workerId || null,
-        user_latitude: userLat,
-        user_longitude: userLng
+        assigned_worker_id: isWorkerUuid ? newBooking.workerId : null
       };
 
-      if (isUuid) {
+      if (isUuid(newBooking.id)) {
         supabaseRow.id = newBooking.id;
       }
 
@@ -1112,7 +1181,25 @@ export async function createBooking(payload) {
         newBooking.supabaseId = inserted.id;
         newBooking.id = inserted.id;
         const currentRefreshed = getLocalBookings();
-        saveLocalBookings([newBooking, ...currentRefreshed.filter(b => b.id !== newBooking.id)]);
+        saveLocalBookings([newBooking, ...currentRefreshed.filter(b => b.id !== newBooking.id && b.supabaseId !== inserted.id)]);
+      } else if (sbErr) {
+        console.warn('Supabase booking insert notice:', sbErr.message);
+      }
+
+      // Broadcast immediately across all connected tabs/devices via Supabase Realtime
+      try {
+        const liveChannel = supabase.channel('jobit_realtime_bookings');
+        liveChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            liveChannel.send({
+              type: 'broadcast',
+              event: 'booking_created',
+              payload: newBooking
+            });
+          }
+        });
+      } catch (broadcastErr) {
+        console.warn('Supabase broadcast booking error:', broadcastErr);
       }
     } catch (e) {
       console.warn('Supabase booking create background fallback', e);
@@ -1157,19 +1244,35 @@ export async function updateBookingStatus(bookingId, newStatus, extraUpdates = {
   // Sync to Supabase 'bookings' table with exact schema matching
   if (isSupabaseConfigured && supabase) {
     try {
-      const isUuid = typeof bookingId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
       const target = updated.find(b => b.id === bookingId);
-      const targetId = isUuid ? bookingId : (target?.supabaseId || bookingId);
+      const targetId = isUuid(bookingId) ? bookingId : (target?.supabaseId && isUuid(target.supabaseId) ? target.supabaseId : null);
 
       const supabasePayload = { status: newStatus };
-      if (extraUpdates.workerId || extraUpdates.assigned_worker_id) {
-        supabasePayload.assigned_worker_id = extraUpdates.workerId || extraUpdates.assigned_worker_id;
+      const rawWorkerId = extraUpdates.workerId || extraUpdates.assigned_worker_id;
+      if (rawWorkerId && isUuid(rawWorkerId)) {
+        supabasePayload.assigned_worker_id = rawWorkerId;
       }
 
-      await supabase
-        .from('bookings')
-        .update(supabasePayload)
-        .eq('id', targetId);
+      if (targetId) {
+        await supabase
+          .from('bookings')
+          .update(supabasePayload)
+          .eq('id', targetId);
+      }
+
+      // Broadcast update across devices
+      try {
+        const liveChannel = supabase.channel('jobit_realtime_bookings');
+        liveChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            liveChannel.send({
+              type: 'broadcast',
+              event: 'booking_updated',
+              payload: { id: bookingId, supabaseId: targetId, status: newStatus, ...extraUpdates }
+            });
+          }
+        });
+      } catch {}
     } catch (e) {
       console.warn('Supabase update status fallback', e);
     }
@@ -1329,15 +1432,32 @@ export async function acceptJobAsWorker(bookingId, worker) {
   // Sync to Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const isUuid = typeof existing.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing.id);
-      const targetId = isUuid ? existing.id : (existing.supabaseId || existing.id);
-      await supabase
-        .from('bookings')
-        .update({
-          status: 'assigned',
-          assigned_worker_id: worker.id
-        })
-        .eq('id', targetId);
+      const targetId = isUuid(existing.id) ? existing.id : (existing.supabaseId && isUuid(existing.supabaseId) ? existing.supabaseId : null);
+      const updateData = { status: 'assigned' };
+      if (isUuid(worker.id)) {
+        updateData.assigned_worker_id = worker.id;
+      }
+
+      if (targetId) {
+        await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('id', targetId);
+      }
+
+      // Broadcast update across devices
+      try {
+        const liveChannel = supabase.channel('jobit_realtime_bookings');
+        liveChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            liveChannel.send({
+              type: 'broadcast',
+              event: 'booking_updated',
+              payload: { id: existing.id, supabaseId: targetId, ...updatedBookingData }
+            });
+          }
+        });
+      } catch {}
     } catch (e) {
       console.warn('Supabase accept assignment fallback', e);
     }

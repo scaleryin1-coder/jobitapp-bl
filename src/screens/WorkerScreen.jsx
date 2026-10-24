@@ -49,8 +49,10 @@ import {
   calculateJobBilling,
   subscribePendingWorkers,
   TEMPORARY_TESTING_OVERRIDE,
-  playNotificationChime
+  playNotificationChime,
+  parseSupabaseBooking
 } from '../data/bookingService';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { useAuth } from '../context/AuthContext';
 import { VoiceCallModal } from '../components/voice/VoiceCallModal';
 import { PaymentQRModal } from '../components/billing/PaymentQRModal';
@@ -172,6 +174,64 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
 
     window.addEventListener('jobit_worker_incoming_job', handleIncomingJob);
     return () => window.removeEventListener('jobit_worker_incoming_job', handleIncomingJob);
+  }, [activeWorker, declinedJobIds]);
+
+  // Direct Supabase Real-Time Listener (.on('postgres_changes', ...)) for Worker Dashboard
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !activeWorker) return;
+
+    const channel = supabase
+      .channel('jobit_worker_live_' + (activeWorker.id || 'worker'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const parsed = parseSupabaseBooking(payload.new);
+          if (parsed && parsed.status === 'pending' && !declinedJobIds.includes(parsed.id)) {
+            const bookingCategory = parsed.categoryId || parsed.categoryName || parsed.serviceTitle || parsed.service_type;
+            const matchesTrade = doesWorkerMatchCategory(activeWorker, bookingCategory);
+            if (TEMPORARY_TESTING_OVERRIDE || matchesTrade) {
+              playNotificationChime();
+              setIncomingPopupJob(parsed);
+              setPopupRaceMessage('');
+              setBookings(prev => {
+                if (prev.some(b => b.id === parsed.id || b.supabaseId === parsed.id)) return prev;
+                return [parsed, ...prev];
+              });
+            }
+          }
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          const parsed = parseSupabaseBooking(payload.new);
+          if (parsed) {
+            setBookings(prev => prev.map(b => (b.id === parsed.id || b.supabaseId === parsed.id) ? { ...b, ...parsed } : b));
+          }
+        }
+      })
+      .on('broadcast', { event: 'booking_created' }, ({ payload }) => {
+        if (payload && payload.status === 'pending' && !declinedJobIds.includes(payload.id)) {
+          const bookingCategory = payload.categoryId || payload.categoryName || payload.serviceTitle || payload.service_type;
+          const matchesTrade = doesWorkerMatchCategory(activeWorker, bookingCategory);
+          if (TEMPORARY_TESTING_OVERRIDE || matchesTrade) {
+            playNotificationChime();
+            setIncomingPopupJob(payload);
+            setPopupRaceMessage('');
+            setBookings(prev => {
+              if (prev.some(b => b.id === payload.id || b.supabaseId === payload.id)) return prev;
+              return [payload, ...prev];
+            });
+          }
+        }
+      })
+      .on('broadcast', { event: 'booking_updated' }, ({ payload }) => {
+        if (payload && payload.id) {
+          setBookings(prev => prev.map(b => (b.id === payload.id || b.supabaseId === payload.id) ? { ...b, ...payload } : b));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      if (channel && typeof channel.unsubscribe === 'function') {
+        channel.unsubscribe();
+      }
+    };
   }, [activeWorker, declinedJobIds]);
 
   // First-Come-First-Serve real-time monitoring for the popup modal
