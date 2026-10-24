@@ -123,6 +123,29 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
     setTimeout(() => setToastMsg(''), 4000);
   };
 
+  // Filter approved real workers
+  const approvedRealWorkers = workers.filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
+
+  // If a user logs in, they only see their own real profile and registered account details
+  const myRegisteredProfile = (currentUser?.role === 'worker' || currentUser?.workerId)
+    ? (approvedRealWorkers.find(w => w.id === currentUser.workerId || w.id === currentUser.uid || (w.phone && currentUser.phone && w.phone.replace(/\D/g, '').slice(-10) === currentUser.phone.replace(/\D/g, '').slice(-10))) || (currentUser?.role === 'worker' ? {
+        id: currentUser.workerId || currentUser.uid,
+        name: currentUser.name || 'Verified Partner',
+        skill: currentUser.skill || currentUser.categoryName || 'Specialist',
+        phone: currentUser.phone || '',
+        rating: currentUser.rating || 5.0,
+        jobsCompleted: currentUser.jobsCompleted || 0,
+        isOnline: currentUser.isOnline ?? true,
+        avatar: currentUser.avatar || currentUser.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
+        vehicle: currentUser.vehicle || 'Bike',
+        status: currentUser.status || 'approved',
+        workerStatus: currentUser.workerStatus || 'approved'
+      } : null))
+    : null;
+
+  // Identify active worker: user's own profile, or explicitly selected real approved worker, or first real approved worker
+  const activeWorker = myRegisteredProfile || approvedRealWorkers.find(w => w.id === selectedWorkerId) || approvedRealWorkers[0] || null;
+
   useEffect(() => {
     if (currentUser?.workerId || (currentUser?.role === 'worker' && currentUser?.uid)) {
       setSelectedWorkerId(currentUser.workerId || currentUser.uid);
@@ -213,29 +236,6 @@ export function WorkerScreen({ onOpenChat, onLogout, onBack, onOpenWorkerOnboard
     });
     return () => unsub();
   }, []);
-
-  // Filter approved real workers
-  const approvedRealWorkers = workers.filter(w => (w.status === 'approved' || w.workerStatus === 'approved') && !DUMMY_WORKER_IDS?.has(w.id));
-
-  // If a user logs in, they only see their own real profile and registered account details
-  const myRegisteredProfile = (currentUser?.role === 'worker' || currentUser?.workerId)
-    ? (approvedRealWorkers.find(w => w.id === currentUser.workerId || w.id === currentUser.uid || (w.phone && currentUser.phone && w.phone.replace(/\D/g, '').slice(-10) === currentUser.phone.replace(/\D/g, '').slice(-10))) || (currentUser?.role === 'worker' ? {
-        id: currentUser.workerId || currentUser.uid,
-        name: currentUser.name || 'Verified Partner',
-        skill: currentUser.skill || currentUser.categoryName || 'Specialist',
-        phone: currentUser.phone || '',
-        rating: currentUser.rating || 5.0,
-        jobsCompleted: currentUser.jobsCompleted || 0,
-        isOnline: currentUser.isOnline ?? true,
-        avatar: currentUser.avatar || currentUser.photo || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=400&q=80',
-        vehicle: currentUser.vehicle || 'Bike',
-        status: currentUser.status || 'approved',
-        workerStatus: currentUser.workerStatus || 'approved'
-      } : null))
-    : null;
-
-  // Identify active worker: user's own profile, or explicitly selected real approved worker, or first real approved worker
-  const activeWorker = myRegisteredProfile || approvedRealWorkers.find(w => w.id === selectedWorkerId) || approvedRealWorkers[0] || null;
 
   // Sync rejected jobs for the active worker from storage
   useEffect(() => {

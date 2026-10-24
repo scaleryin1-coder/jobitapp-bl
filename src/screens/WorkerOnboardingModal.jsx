@@ -33,25 +33,8 @@ import { ALL_MAIN_CATEGORIES } from '../data/categoriesData';
 import { compressImage } from '../utils/imageUtils';
 import { LocationPickerField } from '../components/common/LocationPickerField';
 
-const POPULAR_LOCATIONS = [
-  'Melattur, Kerala',
-  'Perinthalmanna, Kerala',
-  'Manjeri, Kerala',
-  'Malappuram, Kerala',
-  'Kozhikode, Kerala',
-  'Kochi, Kerala',
-  'Mumbai, Maharashtra'
-];
-
-/**
- * Determines whether Driving License is mandatory for the given category.
- * Universally OPTIONAL across Catering Staff and ALL other worker categories
- * so registrations and applications can submit smoothly without being blocked.
- */
-export function isDrivingLicenseMandatory(categoryName = '') {
-  // Non-mandatory for all roles: KYC documents & driving licenses can be provided during or after registration
-  return false;
-}
+import { POPULAR_LOCATIONS, isDrivingLicenseMandatory } from '../utils/workerUtils';
+export { isDrivingLicenseMandatory, POPULAR_LOCATIONS };
 
 export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
   const { currentUser, loginWithPhone } = useAuth();
