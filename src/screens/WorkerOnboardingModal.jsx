@@ -387,8 +387,6 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     };
   }, []);
 
-  if (!isOpen) return null;
-
   // Step Validations
   const validateStep1 = () => {
     if (!fullName || !fullName.trim() || fullName.trim().length < 2) {
@@ -667,6 +665,8 @@ export function WorkerOnboardingModal({ isOpen, onClose, onSuccess }) {
     c.name.toLowerCase().includes(categorySearch.toLowerCase().trim()) ||
     (c.subCategories && c.subCategories.some(sub => sub.toLowerCase().includes(categorySearch.toLowerCase().trim())))
   );
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-fade-in select-none">
