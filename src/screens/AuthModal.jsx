@@ -321,30 +321,31 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
         throw new Error('Invalid or expired WhatsApp OTP. Please check the code or tap "Resend via WhatsApp".');
       }
 
-      const hasRegisteredName = Boolean(
-        existingUserFound?.isRegistered && 
-        existingUserFound?.name && 
-        existingUserFound?.name !== 'Valued Customer' && 
-        existingUserFound?.name !== 'Customer'
-      );
+      // Query database directly using the authenticated phone number
+      const regStatus = await checkPhoneRegistered(cleanTen);
 
-      // If phone is verified but no full name is registered, route to setup step to require mandatory Full Name
-      if (!hasRegisteredName) {
-        setSignupUsername('');
-        setSignupStep('setup');
-        setAuthMode('signup');
-        setLoading(false);
+      if (regStatus.isRegistered && regStatus.user) {
+        // Matching profile exists:
+        // Retrieve the user's role (Worker or Customer) and account status.
+        // Redirect them directly to their respective Dashboard.
+        // DO NOT route them to the onboarding/registration screen.
+        const existingProfile = regStatus.user;
+        const user = await loginWithPhone(
+          cleanTen, 
+          code, 
+          existingProfile.name || 'Valued Customer', 
+          existingProfile.role || 'customer',
+          existingProfile
+        );
+        onSuccess?.(user.role || 'customer');
+        onClose();
         return;
       }
 
-      const user = await loginWithPhone(
-        cleanTen, 
-        code, 
-        existingUserFound?.name || 'Customer', 
-        existingUserFound?.role || selectedRole
-      );
-      onSuccess?.(user.role || 'customer');
-      onClose();
+      // If truly no matching profile exists in database, route to signup setup
+      setSignupUsername('');
+      setSignupStep('setup');
+      setAuthMode('signup');
     } catch (err) {
       setError(err.message || 'Invalid verification code');
     } finally {
@@ -376,15 +377,22 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
 
     try {
       // Enforce database constraint: Strictly ONE account per mobile number!
+      // If an account already exists across devices, seamlessly switch to OTP login!
       const regStatus = await checkPhoneRegistered(cleanTen);
-      if (regStatus.isRegistered) {
-        setError(`An account already exists for +91 ${cleanTen}. Strictly ONE account per mobile number. Please sign in instead.`);
+      if (regStatus.isRegistered && regStatus.user) {
         setExistingUserFound(regStatus.user);
+        await sendWhatsAppOtp(cleanTen, 'login');
+        setResendTimer(30);
+        setCanResend(false);
+        setOtpDigits(['1', '2', '3', '4', '5', '6']);
+        setOtpSentNotification(`Existing account found! WhatsApp OTP sent to +91 ${cleanTen}`);
+        setAuthMode('login');
+        setLoginStep('otp_verify');
         setLoading(false);
         return;
       }
 
-      // Trigger WhatsApp OTP verification
+      // Truly new user: trigger WhatsApp OTP verification
       const res = await sendWhatsAppOtp(cleanTen, 'signup');
       setResendTimer(30);
       setCanResend(false);
@@ -398,7 +406,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
     }
   };
 
-  // Step 2: Verify Sign-Up OTP -> Navigate directly to Username & Password Setup Screen
+  // Step 2: Verify Sign-Up OTP -> Check if account already exists before setup
   const verifySignupOtp = async (otpCode) => {
     const code = otpCode || otpDigits.join('');
     const cleanTen = phone.replace(/\D/g, '').slice(-10);
@@ -417,7 +425,23 @@ export function AuthModal({ isOpen, onClose, onSuccess, onOpenWorkerOnboarding, 
         throw new Error('Invalid or expired WhatsApp OTP. Please check the code or tap "Resend via WhatsApp".');
       }
 
-      // Once OTP is verified, navigate immediately to set Username and Password
+      // Check if user already exists in database across devices
+      const regStatus = await checkPhoneRegistered(cleanTen);
+      if (regStatus.isRegistered && regStatus.user) {
+        // Matching profile exists: redirect directly to Dashboard without onboarding
+        const user = await loginWithPhone(
+          cleanTen, 
+          code, 
+          regStatus.user.name || 'Valued Customer', 
+          regStatus.user.role || selectedRole,
+          regStatus.user
+        );
+        onSuccess?.(user.role || 'customer');
+        onClose();
+        return;
+      }
+
+      // Once OTP is verified for a truly new user, navigate immediately to set Username and Password
       setTimeout(() => {
         setLoading(false);
         setSignupStep('setup');

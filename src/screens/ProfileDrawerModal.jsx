@@ -170,10 +170,20 @@ export function ProfileDrawerModal({
         return;
       }
 
-      // Existing single account rule
-      if (existingUserFound) {
-        await loginWithPhone(cleanTen, otpInput, existingUserFound.name, existingUserFound.role || 'customer');
+      // Query database directly using the authenticated phone number across devices
+      const regStatus = await checkPhoneRegistered?.(cleanTen);
+      if (regStatus?.isRegistered && regStatus?.user) {
+        await loginWithPhone(cleanTen, otpInput, regStatus.user.name, regStatus.user.role || 'customer', regStatus.user);
         setActiveSubView('main');
+        onClose?.();
+        return;
+      }
+
+      // Existing single account rule fallback
+      if (existingUserFound) {
+        await loginWithPhone(cleanTen, otpInput, existingUserFound.name, existingUserFound.role || 'customer', existingUserFound);
+        setActiveSubView('main');
+        onClose?.();
         return;
       }
 

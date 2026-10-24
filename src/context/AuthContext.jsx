@@ -29,6 +29,26 @@ const safeDbPromise = (promise, timeoutMs = 1500) => {
   ]).catch(() => null);
 };
 
+export function normalizePhoneE164(phone) {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  const tenDigits = digits.slice(-10);
+  if (!tenDigits || tenDigits.length !== 10) return '';
+  return `+91${tenDigits}`;
+}
+
+export function getPhoneQueryVariants(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  const tenDigits = digits.slice(-10);
+  if (!tenDigits || tenDigits.length !== 10) return [];
+  return [
+    `+91${tenDigits}`,
+    `+91 ${tenDigits}`,
+    tenDigits,
+    `91${tenDigits}`
+  ];
+}
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -39,145 +59,6 @@ export function AuthProvider({ children }) {
     }
   });
   const [loading, setLoading] = useState(true);
-
-  // Sync with Firebase Auth if configured
-  useEffect(() => {
-    if (!isFirebaseConfigured || !auth) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-        try {
-          if (fbUser && db) {
-            const userRef = doc(db, 'users', fbUser.uid);
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-              const userData = { uid: fbUser.uid, ...snap.data() };
-              setCurrentUser(userData);
-              localStorage.setItem('jobit_user', JSON.stringify(userData));
-            } else {
-              const defaultData = {
-                uid: fbUser.uid,
-                name: fbUser.displayName || 'Customer',
-                phone: fbUser.phoneNumber || '',
-                role: 'customer',
-                photo: fbUser.photoURL || '',
-                city: localStorage.getItem('jobit_user_location') || 'Mumbai, Maharashtra'
-              };
-              await setDoc(userRef, defaultData, { merge: true });
-              setCurrentUser(defaultData);
-              localStorage.setItem('jobit_user', JSON.stringify(defaultData));
-            }
-          }
-        } catch {
-          // Offline fallback
-        } finally {
-          setLoading(false);
-        }
-      });
-
-      return () => unsubscribe();
-    } catch {
-      setLoading(false);
-    }
-  }, []);
-
-  // Cross-device status refresh: Refresh technician approval status from database on app startup
-  useEffect(() => {
-    const refreshStatusOnStartup = async () => {
-      try {
-        const raw = localStorage.getItem('jobit_user');
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        const cleanTenDigits = (parsed.phone || '').replace(/\D/g, '').slice(-10);
-        if (!cleanTenDigits || cleanTenDigits.length !== 10) return;
-
-        let remoteData = null;
-
-        // 1. Check Firestore users & workers
-        if (isFirebaseConfigured && db) {
-          try {
-            const userSnap = await safeDbPromise(getDoc(doc(db, 'users', 'usr_' + cleanTenDigits)), 2000);
-            if (userSnap && userSnap.exists && userSnap.exists()) {
-              remoteData = { ...(remoteData || {}), ...userSnap.data() };
-            } else if (parsed.uid) {
-              const uidSnap = await safeDbPromise(getDoc(doc(db, 'users', parsed.uid)), 2000);
-              if (uidSnap && uidSnap.exists && uidSnap.exists()) {
-                remoteData = { ...(remoteData || {}), ...uidSnap.data() };
-              }
-            }
-
-            // Check workers collection in Firestore to see if approved as technician
-            const workersSnap = await safeDbPromise(
-              getDocs(query(collection(db, 'workers'), where('phone', 'in', [parsed.phone, `+91 ${cleanTenDigits}`, cleanTenDigits]))),
-              2000
-            );
-            if (workersSnap && !workersSnap.empty) {
-              const wDoc = workersSnap.docs[0].data();
-              if (wDoc.status === 'approved' || wDoc.workerStatus === 'approved' || wDoc.is_approved) {
-                remoteData = {
-                  ...(remoteData || {}),
-                  ...wDoc,
-                  role: 'worker',
-                  status: 'approved',
-                  workerStatus: 'approved',
-                  isOnline: wDoc.isOnline ?? true,
-                  isAvailable: wDoc.isAvailable ?? true
-                };
-              }
-            }
-          } catch (e) {
-            console.warn('Firestore refreshStatusOnStartup notice:', e);
-          }
-        }
-
-        // 2. Check Supabase workers
-        if (isSupabaseConfigured && supabase) {
-          try {
-            const { data: supaWorker } = await supabase
-              .from('workers')
-              .select('*')
-              .or(`phone.eq.${parsed.phone},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
-              .limit(1)
-              .maybeSingle();
-
-            if (supaWorker && (supaWorker.status === 'approved' || supaWorker.is_approved)) {
-              remoteData = {
-                ...(remoteData || {}),
-                role: 'worker',
-                status: 'approved',
-                workerStatus: 'approved',
-                workerId: String(supaWorker.id),
-                skill: supaWorker.skill || supaWorker.category || supaWorker.category_name,
-                categoryName: supaWorker.category_name || supaWorker.category || supaWorker.skill,
-                city: supaWorker.city || supaWorker.service_area
-              };
-            }
-          } catch {}
-        }
-
-        if (remoteData) {
-          setCurrentUser(prev => {
-            const updated = {
-              ...(prev || parsed),
-              ...remoteData,
-              status: remoteData.status || (prev ? prev.status : 'approved'),
-              workerStatus: remoteData.workerStatus || (prev ? prev.workerStatus : 'approved')
-            };
-            localStorage.setItem('jobit_user', JSON.stringify(updated));
-            saveLocalUserByPhone(cleanTenDigits, updated);
-            return updated;
-          });
-        }
-      } catch (err) {
-        console.warn('Startup status refresh notice:', err);
-      }
-    };
-
-    refreshStatusOnStartup();
-  }, []);
 
   const getLocalUserByPhone = (cleanTenDigits) => {
     try {
@@ -220,6 +101,312 @@ export function AuthProvider({ children }) {
     } catch {}
   };
 
+  /**
+   * Comprehensive cross-device database query to fetch an existing user/worker profile.
+   * Checks Firestore (users, workers, pending_workers) and Supabase (users, profiles, workers).
+   */
+  const fetchRemoteUserProfile = async (phoneOrIdentifier, optionalUid = '') => {
+    if (!phoneOrIdentifier && !optionalUid) return null;
+
+    const rawDigits = String(phoneOrIdentifier || '').replace(/\D/g, '');
+    const cleanTenDigits = rawDigits.slice(-10);
+
+    // Direct Admin Rule: 8289968045 is ALWAYS Master Admin
+    if (cleanTenDigits === '8289968045') {
+      return {
+        uid: 'admin_master',
+        name: 'Master Admin',
+        email: 'admin@jobit.com',
+        phone: '+918289968045',
+        role: 'admin',
+        city: 'Headquarters'
+      };
+    }
+
+    const queryVariants = cleanTenDigits && cleanTenDigits.length === 10
+      ? getPhoneQueryVariants(cleanTenDigits)
+      : [];
+
+    let remoteUser = null;
+    let remoteWorker = null;
+
+    // 1. Check Firestore (users, workers, pending_workers)
+    if (isFirebaseConfigured && db) {
+      try {
+        // Query users collection by phone variants
+        if (queryVariants.length > 0) {
+          const userQuerySnap = await safeDbPromise(
+            getDocs(query(collection(db, 'users'), where('phone', 'in', queryVariants))),
+            2000
+          );
+          if (userQuerySnap && !userQuerySnap.empty) {
+            const first = userQuerySnap.docs[0];
+            remoteUser = { uid: first.id, ...first.data() };
+          }
+        }
+
+        // Query users by direct doc ID usr_XXXXXXXXXX
+        if (!remoteUser && cleanTenDigits && cleanTenDigits.length === 10) {
+          const snap = await safeDbPromise(getDoc(doc(db, 'users', 'usr_' + cleanTenDigits)), 1500);
+          if (snap && snap.exists && snap.exists()) {
+            remoteUser = { uid: 'usr_' + cleanTenDigits, ...snap.data() };
+          }
+        }
+
+        // Query users by optionalUid
+        if (!remoteUser && optionalUid) {
+          const uidSnap = await safeDbPromise(getDoc(doc(db, 'users', optionalUid)), 1500);
+          if (uidSnap && uidSnap.exists && uidSnap.exists()) {
+            remoteUser = { uid: optionalUid, ...uidSnap.data() };
+          }
+        }
+
+        // Query workers collection by phone variants
+        if (queryVariants.length > 0) {
+          const workersSnap = await safeDbPromise(
+            getDocs(query(collection(db, 'workers'), where('phone', 'in', queryVariants))),
+            2000
+          );
+          if (workersSnap && !workersSnap.empty) {
+            const wDoc = workersSnap.docs[0].data();
+            remoteWorker = { id: workersSnap.docs[0].id, ...wDoc };
+          }
+
+          // Check pending_workers collection if not found in workers
+          if (!remoteWorker) {
+            const pendingSnap = await safeDbPromise(
+              getDocs(query(collection(db, 'pending_workers'), where('phone', 'in', queryVariants))),
+              2000
+            );
+            if (pendingSnap && !pendingSnap.empty) {
+              const pDoc = pendingSnap.docs[0].data();
+              remoteWorker = { id: pendingSnap.docs[0].id, ...pDoc, status: 'pending', workerStatus: 'pending' };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Firestore fetchRemoteUserProfile error:', err);
+      }
+    }
+
+    // 2. Check Supabase (users, profiles, workers)
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (queryVariants.length > 0) {
+          const phoneOrFilter = queryVariants.map(v => `phone.eq.${v}`).join(',');
+
+          // Query Supabase 'users' table
+          if (!remoteUser) {
+            const { data: supaUsers } = await supabase
+              .from('users')
+              .select('*')
+              .or(phoneOrFilter)
+              .limit(1);
+            if (supaUsers && supaUsers.length > 0) {
+              remoteUser = supaUsers[0];
+            }
+          }
+
+          // Query Supabase 'profiles' table (if present)
+          if (!remoteUser) {
+            try {
+              const { data: supaProfiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .or(phoneOrFilter)
+                .limit(1);
+              if (supaProfiles && supaProfiles.length > 0) {
+                remoteUser = supaProfiles[0];
+              }
+            } catch {}
+          }
+
+          // Query Supabase 'workers' table
+          if (!remoteWorker) {
+            const { data: supaWorkers } = await supabase
+              .from('workers')
+              .select('*')
+              .or(phoneOrFilter)
+              .limit(1);
+            if (supaWorkers && supaWorkers.length > 0) {
+              remoteWorker = supaWorkers[0];
+            }
+          }
+        }
+
+        // Query by username if non-phone identifier provided
+        const trimmed = String(phoneOrIdentifier || '').trim();
+        if (!remoteUser && trimmed && (!cleanTenDigits || cleanTenDigits.length < 10)) {
+          const { data: userByUsername } = await supabase
+            .from('users')
+            .select('*')
+            .ilike('username', trimmed)
+            .limit(1);
+          if (userByUsername && userByUsername.length > 0) {
+            remoteUser = userByUsername[0];
+          }
+        }
+      } catch (supaErr) {
+        console.warn('Supabase fetchRemoteUserProfile error:', supaErr);
+      }
+    }
+
+    // 3. Fallback to Local Cache if remote is offline or pending
+    if (!remoteUser && !remoteWorker && cleanTenDigits) {
+      const localCached = getLocalUserByPhone(cleanTenDigits) || getLocalUserByIdentifier(phoneOrIdentifier);
+      if (localCached) {
+        remoteUser = localCached;
+      }
+    }
+
+    // Return null if no matching record found anywhere
+    if (!remoteUser && !remoteWorker) {
+      return null;
+    }
+
+    // Determine role and account status
+    const isWorker = Boolean(
+      remoteWorker ||
+      (remoteUser && (remoteUser.role === 'worker' || remoteUser.role === 'WORKER' || remoteUser.workerId))
+    );
+
+    const isWorkerApproved = Boolean(
+      (remoteWorker && (remoteWorker.status === 'approved' || remoteWorker.workerStatus === 'approved' || remoteWorker.is_approved)) ||
+      (remoteUser && (remoteUser.status === 'approved' || remoteUser.workerStatus === 'approved'))
+    );
+
+    const finalRole = isWorker ? 'worker' : (remoteUser?.role || 'customer');
+    const finalStatus = isWorker
+      ? (isWorkerApproved ? 'approved' : (remoteWorker?.status || remoteWorker?.workerStatus || remoteUser?.status || 'pending'))
+      : (remoteUser?.status || 'active');
+
+    const canonicalPhone = cleanTenDigits ? `+91${cleanTenDigits}` : normalizePhoneE164(remoteUser?.phone || remoteWorker?.phone);
+
+    const finalProfile = {
+      ...(remoteUser || {}),
+      ...(remoteWorker || {}),
+      uid: remoteUser?.uid || (remoteWorker ? String(remoteWorker.id) : (cleanTenDigits ? 'usr_' + cleanTenDigits : 'usr_anon')),
+      phone: canonicalPhone,
+      role: finalRole,
+      status: finalStatus,
+      workerStatus: isWorker ? finalStatus : undefined,
+      name: (remoteUser?.name || remoteWorker?.name || (isWorker ? 'Verified Partner' : 'Valued Customer')).trim(),
+      ...(remoteWorker ? {
+        workerId: String(remoteWorker.id || remoteWorker.workerId || remoteUser?.workerId),
+        skill: remoteWorker.skill || remoteWorker.category || remoteWorker.category_name || remoteUser?.skill,
+        categoryName: remoteWorker.category_name || remoteWorker.category || remoteWorker.skill,
+        serviceArea: remoteWorker.service_area || remoteWorker.city,
+        city: remoteWorker.city || remoteWorker.service_area || remoteUser?.city
+      } : {})
+    };
+
+    if (cleanTenDigits) {
+      saveLocalUserByPhone(cleanTenDigits, finalProfile);
+    }
+
+    return finalProfile;
+  };
+
+  // Sync with Firebase Auth listener
+  useEffect(() => {
+    if (!isFirebaseConfigured || !auth) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+        try {
+          if (fbUser) {
+            const userPhone = fbUser.phoneNumber || '';
+            const existingProfile = await fetchRemoteUserProfile(userPhone, fbUser.uid);
+
+            if (existingProfile) {
+              setCurrentUser(existingProfile);
+              localStorage.setItem('jobit_user', JSON.stringify(existingProfile));
+            } else {
+              const defaultData = {
+                uid: fbUser.uid,
+                name: fbUser.displayName || 'Customer',
+                phone: normalizePhoneE164(userPhone) || userPhone || '',
+                role: 'customer',
+                photo: fbUser.photoURL || '',
+                city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala'
+              };
+              if (db) {
+                await setDoc(doc(db, 'users', fbUser.uid), defaultData, { merge: true });
+              }
+              setCurrentUser(defaultData);
+              localStorage.setItem('jobit_user', JSON.stringify(defaultData));
+            }
+          }
+        } catch {
+          // Offline fallback
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      return () => unsubscribe();
+    } catch {
+      setLoading(false);
+    }
+  }, []);
+
+  // Sync with Supabase Auth listener
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    try {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          const userPhone = session.user.phone || session.user.user_metadata?.phone;
+          const profile = await fetchRemoteUserProfile(userPhone, session.user.id);
+          if (profile) {
+            setCurrentUser(profile);
+            localStorage.setItem('jobit_user', JSON.stringify(profile));
+          }
+        }
+      });
+
+      return () => subscription?.unsubscribe?.();
+    } catch (e) {
+      console.warn('Supabase auth state listener error:', e);
+    }
+  }, []);
+
+  // Cross-device status refresh: Refresh user/technician approval status from database on app startup
+  useEffect(() => {
+    const refreshStatusOnStartup = async () => {
+      try {
+        const raw = localStorage.getItem('jobit_user');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const cleanTenDigits = (parsed.phone || '').replace(/\D/g, '').slice(-10);
+        if (!cleanTenDigits || cleanTenDigits.length !== 10) return;
+
+        const remoteData = await fetchRemoteUserProfile(cleanTenDigits, parsed.uid);
+        if (remoteData) {
+          setCurrentUser(prev => {
+            const updated = {
+              ...(prev || parsed),
+              ...remoteData,
+              status: remoteData.status || (prev ? prev.status : 'active'),
+              workerStatus: remoteData.workerStatus || (prev ? prev.workerStatus : undefined)
+            };
+            localStorage.setItem('jobit_user', JSON.stringify(updated));
+            saveLocalUserByPhone(cleanTenDigits, updated);
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.warn('Startup status refresh notice:', err);
+      }
+    };
+
+    refreshStatusOnStartup();
+  }, []);
+
   const checkPhoneRegistered = async (phoneOrIdentifier) => {
     if (!phoneOrIdentifier) return { isRegistered: false };
     const rawDigits = String(phoneOrIdentifier).replace(/\D/g, '');
@@ -232,75 +419,24 @@ export function AuthProvider({ children }) {
         user: { 
           uid: 'admin_master', 
           name: 'Master Admin', 
-          phone: '+91 82899 68045', 
+          phone: '+918289968045', 
           role: 'admin' 
         } 
       };
     }
 
-    // 1. Check local users map (by phone or username)
-    const localExisting = getLocalUserByIdentifier(phoneOrIdentifier);
-    if (localExisting) {
-      return { isRegistered: true, user: localExisting };
-    }
-
-    // 2. Check Supabase database if configured
-    if (isSupabaseConfigured && supabase) {
-      try {
-        if (cleanTenDigits && cleanTenDigits.length === 10) {
-          const { data: supaUsers, error } = await supabase
-            .from('users')
-            .select('*')
-            .or(`phone.eq.+91${cleanTenDigits},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
-            .limit(1);
-          if (!error && supaUsers && supaUsers.length > 0) {
-            const user = supaUsers[0];
-            saveLocalUserByPhone(cleanTenDigits, user);
-            return { isRegistered: true, user };
-          }
-        }
-
-        // Also check by username in Supabase
-        const trimmedIdentifier = String(phoneOrIdentifier).trim();
-        if (trimmedIdentifier) {
-          const { data: userByUsername, error: uErr } = await supabase
-            .from('users')
-            .select('*')
-            .ilike('username', trimmedIdentifier)
-            .limit(1);
-          if (!uErr && userByUsername && userByUsername.length > 0) {
-            const user = userByUsername[0];
-            const uPhoneDigits = user.phone ? user.phone.replace(/\D/g, '').slice(-10) : '';
-            if (uPhoneDigits) saveLocalUserByPhone(uPhoneDigits, user);
-            return { isRegistered: true, user };
-          }
-        }
-      } catch (supaErr) {
-        console.warn('Supabase user check note:', supaErr);
-      }
-    }
-
-    // 3. Check Firestore if configured
-    if (isFirebaseConfigured && db) {
-      try {
-        if (cleanTenDigits && cleanTenDigits.length === 10) {
-          const uid = 'usr_' + cleanTenDigits;
-          const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
-          if (snap && snap.exists && snap.exists()) {
-            const user = { uid, ...snap.data() };
-            saveLocalUserByPhone(cleanTenDigits, user);
-            return { isRegistered: true, user };
-          }
-        }
-      } catch {}
+    const profile = await fetchRemoteUserProfile(phoneOrIdentifier);
+    if (profile) {
+      return { isRegistered: true, user: profile };
     }
 
     return { isRegistered: false };
   };
 
   const loginWithPhone = async (phone, otp, name = '', role = 'customer', extraData = {}) => {
-    const rawDigits = phone.replace(/\D/g, '');
+    const rawDigits = String(phone || '').replace(/\D/g, '');
     const cleanTenDigits = rawDigits.slice(-10);
+    const canonicalPhone = `+91${cleanTenDigits}`;
 
     // Direct Admin Rule (Critical): Phone number 8289968045 is ALWAYS Admin!
     if (cleanTenDigits === '8289968045') {
@@ -308,7 +444,7 @@ export function AuthProvider({ children }) {
         uid: 'admin_master',
         name: 'Master Admin',
         email: 'admin@jobit.com',
-        phone: '+91 82899 68045',
+        phone: '+918289968045',
         role: 'admin',
         city: 'Headquarters'
       };
@@ -326,93 +462,54 @@ export function AuthProvider({ children }) {
 
     const uid = 'usr_' + cleanTenDigits;
 
-    // Fetch latest user & worker approval status from shared database (Firestore & Supabase)
-    let existingProfile = getLocalUserByPhone(cleanTenDigits);
-    let dbWorkerData = null;
-
-    if (isFirebaseConfigured && db) {
-      try {
-        const snap = await safeDbPromise(getDoc(doc(db, 'users', uid)), 1500);
-        if (snap && snap.exists && snap.exists()) {
-          existingProfile = { ...(existingProfile || {}), uid, ...snap.data() };
-        }
-
-        // Query workers collection to see if this technician has been approved
-        const workersSnap = await safeDbPromise(
-          getDocs(query(collection(db, 'workers'), where('phone', 'in', [phone, `+91 ${cleanTenDigits}`, cleanTenDigits]))),
-          1500
-        );
-        if (workersSnap && !workersSnap.empty) {
-          const wDoc = workersSnap.docs[0].data();
-          if (wDoc.status === 'approved' || wDoc.workerStatus === 'approved' || wDoc.is_approved) {
-            dbWorkerData = wDoc;
-          }
-        }
-      } catch (err) {
-        console.warn('Firestore login lookup note:', err);
-      }
-    }
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: supaWorker } = await supabase
-          .from('workers')
-          .select('*')
-          .or(`phone.eq.${phone},phone.eq.+91 ${cleanTenDigits},phone.eq.${cleanTenDigits}`)
-          .limit(1)
-          .maybeSingle();
-
-        if (supaWorker && (supaWorker.status === 'approved' || supaWorker.is_approved)) {
-          dbWorkerData = { ...(dbWorkerData || {}), ...supaWorker, is_approved: true, status: 'approved' };
-        }
-      } catch {}
-    }
-
-    const isWorkerApproved = Boolean(
-      dbWorkerData ||
-      (existingProfile && (existingProfile.status === 'approved' || existingProfile.workerStatus === 'approved') && existingProfile.role === 'worker') ||
-      (extraData && (extraData.status === 'approved' || extraData.workerStatus === 'approved'))
-    );
+    // Fetch existing user & worker profile from database
+    const existingProfile = await fetchRemoteUserProfile(cleanTenDigits);
 
     if (existingProfile) {
-      // Existing single account found -> Log directly into this existing account
-      const effectiveRole = (isWorkerApproved || role === 'worker' || extraData?.role === 'worker' || extraData?.userRole === 'worker' || existingProfile.role === 'worker')
-        ? 'worker'
-        : (existingProfile.role || role || 'customer');
+      // Existing profile found -> Log directly into this existing account without creating duplicate
+      const isWorker = existingProfile.role === 'worker' || role === 'worker' || extraData?.role === 'worker' || extraData?.userRole === 'worker';
+      const effectiveRole = isWorker ? 'worker' : (existingProfile.role || role || 'customer');
 
       const mergedProfile = {
         ...existingProfile,
         ...extraData,
-        ...(dbWorkerData ? {
-          skill: dbWorkerData.skill || dbWorkerData.category || dbWorkerData.category_name,
-          categoryName: dbWorkerData.category_name || dbWorkerData.category || dbWorkerData.skill,
-          serviceArea: dbWorkerData.service_area || dbWorkerData.city,
-          city: dbWorkerData.city || dbWorkerData.service_area,
-          workerId: String(dbWorkerData.id)
-        } : {}),
         uid: existingProfile.uid || uid,
-        phone: `+91 ${cleanTenDigits}`,
+        phone: canonicalPhone,
         role: effectiveRole,
-        status: isWorkerApproved ? 'approved' : (extraData?.status || existingProfile.status || 'active'),
-        workerStatus: isWorkerApproved ? 'approved' : (extraData?.workerStatus || existingProfile.workerStatus)
+        status: existingProfile.status || extraData?.status || 'active',
+        workerStatus: isWorker ? (existingProfile.workerStatus || extraData?.workerStatus || existingProfile.status || 'approved') : undefined
       };
+
       saveLocalUserByPhone(cleanTenDigits, mergedProfile);
       setCurrentUser(mergedProfile);
       localStorage.setItem('jobit_user', JSON.stringify(mergedProfile));
+
+      // Sync phone normalization to database
+      if (isFirebaseConfigured && db) {
+        try {
+          await safeDbPromise(setDoc(doc(db, 'users', mergedProfile.uid), { phone: canonicalPhone }, { merge: true }), 1500);
+        } catch {}
+      }
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase.from('users').update({ phone: canonicalPhone }).eq('id', mergedProfile.uid);
+        } catch {}
+      }
+
       return mergedProfile;
     }
 
-    // Brand new user registration for this mobile number
-    const finalName = (name && name.trim()) ? name.trim() : (role === 'worker' || isWorkerApproved ? 'Partner Pro' : 'Customer');
-    const selectedRole = (role === 'worker' || isWorkerApproved) ? 'worker' : 'customer';
+    // Brand new user registration for this mobile number (normalized E.164)
+    const finalName = (name && name.trim()) ? name.trim() : (role === 'worker' ? 'Partner Pro' : 'Customer');
+    const selectedRole = role === 'worker' ? 'worker' : 'customer';
     const profile = {
       uid,
-      phone: `+91 ${cleanTenDigits}`,
+      phone: canonicalPhone,
       name: finalName,
       email: `${finalName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}@example.com`,
       role: selectedRole,
-      status: isWorkerApproved ? 'approved' : (selectedRole === 'worker' ? (extraData.status || 'pending') : undefined),
-      workerStatus: isWorkerApproved ? 'approved' : (selectedRole === 'worker' ? (extraData.workerStatus || extraData.status || 'pending') : undefined),
+      status: selectedRole === 'worker' ? (extraData.status || 'pending') : 'active',
+      workerStatus: selectedRole === 'worker' ? (extraData.workerStatus || extraData.status || 'pending') : undefined,
       city: localStorage.getItem('jobit_user_location') || 'Melattur, Kerala',
       photo: selectedRole === 'worker' 
         ? 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80'
@@ -427,6 +524,19 @@ export function AuthProvider({ children }) {
       try {
         const userRef = doc(db, 'users', uid);
         await safeDbPromise(setDoc(userRef, profile, { merge: true }), 1500);
+      } catch {}
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('users').upsert({
+          id: uid,
+          phone: canonicalPhone,
+          name: finalName,
+          role: selectedRole,
+          city: profile.city,
+          created_at: profile.createdAt
+        }, { onConflict: 'phone' });
       } catch {}
     }
 
@@ -541,7 +651,7 @@ export function AuthProvider({ children }) {
             password: cleanPassword,
             options: {
               data: {
-                phone: `+91 ${cleanTenDigits}`,
+                phone: `+91${cleanTenDigits}`,
                 username: cleanUsername,
                 name: cleanUsername,
                 role: selectedRole
@@ -560,7 +670,7 @@ export function AuthProvider({ children }) {
           .from('users')
           .upsert({
             id: uid,
-            phone: `+91 ${cleanTenDigits}`,
+            phone: `+91${cleanTenDigits}`,
             username: cleanUsername,
             name: cleanUsername,
             password: cleanPassword,
@@ -571,7 +681,7 @@ export function AuthProvider({ children }) {
 
         if (supaInsertErr) {
           if (supaInsertErr.code === '23505' || supaInsertErr.message?.toLowerCase()?.includes('unique')) {
-            throw new Error(`An account already exists for +91 ${cleanTenDigits}. Strictly ONE account per mobile number. Please sign in instead.`);
+            throw new Error(`An account already exists for +91${cleanTenDigits}. Strictly ONE account per mobile number. Please sign in instead.`);
           }
           console.warn('Supabase users table insert note:', supaInsertErr);
         }
@@ -585,7 +695,7 @@ export function AuthProvider({ children }) {
 
     const profile = {
       uid,
-      phone: `+91 ${cleanTenDigits}`,
+      phone: `+91${cleanTenDigits}`,
       name: cleanUsername,
       username: cleanUsername,
       password: cleanPassword,

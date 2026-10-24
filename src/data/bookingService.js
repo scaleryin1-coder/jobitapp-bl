@@ -2297,7 +2297,7 @@ export async function registerWorkerOnboarding(onboardingData) {
     userId: appId,
     // Personal Info
     name: (onboardingData.name || '').trim(),
-    phone: (onboardingData.phone || '').trim(),
+    phone: ((onboardingData.phone || '').replace(/\D/g, '').slice(-10) ? `+91${(onboardingData.phone || '').replace(/\D/g, '').slice(-10)}` : (onboardingData.phone || '').trim()),
     altPhone: (onboardingData.altPhone || '').trim(),
     email: (onboardingData.email || `${(onboardingData.name || 'pro').toLowerCase().replace(/[^a-z0-9]/g, '')}@jobit.com`).trim(),
     gender: onboardingData.gender || 'Not specified',
@@ -2533,7 +2533,7 @@ export async function approveWorkerApplication(workerAppId, fallbackWorkerData =
     userId: workerUniqueId,
     originalAppId: target.id,
     name: target.name,
-    phone: target.phone,
+    phone: cleanTen ? `+91${cleanTen}` : target.phone,
     altPhone: target.altPhone || '',
     email: target.email || `${(target.name || 'pro').toLowerCase().replace(/\s+/g, '')}@jobit.com`,
     gender: target.gender || 'Not specified',
